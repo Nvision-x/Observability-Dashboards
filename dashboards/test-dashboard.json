@@ -40,7 +40,7 @@
       },
       {
         "id": 2,
-        "title": "Error Rate %",
+        "title": "Deployment Status",
         "type": "stat",
         "gridPos": {
           "h": 8,
@@ -50,8 +50,8 @@
         },
         "targets": [
           {
-            "expr": "100 * rate(http_requests_total{namespace=\"$namespace\", status=~\"5..\"}[5m]) / rate(http_requests_total{namespace=\"$namespace\"}[5m])",
-            "legendFormat": "Error Rate",
+            "expr": "kube_deployment_status_condition{}",
+            "legendFormat": "{{service}} - {{method}} {{status}}",
             "refId": "A"
           }
         ],
