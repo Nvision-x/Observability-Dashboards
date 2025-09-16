@@ -1,0 +1,241 @@
+{
+  "title": "NX Infrastructure Alerts",
+  "folder": "Infrastructure",
+  "interval": "1m",
+  "rules": [
+    {
+      "uid": "nx-high-cpu-usage",
+      "title": "High CPU Usage - NX Infrastructure",
+      "condition": "B",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 300,
+            "to": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-nx"
+          },
+          "model": {
+            "expr": "100 - (avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "A",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "reducer": "last",
+            "refId": "B",
+            "type": "reduce"
+          }
+        },
+        {
+          "refId": "C",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "B > 80",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "refId": "C",
+            "type": "threshold"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "5m",
+      "annotations": {
+        "description": "CPU usage on NX infrastructure is above 80% for more than 5 minutes",
+        "runbook_url": "https://wiki.company.com/runbooks/high-cpu",
+        "summary": "High CPU usage detected on NX infrastructure"
+      },
+      "labels": {
+        "severity": "warning",
+        "team": "platform",
+        "service": "nx-infrastructure",
+        "alerttype": "infrastructure"
+      }
+    },
+    {
+      "uid": "nx-high-memory-usage",
+      "title": "High Memory Usage - NX Infrastructure",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 300,
+            "to": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-nx"
+          },
+          "model": {
+            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "A",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "reducer": "last",
+            "refId": "B",
+            "type": "reduce"
+          }
+        },
+        {
+          "refId": "C",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "B > 85",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "refId": "C",
+            "type": "threshold"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "10m",
+      "annotations": {
+        "description": "Memory usage on NX infrastructure is above 85% for more than 10 minutes",
+        "runbook_url": "https://wiki.company.com/runbooks/high-memory",
+        "summary": "High memory usage detected on NX infrastructure"
+      },
+      "labels": {
+        "severity": "critical",
+        "team": "platform", 
+        "service": "nx-infrastructure",
+        "alerttype": "infrastructure"
+      }
+    },
+    {
+      "uid": "nx-pod-crashlooping",
+      "title": "Pod CrashLooping - NX Infrastructure", 
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-nx"
+          },
+          "model": {
+            "expr": "increase(kube_pod_container_status_restarts_total[10m]) > 0",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "A",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "reducer": "last",
+            "refId": "B",
+            "type": "reduce"
+          }
+        },
+        {
+          "refId": "C",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "B > 3",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "refId": "C",
+            "type": "threshold"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "2m",
+      "annotations": {
+        "description": "Pod {{$labels.pod}} in namespace {{$labels.namespace}} is crash looping",
+        "runbook_url": "https://wiki.company.com/runbooks/pod-crashloop",
+        "summary": "Pod crash looping detected in NX infrastructure"
+      },
+      "labels": {
+        "severity": "critical",
+        "team": "platform",
+        "service": "nx-infrastructure", 
+        "alerttype": "kubernetes"
+      }
+    }
+  ]
+}

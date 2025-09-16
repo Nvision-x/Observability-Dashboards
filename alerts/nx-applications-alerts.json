@@ -1,0 +1,241 @@
+{
+  "title": "NX Applications Alerts",
+  "folder": "Applications",
+  "interval": "30s",
+  "rules": [
+    {
+      "uid": "nx-api-high-error-rate",
+      "title": "High API Error Rate - NX Applications",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 300,
+            "to": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-nx"
+          },
+          "model": {
+            "expr": "100 * sum(rate(http_requests_total{status=~\"5..\"}[5m])) by (service) / sum(rate(http_requests_total[5m])) by (service)",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "A",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "reducer": "last",
+            "refId": "B",
+            "type": "reduce"
+          }
+        },
+        {
+          "refId": "C",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "B > 5",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "refId": "C",
+            "type": "threshold"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "5m",
+      "annotations": {
+        "description": "API error rate for service {{$labels.service}} is above 5% for more than 5 minutes",
+        "runbook_url": "https://wiki.company.com/runbooks/api-errors",
+        "summary": "High API error rate detected in NX applications"
+      },
+      "labels": {
+        "severity": "warning",
+        "team": "development",
+        "service": "nx-applications",
+        "alerttype": "application"
+      }
+    },
+    {
+      "uid": "nx-api-high-latency",
+      "title": "High API Latency - NX Applications",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 300,
+            "to": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-nx"
+          },
+          "model": {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "A",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "reducer": "last",
+            "refId": "B",
+            "type": "reduce"
+          }
+        },
+        {
+          "refId": "C",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "B > 1",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "refId": "C",
+            "type": "threshold"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "5m",
+      "annotations": {
+        "description": "P95 API latency for service {{$labels.service}} is above 1 second for more than 5 minutes",
+        "runbook_url": "https://wiki.company.com/runbooks/api-latency",
+        "summary": "High API latency detected in NX applications"
+      },
+      "labels": {
+        "severity": "warning",
+        "team": "development",
+        "service": "nx-applications",
+        "alerttype": "performance"
+      }
+    },
+    {
+      "uid": "nx-db-connection-high",
+      "title": "High Database Connections - NX Applications",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 300,
+            "to": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-nx"
+          },
+          "model": {
+            "expr": "sum(pg_stat_database_numbackends) by (datname)",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "A",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "reducer": "last",
+            "refId": "B",
+            "type": "reduce"
+          }
+        },
+        {
+          "refId": "C",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "B > 80",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "refId": "C",
+            "type": "threshold"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "5m",
+      "annotations": {
+        "description": "Database {{$labels.datname}} has more than 80 active connections for more than 5 minutes",
+        "runbook_url": "https://wiki.company.com/runbooks/db-connections",
+        "summary": "High database connection count detected"
+      },
+      "labels": {
+        "severity": "warning",
+        "team": "development",
+        "service": "nx-applications",
+        "alerttype": "database"
+      }
+    }
+  ]
+}

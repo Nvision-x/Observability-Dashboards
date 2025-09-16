@@ -1,0 +1,24 @@
+{
+  "name": "Loki-NX",
+  "type": "loki",
+  "url": "http://loki:3100",
+  "access": "proxy",
+  "basicAuth": false,
+  "withCredentials": false,
+  "tags": ["git-sync"],
+  "jsonData": {
+    "timeout": 60,
+    "maxLines": 1000,
+    "derivedFields": [
+      {
+        "matcherRegex": "trace_id=(\\w+)",
+        "name": "TraceID",
+        "url": "http://tempo:3100/api/traces/${__value.raw}",
+        "datasourceUid": "tempo-nx"
+      }
+    ]
+  },
+  "secureJsonFields": {},
+  "version": 1,
+  "readOnly": false
+}
