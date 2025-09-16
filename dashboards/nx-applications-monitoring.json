@@ -1,84 +1,12 @@
 {
   "id": null,
-  "uid": "nx-applications-monitoring",
-  "title": "NX Applications Monitoring",
-  "tags": ["nx", "applications", "microservices", "api", "git-sync"],
+  "uid": "nx-applications-dashboard",
+  "title": "NX Applications Dashboard",
+  "tags": ["nx-applications", "monitoring", "observability", "git-sync"],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
-  "refresh": "15s",
-  "time": {
-    "from": "now-30m",
-    "to": "now"
-  },
-    "panels": [
-    {
-      "type": "graph",
-      "title": "CPU Usage (per Pod)",
-      "targets": [
-        {
-          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*'}[5m]))",
-          "legendFormat": "{{pod}}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "graph",
-      "title": "Memory Usage (per Pod)",
-      "targets": [
-        {
-          "expr": "sum by (pod) (container_memory_usage_bytes{namespace='$namespace', pod=~'.*'})",
-          "legendFormat": "{{pod}}",
-          "refId": "B"
-        }
-      ]
-    },
-    {
-      "type": "graph",
-      "title": "Network Receive (per Pod)",
-      "targets": [
-        {
-          "expr": "sum by (pod) (rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*'}[5m]))",
-          "legendFormat": "{{pod}} RX",
-          "refId": "C"
-        }
-      ]
-    },
-    {
-      "type": "graph",
-      "title": "Network Transmit (per Pod)",
-      "targets": [
-        {
-          "expr": "sum by (pod) (rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*'}[5m]))",
-          "legendFormat": "{{pod}} TX",
-          "refId": "D"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Pod Count (Ready)",
-      "targets": [
-        {
-          "expr": "count(kube_pod_status_ready{namespace='$namespace', condition='true'})",
-          "legendFormat": "Ready Pods",
-          "refId": "E"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Pod Restarts",
-      "targets": [
-        {
-          "expr": "sum by (pod) (kube_pod_container_status_restarts_total{namespace='$namespace'})",
-          "legendFormat": "{{pod}}",
-          "refId": "F"
-        }
-      ]
-    }
-  ],
+  "refresh": "30s",
   "templating": {
     "list": [
       {
@@ -93,5 +21,517 @@
         }
       }
     ]
-  }
+  },
+  "panels": [
+    {
+      "type": "graph",
+      "title": "alerts-api CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*alerts-api.*'}[5m]))",
+          "legendFormat": "alerts-api",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "alerts-api Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*alerts-api.*'})",
+          "legendFormat": "alerts-api",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "api CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*api.*'}[5m]))",
+          "legendFormat": "api",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "api Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*api.*'})",
+          "legendFormat": "api",
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "archiver CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*archiver.*'}[5m]))",
+          "legendFormat": "archiver",
+          "refId": "E"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "archiver Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*archiver.*'})",
+          "legendFormat": "archiver",
+          "refId": "F"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "classifier CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*classifier.*'}[5m]))",
+          "legendFormat": "classifier",
+          "refId": "G"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "classifier Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*classifier.*'})",
+          "legendFormat": "classifier",
+          "refId": "H"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "cifs-connector CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*cifs-connector.*'}[5m]))",
+          "legendFormat": "cifs-connector",
+          "refId": "I"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "cifs-connector Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*cifs-connector.*'})",
+          "legendFormat": "cifs-connector",
+          "refId": "J"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "cron-run CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*cron-run.*'}[5m]))",
+          "legendFormat": "cron-run",
+          "refId": "K"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "cron-run Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*cron-run.*'})",
+          "legendFormat": "cron-run",
+          "refId": "L"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "env-dumper CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*env-dumper.*'}[5m]))",
+          "legendFormat": "env-dumper",
+          "refId": "M"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "env-dumper Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*env-dumper.*'})",
+          "legendFormat": "env-dumper",
+          "refId": "N"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "job-engine CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 56,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*job-engine.*'}[5m]))",
+          "legendFormat": "job-engine",
+          "refId": "O"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "job-engine Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 56,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*job-engine.*'})",
+          "legendFormat": "job-engine",
+          "refId": "P"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "migration CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 64,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*migration.*'}[5m]))",
+          "legendFormat": "migration",
+          "refId": "Q"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "migration Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 64,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*migration.*'})",
+          "legendFormat": "migration",
+          "refId": "R"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "nx-nginx CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 72,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*nx-nginx.*'}[5m]))",
+          "legendFormat": "nx-nginx",
+          "refId": "S"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "nx-nginx Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 72,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*nx-nginx.*'})",
+          "legendFormat": "nx-nginx",
+          "refId": "T"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "s3-consumer CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 80,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*s3-consumer.*'}[5m]))",
+          "legendFormat": "s3-consumer",
+          "refId": "U"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "s3-consumer Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 80,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*s3-consumer.*'})",
+          "legendFormat": "s3-consumer",
+          "refId": "V"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "s3-inventory-connector CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 88,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*s3-inventory-connector.*'}[5m]))",
+          "legendFormat": "s3-inventory-connector",
+          "refId": "W"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "s3-inventory-connector Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 88,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*s3-inventory-connector.*'})",
+          "legendFormat": "s3-inventory-connector",
+          "refId": "X"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "s3-producer CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 96,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*s3-producer.*'}[5m]))",
+          "legendFormat": "s3-producer",
+          "refId": "Y"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "s3-producer Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 96,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*s3-producer.*'})",
+          "legendFormat": "s3-producer",
+          "refId": "Z"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "sweeper CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 104,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*sweeper.*'}[5m]))",
+          "legendFormat": "sweeper",
+          "refId": "AA"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "sweeper Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 104,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*sweeper.*'})",
+          "legendFormat": "sweeper",
+          "refId": "AB"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "test-connection CPU Usage",
+      "gridPos": {
+        "x": 0,
+        "y": 112,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*test-connection.*'}[5m]))",
+          "legendFormat": "test-connection",
+          "refId": "AC"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "test-connection Memory Usage",
+      "gridPos": {
+        "x": 12,
+        "y": 112,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*test-connection.*'})",
+          "legendFormat": "test-connection",
+          "refId": "AD"
+        }
+      ]
+    }
+  ]
 }
