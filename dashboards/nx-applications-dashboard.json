@@ -11,10 +11,11 @@
     "from": "now-30m",
     "to": "now"
   },
-    "panels": [
+  "panels": [
     {
       "type": "graph",
       "title": "CPU Usage (per Pod)",
+      "gridPos": { "x": 0, "y": 0, "w": 36, "h": 24 },
       "targets": [
         {
           "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*'}[5m]))",
@@ -26,6 +27,7 @@
     {
       "type": "graph",
       "title": "Memory Usage (per Pod)",
+      "gridPos": { "x": 0, "y": 24, "w": 36, "h": 24 },
       "targets": [
         {
           "expr": "sum by (pod) (container_memory_usage_bytes{namespace='$namespace', pod=~'.*'})",
@@ -37,6 +39,7 @@
     {
       "type": "graph",
       "title": "Network Receive (per Pod)",
+      "gridPos": { "x": 0, "y": 48, "w": 36, "h": 24 },
       "targets": [
         {
           "expr": "sum by (pod) (rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*'}[5m]))",
@@ -48,6 +51,7 @@
     {
       "type": "graph",
       "title": "Network Transmit (per Pod)",
+      "gridPos": { "x": 0, "y": 72, "w": 36, "h": 24 },
       "targets": [
         {
           "expr": "sum by (pod) (rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*'}[5m]))",
@@ -59,6 +63,7 @@
     {
       "type": "stat",
       "title": "Pod Count (Ready)",
+      "gridPos": { "x": 0, "y": 96, "w": 36, "h": 12 },
       "targets": [
         {
           "expr": "count(kube_pod_status_ready{namespace='$namespace', condition='true'})",
@@ -70,6 +75,7 @@
     {
       "type": "stat",
       "title": "Pod Restarts",
+      "gridPos": { "x": 0, "y": 108, "w": 36, "h": 12 },
       "targets": [
         {
           "expr": "sum by (pod) (kube_pod_container_status_restarts_total{namespace='$namespace'})",
@@ -95,4 +101,3 @@
     ]
   }
 }
-
