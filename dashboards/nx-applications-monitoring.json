@@ -12,196 +12,86 @@
     "to": "now"
   },
     "panels": [
-      {
-        "id": 1,
-        "title": "API Request Rate",
-        "type": "timeseries",
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 0
-        },
-        "targets": [
-          {
-            "expr": "sum(rate(http_requests_total{namespace=~\"$namespace\", service=~\".*api.*\"}[5m])) by (service, method, status)",
-            "legendFormat": "{{service}} - {{method}} {{status}}",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "reqps"
-          }
-        }
-      },
-      {
-        "id": 2,
-        "title": "Error Rate",
-        "type": "stat",
-        "gridPos": {
-          "h": 8,
-          "w": 6,
-          "x": 12,
-          "y": 0
-        },
-        "targets": [
-          {
-            "expr": "100 * sum(rate(http_requests_total{namespace=~\"$namespace\", status=~\"5..\"}[5m])) / sum(rate(http_requests_total{namespace=~\"$namespace\"}[5m]))",
-            "legendFormat": "Error Rate %",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "percent",
-            "thresholds": {
-              "steps": [
-                {"color": "green", "value": null},
-                {"color": "yellow", "value": 1},
-                {"color": "red", "value": 5}
-              ]
-            }
-          }
-        }
-      },
-      {
-        "id": 3,
-        "title": "Response Time P95",
-        "type": "stat",
-        "gridPos": {
-          "h": 8,
-          "w": 6,
-          "x": 18,
-          "y": 0
-        },
-        "targets": [
-          {
-            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=~\"$namespace\"}[5m])) by (le, service))",
-            "legendFormat": "P95 Response Time",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "s",
-            "thresholds": {
-              "steps": [
-                {"color": "green", "value": null},
-                {"color": "yellow", "value": 0.5},
-                {"color": "red", "value": 1}
-              ]
-            }
-          }
-        }
-      },
-      {
-        "id": 4,
-        "title": "Application Memory Usage",
-        "type": "timeseries",
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 8
-        },
-        "targets": [
-          {
-            "expr": "sum(container_memory_usage_bytes{namespace=~\"$namespace\", pod=~\".*\", container!=\"POD\", container!=\"\"}) by (pod)",
-            "legendFormat": "{{pod}}",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "bytes"
-          }
-        }
-      },
-      {
-        "id": 5,
-        "title": "Application CPU Usage",
-        "type": "timeseries",
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 8
-        },
-        "targets": [
-          {
-            "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\", pod=~\".*\", container!=\"POD\", container!=\"\"}[5m])) by (pod) * 100",
-            "legendFormat": "{{pod}}",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "percent"
-          }
-        }
-      },
-      {
-        "id": 6,
-        "title": "Database Connections",
-        "type": "timeseries",
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 16
-        },
-        "targets": [
-          {
-            "expr": "sum(pg_stat_database_numbackends{namespace=~\"$namespace\"}) by (datname)",
-            "legendFormat": "{{datname}} connections",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "short"
-          }
-        }
-      },
-      {
-        "id": 7,
-        "title": "Queue Length",
-        "type": "timeseries",
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 16
-        },
-        "targets": [
-          {
-            "expr": "sum(pulsar_subscriptions_msgBacklog{namespace=~\"$namespace\"}) by (subscription)",
-            "legendFormat": "{{subscription}} backlog",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "short"
-          }
-        }
-      }
-    ],
-    "templating": {
-      "list": [
+    {
+      "type": "graph",
+      "title": "CPU Usage (per Pod)",
+      "targets": [
         {
-          "name": "namespace",
-          "type": "query",
-          "query": "label_values(kube_namespace_created, namespace)",
-          "current": {
-            "selected": false,
-            "text": "default",
-            "value": "default"
-          },
-          "includeAll": true,
-          "multi": true
+          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*'}[5m]))",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Memory Usage (per Pod)",
+      "targets": [
+        {
+          "expr": "sum by (pod) (container_memory_usage_bytes{namespace='$namespace', pod=~'.*'})",
+          "legendFormat": "{{pod}}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Network Receive (per Pod)",
+      "targets": [
+        {
+          "expr": "sum by (pod) (rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*'}[5m]))",
+          "legendFormat": "{{pod}} RX",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Network Transmit (per Pod)",
+      "targets": [
+        {
+          "expr": "sum by (pod) (rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*'}[5m]))",
+          "legendFormat": "{{pod}} TX",
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Pod Count (Ready)",
+      "targets": [
+        {
+          "expr": "count(kube_pod_status_ready{namespace='$namespace', condition='true'})",
+          "legendFormat": "Ready Pods",
+          "refId": "E"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Pod Restarts",
+      "targets": [
+        {
+          "expr": "sum by (pod) (kube_pod_container_status_restarts_total{namespace='$namespace'})",
+          "legendFormat": "{{pod}}",
+          "refId": "F"
         }
       ]
     }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "namespace",
+        "type": "query",
+        "datasource": "Prometheus",
+        "refresh": 1,
+        "query": "label_values(kube_pod_info, namespace)",
+        "current": {
+          "text": "default",
+          "value": "default"
+        }
+      }
+    ]
+  }
 }
