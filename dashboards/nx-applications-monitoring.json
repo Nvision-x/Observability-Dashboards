@@ -91,16 +91,37 @@
 },
     {
       "type": "graph",
-      "title": "ALERTS-API CPU Usage",
+      "title": "ALERTS-API Resource Requests",
       "gridPos": { "x": 12, "y": 0, "w": 6, "h": 8 },
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*alerts-api.*'}[5m]))",
-          "legendFormat": "alerts-api",
+          "expr": "kube_pod_container_resource_requests{namespace="default",pod=~"applications-alerts-api.*"}",
+          "legendFormat": "resource-requests",
           "refId": "A"
         }
-      ]
+      ],
+  "options": {
+    "showHeader": true
+  },
+  "fieldConfig": {
+    "defaults": {
+      "unit": "none",
+      "thresholds": {
+        "mode": "absolute",
+        "steps": [
+          { "color": "red", "value": 0 },
+          { "color": "green", "value": 1 }
+        ]
+      },
+      "custom": {
+        "cellOptions": {
+          "type": "color-background"
+        }
+      }
     },
+    "overrides": []
+  }
+},
     {
       "type": "graph",
       "title": "ALERTS-API Memory Usage",
