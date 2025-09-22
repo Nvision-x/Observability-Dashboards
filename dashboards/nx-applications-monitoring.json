@@ -24,41 +24,42 @@
   },
   "panels": [
     {
-      "type": "table",
-      "title": "ALERTS-API POD Status",
-      "gridPos": { "x": 0, "y": 0, "w": 3, "h": 8 },
-      "targets": [
-        {
-          "expr": "kube_pod_status_ready{namespace='$namespace', pod=~'.*alerts-api.*'}",
-          "legendFormat": "alerts-api",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "showHeader": true
+  "type": "table",
+  "title": "ALERTS-API POD Status",
+  "gridPos": { "x": 0, "y": 0, "w": 6, "h": 8 },
+  "targets": [
+    {
+      "expr": "kube_pod_status_ready{namespace='$namespace', pod=~'.*alerts-api.*'}",
+      "legendFormat": "alerts-api",
+      "refId": "C"
+    }
+  ],
+  "options": {
+    "showHeader": true
+  },
+  "fieldConfig": {
+    "defaults": {
+      "unit": "none",
+      "thresholds": {
+        "mode": "absolute",
+        "steps": [
+          { "color": "red", "value": 0 },
+          { "color": "green", "value": 1 }
+        ]
       },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": 0 },
-              { "color": "green", "value": 1 }
-            ]
-          },
-          "custom": {
-            "cellOptions": {
-              "type": "color-background"
-            }
-          }
+      "custom": {
+        "cellOptions": {
+          "type": "color-background"
         }
       }
     },
+    "overrides": []
+  }
+},
     {
       "type": "table",
       "title": "ALERTS-API POD Restarts",
-      "gridPos": { "x": 3, "y": 0, "w": 3, "h": 8 },
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 8 },
       "targets": [
         {
           "expr": "increase(kube_pod_container_status_restarts_total{namespace='$namespace', pod=~'.*alerts-api.*'}[15m])",
@@ -66,32 +67,32 @@
           "refId": "B"
         }
       ],
-      "options": {
-        "showHeader": true
+  "options": {
+    "showHeader": true
+  },
+  "fieldConfig": {
+    "defaults": {
+      "unit": "none",
+      "thresholds": {
+        "mode": "absolute",
+        "steps": [
+          { "color": "red", "value": 0 },
+          { "color": "green", "value": 1 }
+        ]
       },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": 0 },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 3 }
-            ]
-          },
-          "custom": {
-            "cellOptions": {
-              "type": "color-background"
-            }
-          }
+      "custom": {
+        "cellOptions": {
+          "type": "color-background"
         }
       }
     },
+    "overrides": []
+  }
+},
     {
       "type": "graph",
       "title": "ALERTS-API CPU Usage",
-      "gridPos": { "x": 6, "y": 0, "w": 3, "h": 8 },
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 8 },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*alerts-api.*'}[5m]))",
@@ -103,7 +104,7 @@
     {
       "type": "graph",
       "title": "ALERTS-API Memory Usage",
-      "gridPos": { "x": 9, "y": 0, "w": 3, "h": 8 },
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 8 },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*alerts-api.*'})",
@@ -112,48 +113,6 @@
         }
       ]
     },
-    {
-      "type": "graph",
-      "title": "ALERTS-API Network RX",
-      "gridPos": { "x": 12, "y": 0, "w": 3, "h": 8 },
-      "targets": [
-        {
-          "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*alerts-api.*'}[5m]))",
-          "legendFormat": "alerts-api RX",
-          "refId": "E"
-        }
-      ]
-    },
-    {
-      "type": "graph",
-      "title": "ALERTS-API Network TX",
-      "gridPos": { "x": 15, "y": 0, "w": 3, "h": 8 },
-      "targets": [
-        {
-          "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*alerts-api.*'}[5m]))",
-          "legendFormat": "alerts-api TX",
-          "refId": "F"
-        }
-      ]
-    },
-    {
-      "type": "graph",
-      "title": "ALERTS-API Disk I/O",
-      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 8 },
-      "targets": [
-        {
-          "expr": "sum(rate(container_fs_reads_bytes_total{namespace='$namespace', pod=~'.*alerts-api.*'}[5m]))",
-          "legendFormat": "alerts-api Read",
-          "refId": "G"
-        },
-        {
-          "expr": "sum(rate(container_fs_writes_bytes_total{namespace='$namespace', pod=~'.*alerts-api.*'}[5m]))",
-          "legendFormat": "alerts-api Write",
-          "refId": "H"
-        }
-      ]
-    },
-
     {
       "type": "table",
       "title": "API POD Status",
