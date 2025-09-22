@@ -26,7 +26,7 @@
     {
   "type": "table",
   "title": "ALERTS-API POD Status",
-  "gridPos": { "x": 0, "y": 0, "w": 5, "h": 8 },
+  "gridPos": { "x": 0, "y": 0, "w": 6, "h": 8 },
   "targets": [
     {
       "expr": "kube_pod_status_ready{namespace='$namespace', pod=~'.*alerts-api.*'}",
@@ -59,7 +59,7 @@
     {
       "type": "table",
       "title": "ALERTS-API POD Restarts",
-      "gridPos": { "x": 4, "y": 0, "w": 5, "h": 8 },
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 8 },
       "targets": [
         {
           "expr": "increase(kube_pod_container_status_restarts_total{namespace='$namespace', pod=~'.*alerts-api.*'}[15m])",
@@ -92,7 +92,7 @@
     {
       "type": "graph",
       "title": "ALERTS-API CPU Usage",
-      "gridPos": { "x": 8, "y": 0, "w": 5, "h": 8 },
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 8 },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*alerts-api.*'}[5m]))",
@@ -104,29 +104,12 @@
     {
       "type": "graph",
       "title": "ALERTS-API Memory Usage",
-      "gridPos": { "x": 12, "y": 0, "w": 5, "h": 8 },
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 8 },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*alerts-api.*'})",
           "legendFormat": "alerts-api",
           "refId": "B"
-        }
-      ]
-    },
-    {
-      "type": "graph",
-      "title": "ALERTS-API Network I/O",
-      "gridPos": { "x": 16, "y": 0, "w": 5, "h": 8 },
-      "targets": [
-        {
-          "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*alerts-api.*'}[5m]))",
-          "legendFormat": "alerts-api RX",
-          "refId": "D"
-        },
-        {
-          "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*alerts-api.*'}[5m]))",
-          "legendFormat": "alerts-api TX",
-          "refId": "E"
         }
       ]
     },
