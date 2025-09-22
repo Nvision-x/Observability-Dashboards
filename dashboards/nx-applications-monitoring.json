@@ -48,17 +48,33 @@
       ]
     },
     {
-      "type": "graph",
-      "title": "alerts-api Network Inbound",
-      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 8 },
-      "targets": [
-        {
-          "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*alerts-api.*'}[5m]))",
-          "legendFormat": "alerts-api RX",
-          "refId": "C"
-        }
-      ]
+  "type": "table",
+  "title": "alerts-api POD Status",
+  "gridPos": { "x": 12, "y": 0, "w": 6, "h": 8 },
+  "targets": [
+    {
+      "expr": "kube_pod_status_ready{namespace=\"default\",pod=~\"applications-alerts-api.*\"}",
+      "legendFormat": "{{pod}}",
+      "refId": "C"
+    }
+  ],
+  "options": {
+    "showHeader": true
+  },
+  "fieldConfig": {
+    "defaults": {
+      "unit": "none",
+      "thresholds": {
+        "mode": "absolute",
+        "steps": [
+          { "color": "red", "value": 0 },
+          { "color": "green", "value": 1 }
+        ]
+      }
     },
+    "overrides": []
+  }
+},
     {
       "type": "graph",
       "title": "alerts-api Network Outbound",
