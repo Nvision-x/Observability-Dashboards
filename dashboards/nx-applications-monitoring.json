@@ -57,17 +57,38 @@
   }
 },
     {
-      "type": "graph",
-      "title": "ALERTS-API Memory Usage",
+      "type": "table",
+      "title": "ALERTS-API POD Restarts",
       "gridPos": { "x": 6, "y": 0, "w": 6, "h": 8 },
       "targets": [
         {
-          "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*alerts-api.*'})",
+          "expr": "kube_pod_container_status_restarts_total{namespace="default",pod=~"applications-alerts-api.*"}",
           "legendFormat": "alerts-api",
           "refId": "B"
         }
-      ]
+      ],
+  "options": {
+    "showHeader": true
+  },
+  "fieldConfig": {
+    "defaults": {
+      "unit": "none",
+      "thresholds": {
+        "mode": "absolute",
+        "steps": [
+          { "color": "red", "value": 0 },
+          { "color": "green", "value": 1 }
+        ]
+      },
+      "custom": {
+        "cellOptions": {
+          "type": "color-background"
+        }
+      }
     },
+    "overrides": []
+  }
+},
     {
       "type": "graph",
       "title": "ALERTS-API CPU Usage",
