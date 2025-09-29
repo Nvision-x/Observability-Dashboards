@@ -18,19 +18,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create CalVer Release
-        uses: Nvision-x/gh-actions-calver@v2025.09.26-1
+      - name: Generate CalVer Tag
+        id: calver
+        uses: Nvision-x/gh-actions-calver@v2025.09.29-1
         with:
-          # Create release automatically
-          create_release: true
-          # Use CalVer format: YYYY.MM.DD
-          calver_format: "YYYY.MM.DD"
-          # Tag prefix (optional)
-          tag_prefix: "v"
-          # Generate release notes from commits
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          prefix: "v"
+          use-sequence: true
+
+      - name: Create GitHub Release
+        if: steps.calver.outputs.create_release == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.calver.outputs.tag }}
+          name: Release ${{ steps.calver.outputs.tag }}
           generate_release_notes: true
-          # Include all files in the release
-          release_files: |
+          files: |
             dashboards/*.json
             alerts/*.json
             datasources/*.json
