@@ -1,0 +1,385 @@
+{
+  "uid": "pulsar-monitor",
+  "title": "Pulsar Monitor",
+  "tags": ["git-sync", "pulsar", "prometheus"],
+  "timezone": "",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["5s","10s","30s","1m","5m","15m","30m","1h","2h","1d"]
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "refresh": 1,
+        "hide": 0
+      },
+      {
+        "name": "cluster",
+        "label": "Cluster",
+        "type": "query",
+        "hide": 0,
+        "datasource": "$datasource",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "definition": "label_values({__name__=~\"pulsar_.*\"}, cluster)"
+      },
+      {
+        "name": "namespace",
+        "label": "Namespace",
+        "type": "query",
+        "hide": 0,
+        "datasource": "$datasource",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "definition": "label_values({__name__=~\"pulsar_.*\", cluster=~\"$cluster\"}, namespace)"
+      },
+      {
+        "name": "topic",
+        "label": "Topic",
+        "type": "query",
+        "hide": 0,
+        "datasource": "$datasource",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "definition": "label_values({__name__=~\"pulsar_.*\", cluster=~\"$cluster\", namespace=~\"$namespace\"}, topic)"
+      },
+      {
+        "name": "subscription",
+        "label": "Subscription",
+        "type": "query",
+        "hide": 0,
+        "datasource": "$datasource",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "definition": "label_values({__name__=~\"pulsar_.*\", cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}, subscription)"
+      },
+      {
+        "name": "broker",
+        "label": "Broker",
+        "type": "query",
+        "hide": 0,
+        "datasource": "$datasource",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "definition": "label_values({__name__=~\"pulsar_.*\"}, instance)"
+      },
+      {
+        "name": "metric",
+        "label": "Metric",
+        "type": "query",
+        "datasource": "$datasource",
+        "refresh": 2,
+        "includeAll": false,
+        "multi": false,
+        "definition": "label_values({__name__=~\"pulsar_.*\"}, __name__)"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Overview",
+      "id": 1,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Messages In (msg/s)",
+      "id": 2,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum(rate(pulsar_rate_in{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))", "refId": "A" }
+      ],
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "Messages Out (msg/s)",
+      "id": 3,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum(rate(pulsar_rate_out{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))", "refId": "A" }
+      ],
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "Throughput In (bytes/s)",
+      "id": 4,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum(rate(pulsar_throughput_in{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))", "refId": "A" }
+      ],
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "Throughput Out (bytes/s)",
+      "id": 5,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum(rate(pulsar_throughput_out{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))", "refId": "A" }
+      ],
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "Topics",
+      "id": 6,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum(pulsar_topics_count{cluster=~\"$cluster\", namespace=~\"$namespace\"})", "refId": "A" }
+      ],
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 5 }
+    },
+    {
+      "type": "stat",
+      "title": "Subscriptions",
+      "id": 7,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum(pulsar_subscriptions_count{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"})", "refId": "A" }
+      ],
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 5 }
+    },
+    {
+      "type": "stat",
+      "title": "Producers",
+      "id": 8,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum(pulsar_producers_count{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"})", "refId": "A" }
+      ],
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 5 }
+    },
+    {
+      "type": "stat",
+      "title": "Consumers",
+      "id": 9,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum(pulsar_consumers_count{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"})", "refId": "A" }
+      ],
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 5 }
+    },
+
+    {
+      "type": "row",
+      "title": "Traffic and Throughput",
+      "id": 10,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Message Rate In/Out (msg/s)",
+      "id": 11,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum by (__name__) (rate(pulsar_rate_in{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))", "legendFormat": "rate_in", "refId": "A" },
+        { "expr": "sum by (__name__) (rate(pulsar_rate_out{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))", "legendFormat": "rate_out", "refId": "B" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Throughput In/Out (bytes/s)",
+      "id": 12,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum(rate(pulsar_throughput_in{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))", "legendFormat": "throughput_in", "refId": "A" },
+        { "expr": "sum(rate(pulsar_throughput_out{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))", "legendFormat": "throughput_out", "refId": "B" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 }
+    },
+
+    {
+      "type": "row",
+      "title": "Backlog and Subscriptions",
+      "id": 13,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Subscription Backlog (msgs)",
+      "id": 14,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum by (namespace, topic, subscription) (pulsar_subscription_backlog{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\", subscription=~\"$subscription\"})", "legendFormat": "{{namespace}}/{{topic}}/{{subscription}}", "refId": "A" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 }
+    },
+    {
+      "type": "bargauge",
+      "title": "Top Subscriptions by Backlog",
+      "id": 15,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "topk(10, sum by (subscription) (pulsar_subscription_backlog{cluster=~\"$cluster\", namespace=~\"$namespace\"}))", "refId": "A" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 }
+    },
+
+    {
+      "type": "row",
+      "title": "Topics",
+      "id": 16,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 }
+    },
+    {
+      "type": "bargauge",
+      "title": "Top 10 Topics by Msg Out (msg/s)",
+      "id": 17,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "topk(10, sum by (topic) (rate(pulsar_rate_out{cluster=~\"$cluster\", namespace=~\"$namespace\"}[5m])))", "refId": "A" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 }
+    },
+    {
+      "type": "bargauge",
+      "title": "Top 10 Topics by Throughput Out (bytes/s)",
+      "id": 18,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "topk(10, sum by (topic) (rate(pulsar_throughput_out{cluster=~\"$cluster\", namespace=~\"$namespace\"}[5m])))", "refId": "A" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 }
+    },
+
+    {
+      "type": "row",
+      "title": "Brokers",
+      "id": 19,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 36 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Active Connections by Broker",
+      "id": 20,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum by (instance) (pulsar_active_connections{cluster=~\"$cluster\", instance=~\"$broker\"})", "legendFormat": "{{instance}}", "refId": "A" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 37 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Broker Errors (rate)",
+      "id": 21,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum by (__name__) (rate({__name__=~\"pulsar_.*(error|exception|failed).*\", cluster=~\"$cluster\"}[5m]))", "legendFormat": "{{__name__}}", "refId": "A" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 37 }
+    },
+
+    {
+      "type": "row",
+      "title": "Latency (if histogram buckets are exposed)",
+      "id": 22,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 45 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Publish Latency P95/P99 (ms)",
+      "id": 23,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(pulsar_publish_latency_ms_bucket{cluster=~\"$cluster\"}[5m])))",
+          "legendFormat": "p95",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(pulsar_publish_latency_ms_bucket{cluster=~\"$cluster\"}[5m])))",
+          "legendFormat": "p99",
+          "refId": "B"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 46 }
+    },
+
+    {
+      "type": "row",
+      "title": "BookKeeper (Storage)",
+      "id": 24,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 54 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Add/Read Requests (req/s)",
+      "id": 25,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum(rate(bookkeeper_server_ADD_ENTRY_REQUESTS{cluster=~\"$cluster\"}[5m]))", "legendFormat": "add_entry", "refId": "A" },
+        { "expr": "sum(rate(bookkeeper_server_READ_ENTRY_REQUESTS{cluster=~\"$cluster\"}[5m]))", "legendFormat": "read_entry", "refId": "B" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 55 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Ledger Count and Disk Usage",
+      "id": 26,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum(bookkeeper_server_LEDGER_COUNT{cluster=~\"$cluster\"})", "legendFormat": "ledgers", "refId": "A" },
+        { "expr": "sum(bookkeeper_disk_used{cluster=~\"$cluster\"})", "legendFormat": "disk_used_bytes", "refId": "B" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 55 }
+    },
+
+    {
+      "type": "row",
+      "title": "Metric Explorer",
+      "id": 27,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 63 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Selected Metric: $metric",
+      "id": 28,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "sum by (__name__) ($metric{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\", subscription=~\"$subscription\"})", "legendFormat": "{{__name__}}", "refId": "A" }
+      ],
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 64 }
+    },
+    {
+      "type": "table",
+      "title": "All Pulsar Metrics Present (count by metric name)",
+      "id": 29,
+      "datasource": "$datasource",
+      "targets": [
+        { "expr": "count by (__name__) ({__name__=~\"pulsar_.*\"})", "refId": "A" }
+      ],
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 72 },
+      "options": { "showHeader": true }
+    }
+  ]
+}
