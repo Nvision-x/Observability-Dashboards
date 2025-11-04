@@ -791,7 +791,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "nats_jetstream_streams_total{server_id=~\"$server\"}",
+          "expr": "nats_streams_total{server_id=~\"$server\"}",
           "refId": "A"
         }
       ],
@@ -842,7 +842,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "nats_jetstream_consumers_total{server_id=~\"$server\"}",
+          "expr": "nats_consumers_total{server_id=~\"$server\"}",
           "refId": "A"
         }
       ],
@@ -893,7 +893,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "nats_jetstream_memory_used_bytes{server_id=~\"$server\"}",
+          "expr": "nats_memory_used_bytes{server_id=~\"$server\"}",
           "refId": "A"
         }
       ],
@@ -944,7 +944,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "nats_jetstream_storage_used_bytes{server_id=~\"$server\"}",
+          "expr": "nats_storage_used_bytes{server_id=~\"$server\"}",
           "refId": "A"
         }
       ],
@@ -1020,12 +1020,12 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "nats_jetstream_stream_total_messages{server_id=~\"$server\", stream_name=~\"$stream\"}",
+          "expr": "nats_stream_total_messages{server_id=~\"$server\", stream_name=~\"$stream\"}",
           "legendFormat": "Messages - {{stream_name}}",
           "refId": "A"
         },
         {
-          "expr": "nats_jetstream_stream_total_bytes{server_id=~\"$server\", stream_name=~\"$stream\"}",
+          "expr": "nats_stream_total_bytes{server_id=~\"$server\", stream_name=~\"$stream\"}",
           "legendFormat": "Bytes - {{stream_name}}",
           "refId": "B"
         }
@@ -1102,12 +1102,12 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "nats_jetstream_consumer_num_pending{server_id=~\"$server\", stream_name=~\"$stream\"}",
+          "expr": "nats_consumer_num_pending{server_id=~\"$server\", stream_name=~\"$stream\"}",
           "legendFormat": "Pending - {{stream_name}}/{{consumer_name}}",
           "refId": "A"
         },
         {
-          "expr": "nats_jetstream_consumer_num_ack_pending{server_id=~\"$server\", stream_name=~\"$stream\"}",
+          "expr": "nats_consumer_num_ack_pending{server_id=~\"$server\", stream_name=~\"$stream\"}",
           "legendFormat": "Ack Pending - {{stream_name}}/{{consumer_name}}",
           "refId": "B"
         }
@@ -1184,12 +1184,12 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "rate(nats_jetstream_consumer_delivered_consumer_seq{server_id=~\"$server\", stream_name=~\"$stream\"}[1m])",
+          "expr": "rate(nats_consumer_delivered_consumer_seq{server_id=~\"$server\", stream_name=~\"$stream\"}[1m])",
           "legendFormat": "Delivered - {{stream_name}}/{{consumer_name}}",
           "refId": "A"
         },
         {
-          "expr": "rate(nats_jetstream_consumer_num_redelivered{server_id=~\"$server\", stream_name=~\"$stream\"}[1m])",
+          "expr": "rate(nats_consumer_num_redelivered{server_id=~\"$server\", stream_name=~\"$stream\"}[1m])",
           "legendFormat": "Redelivered - {{stream_name}}/{{consumer_name}}",
           "refId": "B"
         }
@@ -1266,12 +1266,12 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "nats_jetstream_stream_first_seq{server_id=~\"$server\", stream_name=~\"$stream\"}",
+          "expr": "nats_stream_first_seq{server_id=~\"$server\", stream_name=~\"$stream\"}",
           "legendFormat": "First Seq - {{stream_name}}",
           "refId": "A"
         },
         {
-          "expr": "nats_jetstream_stream_last_seq{server_id=~\"$server\", stream_name=~\"$stream\"}",
+          "expr": "nats_stream_last_seq{server_id=~\"$server\", stream_name=~\"$stream\"}",
           "legendFormat": "Last Seq - {{stream_name}}",
           "refId": "B"
         }
@@ -1362,7 +1362,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "topk(10, sum by (subject) (rate(nats_jetstream_stream_subject_msgs{server_id=~\"$server\", stream_name=~\"$stream\"}[1m])))",
+          "expr": "topk(10, sum by (subject) (rate(nats_stream_subject_msgs{server_id=~\"$server\", stream_name=~\"$stream\"}[1m])))",
           "legendFormat": "{{subject}}",
           "refId": "A"
         }
@@ -1420,7 +1420,7 @@
         "allValue": ".*",
         "current": {},
         "datasource": "${datasource}",
-        "definition": "label_values(nats_jetstream_stream_total_messages, stream_name)",
+        "definition": "label_values(nats_stream_total_messages, stream_name)",
         "hide": 0,
         "includeAll": true,
         "label": "Stream",
@@ -1428,7 +1428,7 @@
         "name": "stream",
         "options": [],
         "query": {
-          "query": "label_values(nats_jetstream_stream_total_messages, stream_name)",
+          "query": "label_values(nats_stream_total_messages, stream_name)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
