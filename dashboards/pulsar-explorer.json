@@ -87,12 +87,12 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "sum(rate(pulsar_in_messages_total{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[1m]))",
+          "expr": "sum(rate(pulsar_in_messages_total{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[$__rate_interval]))",
           "legendFormat": "Messages In",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(pulsar_out_messages_total{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[1m]))",
+          "expr": "sum(rate(pulsar_out_messages_total{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[$__rate_interval]))",
           "legendFormat": "Messages Out",
           "refId": "B"
         }
@@ -169,12 +169,12 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "sum(rate(pulsar_in_bytes_total{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[1m]))",
+          "expr": "sum(rate(pulsar_in_bytes_total{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[$__rate_interval]))",
           "legendFormat": "Bytes In",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(pulsar_out_bytes_total{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[1m]))",
+          "expr": "sum(rate(pulsar_out_bytes_total{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[$__rate_interval]))",
           "legendFormat": "Bytes Out",
           "refId": "B"
         }
@@ -544,7 +544,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "sum by (subscription) (rate(pulsar_subscription_msg_rate_out{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[1m]))",
+          "expr": "sum by (subscription) (rate(pulsar_subscription_msg_rate_out{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[$__rate_interval]))",
           "legendFormat": "{{subscription}}",
           "refId": "A"
         }
@@ -621,17 +621,17 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(pulsar_producer_msg_rate_in_bucket{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[1m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(pulsar_producer_msg_rate_in_bucket{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[$__rate_interval])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(pulsar_producer_msg_rate_in_bucket{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[1m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(pulsar_producer_msg_rate_in_bucket{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[$__rate_interval])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(pulsar_producer_msg_rate_in_bucket{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[1m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(pulsar_producer_msg_rate_in_bucket{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[$__rate_interval])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -867,12 +867,12 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "sum(rate(pulsar_replication_rate_in{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[1m]))",
+          "expr": "sum(rate(pulsar_replication_rate_in{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[$__rate_interval]))",
           "legendFormat": "Replication In - {{remote_cluster}}",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(pulsar_replication_rate_out{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[1m]))",
+          "expr": "sum(rate(pulsar_replication_rate_out{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[$__rate_interval]))",
           "legendFormat": "Replication Out - {{remote_cluster}}",
           "refId": "B"
         }
