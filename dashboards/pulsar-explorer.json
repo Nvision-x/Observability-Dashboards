@@ -621,19 +621,9 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(pulsar_producer_msg_rate_in_bucket{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[$__rate_interval])) by (le))",
+          "expr": "sum(rate(pulsar_producer_msg_rate_in{cluster="$cluster", namespace="$namespace", topic="$topic"}[$__rate_interval]))",
           "legendFormat": "p50",
           "refId": "A"
-        },
-        {
-          "expr": "histogram_quantile(0.95, sum(rate(pulsar_producer_msg_rate_in_bucket{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[$__rate_interval])) by (le))",
-          "legendFormat": "p95",
-          "refId": "B"
-        },
-        {
-          "expr": "histogram_quantile(0.99, sum(rate(pulsar_producer_msg_rate_in_bucket{cluster=\"$cluster\", namespace=\"$namespace\", topic=\"$topic\"}[$__rate_interval])) by (le))",
-          "legendFormat": "p99",
-          "refId": "C"
         }
       ],
       "title": "Producer Latency Percentiles",
