@@ -1,0 +1,123 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "decimals": 1 },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [{ "expr": "app_cpu_usage_percent{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}", "legendFormat": "CPU Usage", "refId": "A" }],
+      "title": "App CPU Usage (%)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes", "decimals": 0 }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+      "id": 2,
+      "targets": [{ "expr": "app_ram_usage_bytes{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}", "legendFormat": "App RAM", "refId": "A" }],
+      "title": "App RAM Usage (bytes)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+      "id": 3,
+      "targets": [
+        { "expr": "process_resident_memory_bytes{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}", "legendFormat": "Resident", "refId": "A" },
+        { "expr": "process_virtual_memory_bytes{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}", "legendFormat": "Virtual", "refId": "B" }
+      ],
+      "title": "Process Memory Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 6 },
+      "id": 4,
+      "targets": [{ "expr": "rate(process_cpu_seconds_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])", "legendFormat": "CPU sec rate", "refId": "A" }],
+      "title": "Process CPU Usage (rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 6 },
+      "id": 5,
+      "targets": [{ "expr": "python_gc_objects_collected_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}", "legendFormat": "Gen {{generation}}", "refId": "A" }],
+      "title": "Python GC Objects Collected",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 6 },
+      "id": 6,
+      "targets": [{ "expr": "rate(python_gc_collections_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])", "legendFormat": "Gen {{generation}}", "refId": "A" }],
+      "title": "Python GC Collections (rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 12 },
+      "id": 7,
+      "targets": [
+        { "expr": "process_open_fds{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}", "legendFormat": "Open FDs", "refId": "A" },
+        { "expr": "process_max_fds{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}", "legendFormat": "Max FDs", "refId": "B" }
+      ],
+      "title": "File Descriptors",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 12 },
+      "id": 8,
+      "targets": [{ "expr": "rate(app_items_processed_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])", "legendFormat": "Items processed", "refId": "A" }],
+      "title": "Items Processed per Second",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 12 },
+      "id": 9,
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(enricher_ingestion_times_seconds_bucket{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])) by (le))", "legendFormat": "p95", "refId": "A" },
+        { "expr": "rate(enricher_ingestion_times_seconds_sum[5m]) / rate(enricher_ingestion_times_seconds_count{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])", "legendFormat": "avg", "refId": "B" }
+      ],
+      "title": "enricher Ingestion Time (avg / p95)",
+      "type": "timeseries"
+    }
+  ],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["nx-applications", "performance", "metrics", "sla", "git-sync"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "",
+  "folderUid": "1app-mtr-folder1",
+  "title": "Application - Enricher - Metrics 222",
+  "version": 1
+}
