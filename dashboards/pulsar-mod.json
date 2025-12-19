@@ -1,0 +1,514 @@
+{
+  "uid": "pulsar-mod",
+  "title": "Pulsar Mod",
+  "tags": ["git-sync", "pulsar", "prometheus", "messaging"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["5s","10s","30s","1m","5m","15m","30m","1h","2h","1d"]
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "refresh": 1,
+        "hide": 0
+      },
+      {
+        "name": "cluster",
+        "label": "Cluster",
+        "type": "query",
+        "hide": 0,
+        "datasource": "$datasource",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "definition": "label_values({__name__=~\"pulsar_.*\"}, cluster)"
+      },
+      {
+        "name": "namespace",
+        "label": "Namespace",
+        "type": "query",
+        "hide": 0,
+        "datasource": "$datasource",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "definition": "label_values({__name__=~\"pulsar_.*\", cluster=~\"$cluster\"}, namespace)"
+      },
+      {
+        "name": "topic",
+        "label": "Topic",
+        "type": "query",
+        "hide": 0,
+        "datasource": "$datasource",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "definition": "label_values({__name__=~\"pulsar_.*\", cluster=~\"$cluster\", namespace=~\"$namespace\"}, topic)"
+      },
+      {
+        "name": "subscription",
+        "label": "Subscription",
+        "type": "query",
+        "hide": 0,
+        "datasource": "$datasource",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "definition": "label_values({__name__=~\"pulsar_.*\", cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}, subscription)"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Pulsar Overview",
+      "id": 1,
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Total Topics",
+      "id": 2,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "sum(pulsar_topics_count{cluster=~\"$cluster\", namespace=~\"$namespace\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 50, "color": "yellow" },
+              { "value": 100, "color": "red" }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "Active Subscriptions",
+      "id": 3,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "sum(pulsar_subscriptions_count{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "blue" }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "Connected Producers",
+      "id": 4,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "sum(pulsar_producers_count{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "purple" }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "Connected Consumers",
+      "id": 5,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "sum(pulsar_consumers_count{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "orange" }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 }
+    },
+
+    {
+      "type": "row",
+      "title": "Message Rates",
+      "id": 10,
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }
+    },
+    {
+      "type": "stat",
+      "title": "Messages In Rate",
+      "id": 11,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "sum(rate(pulsar_rate_in{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "msg/s",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 6 }
+    },
+    {
+      "type": "stat",
+      "title": "Messages Out Rate",
+      "id": 12,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "sum(rate(pulsar_rate_out{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "msg/s",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "blue" }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 6 }
+    },
+    {
+      "type": "stat",
+      "title": "Throughput In",
+      "id": 13,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "sum(rate(pulsar_throughput_in{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 6 }
+    },
+    {
+      "type": "stat",
+      "title": "Throughput Out",
+      "id": 14,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "sum(rate(pulsar_throughput_out{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "blue" }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 6 }
+    },
+
+    {
+      "type": "row",
+      "title": "Message Traffic Over Time",
+      "id": 20,
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 10 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Message Rate In/Out",
+      "id": 21,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "sum(rate(pulsar_rate_in{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))",
+          "legendFormat": "Rate In",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(pulsar_rate_out{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))",
+          "legendFormat": "Rate Out",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "msg/s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10
+          }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 11 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Throughput In/Out",
+      "id": 22,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "sum(rate(pulsar_throughput_in{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))",
+          "legendFormat": "Throughput In",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(pulsar_throughput_out{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m]))",
+          "legendFormat": "Throughput Out",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10
+          }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 11 }
+    },
+
+    {
+      "type": "row",
+      "title": "Backlog Monitoring",
+      "id": 30,
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Subscription Backlog",
+      "id": 31,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "sum by (namespace, topic, subscription) (pulsar_subscription_backlog{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\", subscription=~\"$subscription\"})",
+          "legendFormat": "{{namespace}}/{{topic}}/{{subscription}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 0
+          }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 }
+    },
+    {
+      "type": "bargauge",
+      "title": "Top 10 Subscriptions by Backlog",
+      "id": 32,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "topk(10, sum by (subscription) (pulsar_subscription_backlog{cluster=~\"$cluster\", namespace=~\"$namespace\"}))",
+          "legendFormat": "{{subscription}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "palette-classic" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 1000, "color": "yellow" },
+              { "value": 10000, "color": "red" }
+            ]
+          }
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient"
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 }
+    },
+
+    {
+      "type": "row",
+      "title": "Storage and Performance",
+      "id": 40,
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Storage Size by Topic",
+      "id": 41,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "sum by (topic) (pulsar_storage_size{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"})",
+          "legendFormat": "{{topic}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 5
+          }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 29 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Publish Latency",
+      "id": 42,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(pulsar_publish_latency_bucket{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(pulsar_publish_latency_bucket{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"}[5m])) by (le))",
+          "legendFormat": "p99",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 29 }
+    },
+
+    {
+      "type": "row",
+      "title": "Topic Details",
+      "id": 50,
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 37 }
+    },
+    {
+      "type": "table",
+      "title": "Topic Statistics",
+      "id": 51,
+      "datasource": "$datasource",
+      "targets": [
+        {
+          "expr": "sum by (namespace, topic) (pulsar_topics_count{cluster=~\"$cluster\", namespace=~\"$namespace\", topic=~\"$topic\"})",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 38 }
+    }
+  ]
+}
