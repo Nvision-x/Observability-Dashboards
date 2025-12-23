@@ -96,7 +96,7 @@
       },
       "targets": [
         {
-          "expr": "",
+          "expr": "(count(up{job=\"archiver\", namespace=\"$namespace\"} == 1) > 0) * (rate(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\".*archiver.*\"}[5m]) < 0.01) * ((rate(log_messages_total{job=\"archiver\", namespace=\"$namespace\", level=\"error\"}[5m]) < 1) OR on() vector(1))",
           "refId": "A"
         }
       ],
@@ -166,7 +166,7 @@
       "transparent": false
     },
     {
-      "title": "Pods Running Total",
+      "title": "Pods Running",
       "type": "stat",
       "gridPos": {
         "h": 3,
@@ -176,7 +176,7 @@
       },
       "targets": [
         {
-          "expr": "",
+          "expr": "count(up{job=\"archiver\", namespace=\"$namespace\"} == 1)",
           "refId": "A"
         }
       ],
@@ -268,9 +268,9 @@
         "x": 14,
         "y": 1
       },
-      "targets": 
+      "targets": [
         {
-          "expr": "",
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\".*archiver.*\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -372,7 +372,7 @@
       },
       "targets": [
         {
-          "expr": "",
+          "expr": "min(prober_probe_success{job=\"archiver\", namespace=\"$namespace\", probe_type=\"liveness\"})",
           "refId": "A"
         }
       ],
@@ -545,7 +545,7 @@
       },
       "targets": [
         {
-          "expr": "",
+          "expr": "avg(time() - process_start_time_seconds{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"})",
           "refId": "A"
         }
       ],
@@ -1662,6 +1662,7 @@
       },
       "targets": [
         {
+          "expr": "sum(container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\"}) / 1024 / 1024",
           "expr": "sum(container_memory_working_set_bytes{pod=~\"applications-archiverv2.*\", container=\"archiverv2\", namespace=\"default\"}) / 1024 / 1024",
           "refId": "A"
         }
