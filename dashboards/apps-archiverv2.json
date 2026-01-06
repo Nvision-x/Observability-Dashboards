@@ -126,7 +126,7 @@
       "pluginVersion": "12.1.0",
       "targets": [
         {
-          "expr": "sum(kube_pod_status_ready{pod=~\"applications-archiverv2.*\", condition=\"true\"})",
+          "expr": "sum(kube_pod_status_ready{namespace=\"$namespace\", pod=~\"applications-archiverv2.*\", condition=\"true\"}) / sum(kube_deployment_spec_replicas{namespace=\"$namespace\", deployment=~\".*archiverv2.*\"})",
           "refId": "A"
         }
       ],
@@ -305,7 +305,7 @@
       "pluginVersion": "12.1.0",
       "targets": [
         {
-          "expr": "prometheus_sd_kubernetes_http_request_total{job=\"observability-kube-prometh-prometheus\", service=\"observability-kube-prometh-prometheus\"}",
+          "expr": "sum(rate(pulsar_consumer_msg_rate_out{namespace=\"$namespace\", subscription=~\".*archiverv2.*\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -2689,8 +2689,8 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "barWidthFactor": 0.6,
-            "drawStyle": "bars",
-            "fillOpacity": 50,
+            "drawStyle": "line",
+            "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -2699,12 +2699,12 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -2723,12 +2723,16 @@
                 "value": 0
               },
               {
+                "color": "yellow",
+                "value": 1
+              },
+              {
                 "color": "red",
-                "value": 80
+                "value": 3
               }
             ]
           },
-          "unit": "short"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -3328,8 +3332,8 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "barWidthFactor": 0.6,
-            "drawStyle": "bars",
-            "fillOpacity": 50,
+            "drawStyle": "line",
+            "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -3338,12 +3342,12 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "auto",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -3362,12 +3366,16 @@
                 "value": 0
               },
               {
-                "color": "red",
+                "color": "yellow",
                 "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
               }
             ]
           },
-          "unit": "short"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -3921,7 +3929,7 @@
         "includeAll": false,
         "name": "namespace",
         "options": [],
-        "query": "label_values(up{job=\"archiver\"}, namespace)",
+        "query": "label_values(kube_pod_info{pod=~\".*archiverv2.*\"}, namespace)",
         "refresh": 1,
         "regex": "",
         "type": "query"
@@ -3939,7 +3947,7 @@
         "multi": true,
         "name": "pod",
         "options": [],
-        "query": "label_values(up{job=\"archiver\", namespace=\"$namespace\"}, pod)",
+        "query": "label_values(kube_pod_info{namespace=\"$namespace\", pod=~\".*archiverv2.*\"}, pod)",
         "refresh": 1,
         "regex": "",
         "sort": 1,
