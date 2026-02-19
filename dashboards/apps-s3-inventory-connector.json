@@ -1,30 +1,51 @@
 {
-  "title": "S3 Inventory Connector Monitoring",
-  "tags": ["prometheus", "s3-inventory-connector", "kubernetes"],
+  "title": "S3 Inventory Connector - Monitoring",
+  "tags": ["prometheus", "s3-inventory-connector", "pulsar", "golang", "kubernetes"],
   "timezone": "browser",
   "schemaVersion": 38,
   "version": 1,
   "refresh": "30s",
   "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
   "panels": [
     {
       "id": 1,
       "type": "stat",
       "title": "Service Status",
       "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "up{job=\"default/applications-s3-inventory-connector\"}",
+          "expr": "up{job=~\".*applications-s3-inventory-connector.*\"}",
           "legendFormat": "{{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "refId": "A"
         }
       ],
       "options": {
@@ -43,21 +64,15 @@
             {
               "type": "value",
               "options": {
-                "0": {
-                  "text": "DOWN",
-                  "color": "red"
-                },
-                "1": {
-                  "text": "UP",
-                  "color": "green"
-                }
+                "0": {"text": "DOWN", "color": "red"},
+                "1": {"text": "UP", "color": "green"}
               }
             }
           ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {"value": 0, "color": "red"},
+              {"value": null, "color": "red"},
               {"value": 1, "color": "green"}
             ]
           }
@@ -69,19 +84,12 @@
       "type": "stat",
       "title": "Files Discovered",
       "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "s3_connector_files_discovered_total{job=\"default/applications-s3-inventory-connector\"}",
+          "expr": "s3_connector_files_discovered_total{job=~\".*applications-s3-inventory-connector.*\"}",
           "legendFormat": "{{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "refId": "A"
         }
       ],
       "options": {
@@ -98,10 +106,9 @@
         "defaults": {
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
-          }
+            "steps": [{"value": null, "color": "green"}]
+          },
+          "unit": "short"
         }
       }
     },
@@ -110,19 +117,12 @@
       "type": "stat",
       "title": "Files Processed",
       "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "s3_connector_files_processed_total{job=\"default/applications-s3-inventory-connector\"}",
+          "expr": "s3_connector_files_processed_total{job=~\".*applications-s3-inventory-connector.*\"}",
           "legendFormat": "{{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "refId": "A"
         }
       ],
       "options": {
@@ -139,10 +139,9 @@
         "defaults": {
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
-          }
+            "steps": [{"value": null, "color": "green"}]
+          },
+          "unit": "short"
         }
       }
     },
@@ -151,19 +150,12 @@
       "type": "stat",
       "title": "Pulsar Messages Sent",
       "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "s3_connector_pulsar_messages_sent_total{job=\"default/applications-s3-inventory-connector\"}",
+          "expr": "s3_connector_pulsar_messages_sent_total{job=~\".*applications-s3-inventory-connector.*\"}",
           "legendFormat": "{{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "refId": "A"
         }
       ],
       "options": {
@@ -180,40 +172,36 @@
         "defaults": {
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
-          }
+            "steps": [{"value": null, "color": "green"}]
+          },
+          "unit": "short"
         }
       }
     },
     {
       "id": 5,
       "type": "timeseries",
-      "title": "Files Discovered Rate",
-      "gridPos": {"x": 0, "y": 4, "w": 8, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "title": "File Processing Rate",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "rate(s3_connector_files_discovered_total{job=\"default/applications-s3-inventory-connector\"}[5m])",
-          "legendFormat": "{{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "expr": "rate(s3_connector_files_discovered_total{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
+          "legendFormat": "Discovered - {{pod}}",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(s3_connector_files_processed_total{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
+          "legendFormat": "Processed - {{pod}}",
+          "refId": "B"
         }
       ],
       "options": {
-        "tooltip": {
-          "mode": "single"
-        },
+        "tooltip": {"mode": "multi", "sort": "none"},
         "legend": {
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         }
       },
       "fieldConfig": {
@@ -222,68 +210,39 @@
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "barAlignment": 0,
             "lineWidth": 1,
             "fillOpacity": 10,
-            "gradientMode": "none",
+            "showPoints": "never",
             "spanNulls": false,
-            "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
           },
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
+            "steps": [{"value": null, "color": "green"}]
           }
-        },
-        "overrides": []
+        }
       }
     },
     {
       "id": 6,
       "type": "timeseries",
-      "title": "Files Processed Rate",
-      "gridPos": {"x": 8, "y": 4, "w": 8, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "title": "Pulsar Message Rate",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "rate(s3_connector_files_processed_total{job=\"default/applications-s3-inventory-connector\"}[5m])",
-          "legendFormat": "{{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "expr": "rate(s3_connector_pulsar_messages_sent_total{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
+          "legendFormat": "Messages/sec - {{pod}}",
+          "refId": "A"
         }
       ],
       "options": {
-        "tooltip": {
-          "mode": "single"
-        },
+        "tooltip": {"mode": "multi", "sort": "none"},
         "legend": {
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         }
       },
       "fieldConfig": {
@@ -292,138 +251,50 @@
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "barAlignment": 0,
             "lineWidth": 1,
             "fillOpacity": 10,
-            "gradientMode": "none",
+            "showPoints": "never",
             "spanNulls": false,
-            "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
           },
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
+            "steps": [{"value": null, "color": "green"}]
           }
-        },
-        "overrides": []
+        }
       }
     },
     {
       "id": 7,
       "type": "timeseries",
-      "title": "Pulsar Messages Sent Rate",
-      "gridPos": {"x": 16, "y": 4, "w": 8, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "rate(s3_connector_pulsar_messages_sent_total{job=\"default/applications-s3-inventory-connector\"}[5m])",
-          "legendFormat": "{{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ],
-      "options": {
-        "tooltip": {
-          "mode": "single"
-        },
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "barAlignment": 0,
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "spanNulls": false,
-            "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "id": 8,
-      "type": "timeseries",
-      "title": "S3 Scan Duration (p95)",
+      "title": "S3 Scan Duration (Percentiles)",
       "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, rate(s3_connector_scan_duration_seconds_bucket{job=\"default/applications-s3-inventory-connector\"}[5m]))",
-          "legendFormat": "{{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "expr": "histogram_quantile(0.50, rate(s3_connector_scan_duration_seconds_bucket{job=~\".*applications-s3-inventory-connector.*\"}[5m]))",
+          "legendFormat": "p50 - {{pod}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(s3_connector_scan_duration_seconds_bucket{job=~\".*applications-s3-inventory-connector.*\"}[5m]))",
+          "legendFormat": "p95 - {{pod}}",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(s3_connector_scan_duration_seconds_bucket{job=~\".*applications-s3-inventory-connector.*\"}[5m]))",
+          "legendFormat": "p99 - {{pod}}",
+          "refId": "C"
         }
       ],
       "options": {
-        "tooltip": {
-          "mode": "single"
-        },
+        "tooltip": {"mode": "multi", "sort": "none"},
         "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["mean", "max"]
         }
       },
       "fieldConfig": {
@@ -432,304 +303,39 @@
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "barAlignment": 0,
             "lineWidth": 1,
             "fillOpacity": 10,
-            "gradientMode": "none",
+            "showPoints": "never",
             "spanNulls": false,
-            "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
           },
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
+            "steps": [{"value": null, "color": "green"}]
           }
-        },
-        "overrides": []
+        }
       }
     },
     {
-      "id": 9,
-      "type": "timeseries",
-      "title": "Go Goroutines",
-      "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "go_goroutines{job=\"default/applications-s3-inventory-connector\"}",
-          "legendFormat": "{{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ],
-      "options": {
-        "tooltip": {
-          "mode": "single"
-        },
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "barAlignment": 0,
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "spanNulls": false,
-            "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "id": 10,
-      "type": "timeseries",
-      "title": "Go Heap Memory",
-      "gridPos": {"x": 0, "y": 20, "w": 12, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "go_memstats_heap_alloc_bytes{job=\"default/applications-s3-inventory-connector\"}",
-          "legendFormat": "Heap Alloc - {{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        },
-        {
-          "expr": "go_memstats_heap_inuse_bytes{job=\"default/applications-s3-inventory-connector\"}",
-          "legendFormat": "Heap In Use - {{pod}}",
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        },
-        {
-          "expr": "go_memstats_heap_sys_bytes{job=\"default/applications-s3-inventory-connector\"}",
-          "legendFormat": "Heap Sys - {{pod}}",
-          "refId": "C",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ],
-      "options": {
-        "tooltip": {
-          "mode": "single"
-        },
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "barAlignment": 0,
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "spanNulls": false,
-            "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "id": 11,
-      "type": "timeseries",
-      "title": "Process Memory",
-      "gridPos": {"x": 12, "y": 20, "w": 12, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "process_resident_memory_bytes{job=\"default/applications-s3-inventory-connector\"}",
-          "legendFormat": "RSS - {{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        },
-        {
-          "expr": "process_virtual_memory_bytes{job=\"default/applications-s3-inventory-connector\"}",
-          "legendFormat": "Virtual - {{pod}}",
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
-        }
-      ],
-      "options": {
-        "tooltip": {
-          "mode": "single"
-        },
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "barAlignment": 0,
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "spanNulls": false,
-            "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "id": 12,
+      "id": 8,
       "type": "timeseries",
       "title": "Process CPU Usage",
-      "gridPos": {"x": 0, "y": 28, "w": 12, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{job=\"default/applications-s3-inventory-connector\"}[5m])",
+          "expr": "rate(process_cpu_seconds_total{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
           "legendFormat": "{{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "refId": "A"
         }
       ],
       "options": {
-        "tooltip": {
-          "mode": "single"
-        },
+        "tooltip": {"mode": "multi", "sort": "none"},
         "legend": {
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         }
       },
       "fieldConfig": {
@@ -738,68 +344,226 @@
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "barAlignment": 0,
             "lineWidth": 1,
             "fillOpacity": 10,
-            "gradientMode": "none",
-            "spanNulls": false,
             "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "spanNulls": false,
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
           },
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
+            "steps": [{"value": null, "color": "green"}]
           }
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Go Heap Memory",
+      "gridPos": {"x": 0, "y": 20, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "go_memstats_heap_alloc_bytes{job=~\".*applications-s3-inventory-connector.*\"}",
+          "legendFormat": "Heap Alloc - {{pod}}",
+          "refId": "A"
         },
-        "overrides": []
+        {
+          "expr": "go_memstats_heap_inuse_bytes{job=~\".*applications-s3-inventory-connector.*\"}",
+          "legendFormat": "Heap In Use - {{pod}}",
+          "refId": "B"
+        },
+        {
+          "expr": "go_memstats_heap_sys_bytes{job=~\".*applications-s3-inventory-connector.*\"}",
+          "legendFormat": "Heap Sys - {{pod}}",
+          "refId": "C"
+        }
+      ],
+      "options": {
+        "tooltip": {"mode": "multi", "sort": "none"},
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["mean", "lastNotNull"]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"value": null, "color": "green"}]
+          }
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Process Memory (RSS & Virtual)",
+      "gridPos": {"x": 12, "y": 20, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes{job=~\".*applications-s3-inventory-connector.*\"}",
+          "legendFormat": "RSS - {{pod}}",
+          "refId": "A"
+        },
+        {
+          "expr": "process_virtual_memory_bytes{job=~\".*applications-s3-inventory-connector.*\"}",
+          "legendFormat": "Virtual - {{pod}}",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "tooltip": {"mode": "multi", "sort": "none"},
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["mean", "lastNotNull"]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"value": null, "color": "green"}]
+          }
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Goroutines & Threads",
+      "gridPos": {"x": 0, "y": 28, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "go_goroutines{job=~\".*applications-s3-inventory-connector.*\"}",
+          "legendFormat": "Goroutines - {{pod}}",
+          "refId": "A"
+        },
+        {
+          "expr": "go_threads{job=~\".*applications-s3-inventory-connector.*\"}",
+          "legendFormat": "Threads - {{pod}}",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "tooltip": {"mode": "multi", "sort": "none"},
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["lastNotNull"]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"value": null, "color": "green"}]
+          }
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Go GC Duration",
+      "gridPos": {"x": 12, "y": 28, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "rate(go_gc_duration_seconds_sum{job=~\".*applications-s3-inventory-connector.*\"}[5m]) / rate(go_gc_duration_seconds_count{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {"mode": "multi", "sort": "none"},
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"value": null, "color": "green"}]
+          }
+        }
       }
     },
     {
       "id": 13,
       "type": "timeseries",
-      "title": "Pulsar Client - Messages Published Rate",
-      "gridPos": {"x": 12, "y": 28, "w": 12, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "title": "Pulsar Messages Published Rate",
+      "gridPos": {"x": 0, "y": 36, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "rate(pulsar_client_messages_published{job=\"default/applications-s3-inventory-connector\"}[5m])",
+          "expr": "rate(pulsar_client_messages_published{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
           "legendFormat": "{{pulsar_namespace}} - {{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "refId": "A"
         }
       ],
       "options": {
-        "tooltip": {
-          "mode": "single"
-        },
+        "tooltip": {"mode": "multi", "sort": "none"},
         "legend": {
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         }
       },
       "fieldConfig": {
@@ -808,68 +572,39 @@
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "barAlignment": 0,
             "lineWidth": 1,
             "fillOpacity": 10,
-            "gradientMode": "none",
-            "spanNulls": false,
             "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "spanNulls": false,
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
           },
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
+            "steps": [{"value": null, "color": "green"}]
           }
-        },
-        "overrides": []
+        }
       }
     },
     {
       "id": 14,
       "type": "timeseries",
-      "title": "Pulsar Client - Messages Received Rate",
-      "gridPos": {"x": 0, "y": 36, "w": 12, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "title": "Pulsar Messages Received Rate",
+      "gridPos": {"x": 12, "y": 36, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "rate(pulsar_client_messages_received{job=\"default/applications-s3-inventory-connector\"}[5m])",
+          "expr": "rate(pulsar_client_messages_received{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
           "legendFormat": "{{pulsar_namespace}} - {{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "refId": "A"
         }
       ],
       "options": {
-        "tooltip": {
-          "mode": "single"
-        },
+        "tooltip": {"mode": "multi", "sort": "none"},
         "legend": {
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         }
       },
       "fieldConfig": {
@@ -878,68 +613,39 @@
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "barAlignment": 0,
             "lineWidth": 1,
             "fillOpacity": 10,
-            "gradientMode": "none",
-            "spanNulls": false,
             "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "spanNulls": false,
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
           },
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
+            "steps": [{"value": null, "color": "green"}]
           }
-        },
-        "overrides": []
+        }
       }
     },
     {
       "id": 15,
       "type": "timeseries",
       "title": "Pulsar Producer Latency (p95)",
-      "gridPos": {"x": 12, "y": 36, "w": 12, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": {"x": 0, "y": 44, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, rate(pulsar_client_producer_latency_seconds_bucket{job=\"default/applications-s3-inventory-connector\"}[5m]))",
+          "expr": "histogram_quantile(0.95, rate(pulsar_client_producer_latency_seconds_bucket{job=~\".*applications-s3-inventory-connector.*\"}[5m]))",
           "legendFormat": "{{pulsar_namespace}} - {{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "refId": "A"
         }
       ],
       "options": {
-        "tooltip": {
-          "mode": "single"
-        },
+        "tooltip": {"mode": "multi", "sort": "none"},
         "legend": {
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         }
       },
       "fieldConfig": {
@@ -948,68 +654,39 @@
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "barAlignment": 0,
             "lineWidth": 1,
             "fillOpacity": 10,
-            "gradientMode": "none",
-            "spanNulls": false,
             "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "spanNulls": false,
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
           },
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
+            "steps": [{"value": null, "color": "green"}]
           }
-        },
-        "overrides": []
+        }
       }
     },
     {
       "id": 16,
       "type": "timeseries",
       "title": "Pulsar Consumer Processing Time (p95)",
-      "gridPos": {"x": 0, "y": 44, "w": 12, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": {"x": 12, "y": 44, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, rate(pulsar_client_consumer_processing_time_seconds_bucket{job=\"default/applications-s3-inventory-connector\"}[5m]))",
+          "expr": "histogram_quantile(0.95, rate(pulsar_client_consumer_processing_time_seconds_bucket{job=~\".*applications-s3-inventory-connector.*\"}[5m]))",
           "legendFormat": "{{pulsar_namespace}} - {{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "refId": "A"
         }
       ],
       "options": {
-        "tooltip": {
-          "mode": "single"
-        },
+        "tooltip": {"mode": "multi", "sort": "none"},
         "legend": {
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         }
       },
       "fieldConfig": {
@@ -1018,234 +695,159 @@
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "barAlignment": 0,
             "lineWidth": 1,
             "fillOpacity": 10,
-            "gradientMode": "none",
-            "spanNulls": false,
             "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "spanNulls": false,
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
           },
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
+            "steps": [{"value": null, "color": "green"}]
           }
-        },
-        "overrides": []
+        }
       }
     },
     {
       "id": 17,
       "type": "timeseries",
       "title": "Pulsar Connections",
-      "gridPos": {"x": 12, "y": 44, "w": 12, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": {"x": 0, "y": 52, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "pulsar_client_connections_opened{job=\"default/applications-s3-inventory-connector\"}",
+          "expr": "pulsar_client_connections_opened{job=~\".*applications-s3-inventory-connector.*\"}",
           "legendFormat": "Opened - {{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "refId": "A"
         },
         {
-          "expr": "pulsar_client_connections_closed{job=\"default/applications-s3-inventory-connector\"}",
+          "expr": "pulsar_client_connections_closed{job=~\".*applications-s3-inventory-connector.*\"}",
           "legendFormat": "Closed - {{pod}}",
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "refId": "B"
         },
         {
-          "expr": "pulsar_client_connections_establishment_errors{job=\"default/applications-s3-inventory-connector\"}",
-          "legendFormat": "Errors - {{pod}}",
-          "refId": "C",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "expr": "pulsar_client_connections_establishment_errors{job=~\".*applications-s3-inventory-connector.*\"}",
+          "legendFormat": "Establishment Errors - {{pod}}",
+          "refId": "C"
+        },
+        {
+          "expr": "pulsar_client_connections_handshake_errors{job=~\".*applications-s3-inventory-connector.*\"}",
+          "legendFormat": "Handshake Errors - {{pod}}",
+          "refId": "D"
         }
       ],
       "options": {
-        "tooltip": {
-          "mode": "single"
-        },
+        "tooltip": {"mode": "multi", "sort": "none"},
         "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["lastNotNull"]
         }
       },
       "fieldConfig": {
         "defaults": {
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "barAlignment": 0,
             "lineWidth": 1,
             "fillOpacity": 10,
-            "gradientMode": "none",
+            "showPoints": "never",
             "spanNulls": false,
-            "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
           },
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
+            "steps": [{"value": null, "color": "green"}]
           }
-        },
-        "overrides": []
+        }
       }
     },
     {
       "id": 18,
       "type": "timeseries",
-      "title": "Go GC Duration",
-      "gridPos": {"x": 0, "y": 52, "w": 12, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "title": "Pulsar Producers & Consumers",
+      "gridPos": {"x": 12, "y": 52, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "rate(go_gc_duration_seconds_sum{job=\"default/applications-s3-inventory-connector\"}[5m]) / rate(go_gc_duration_seconds_count{job=\"default/applications-s3-inventory-connector\"}[5m])",
-          "legendFormat": "{{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "expr": "pulsar_client_consumers_opened{job=~\".*applications-s3-inventory-connector.*\"}",
+          "legendFormat": "Consumers Opened - {{pod}}",
+          "refId": "A"
+        },
+        {
+          "expr": "pulsar_client_producers_opened{job=~\".*applications-s3-inventory-connector.*\"}",
+          "legendFormat": "Producers Opened - {{pod}}",
+          "refId": "B"
+        },
+        {
+          "expr": "pulsar_client_consumers_partitions_active{job=~\".*applications-s3-inventory-connector.*\"}",
+          "legendFormat": "Consumer Partitions Active - {{pod}}",
+          "refId": "C"
+        },
+        {
+          "expr": "pulsar_client_producers_partitions_active{job=~\".*applications-s3-inventory-connector.*\"}",
+          "legendFormat": "Producer Partitions Active - {{pod}}",
+          "refId": "D"
         }
       ],
       "options": {
-        "tooltip": {
-          "mode": "single"
-        },
+        "tooltip": {"mode": "multi", "sort": "none"},
         "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["lastNotNull"]
         }
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "barAlignment": 0,
             "lineWidth": 1,
             "fillOpacity": 10,
-            "gradientMode": "none",
+            "showPoints": "never",
             "spanNulls": false,
-            "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
           },
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
+            "steps": [{"value": null, "color": "green"}]
           }
-        },
-        "overrides": []
+        }
       }
     },
     {
       "id": 19,
       "type": "timeseries",
       "title": "Network I/O",
-      "gridPos": {"x": 12, "y": 52, "w": 12, "h": 8},
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "gridPos": {"x": 0, "y": 60, "w": 24, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "targets": [
         {
-          "expr": "rate(process_network_transmit_bytes_total{job=\"default/applications-s3-inventory-connector\"}[5m])",
-          "legendFormat": "TX - {{pod}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "expr": "rate(process_network_receive_bytes_total{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
+          "legendFormat": "RX - {{pod}}",
+          "refId": "A"
         },
         {
-          "expr": "rate(process_network_receive_bytes_total{job=\"default/applications-s3-inventory-connector\"}[5m])",
-          "legendFormat": "RX - {{pod}}",
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          }
+          "expr": "rate(process_network_transmit_bytes_total{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
+          "legendFormat": "TX - {{pod}}",
+          "refId": "B"
         }
       ],
       "options": {
-        "tooltip": {
-          "mode": "single"
-        },
+        "tooltip": {"mode": "multi", "sort": "none"},
         "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["mean", "lastNotNull"]
         }
       },
       "fieldConfig": {
@@ -1254,40 +856,21 @@
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
-            "barAlignment": 0,
             "lineWidth": 1,
             "fillOpacity": 10,
-            "gradientMode": "none",
+            "showPoints": "never",
             "spanNulls": false,
-            "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "stacking": {"mode": "none", "group": "A"},
+            "axisPlacement": "auto"
           },
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "green"}
-            ]
+            "steps": [{"value": null, "color": "green"}]
           }
-        },
-        "overrides": []
+        }
       }
     }
-  ]
+  ],
+  "uid": "s3-inventory-connector-complete",
+  "weekStart": ""
 }
