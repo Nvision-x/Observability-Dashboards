@@ -2,42 +2,12 @@ name: Release
 
 on:
   push:
-    branches: [ main, master ]
-  workflow_dispatch:
+    branches:
+      - main
 
 permissions:
   contents: write
-  packages: write
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Generate CalVer Tag
-        id: calver
-        uses: Nvision-x/gh-actions-calver@v2025.09.29-1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          prefix: "v"
-          use-sequence: true
-
-      - name: Create GitHub Release
-        if: steps.calver.outputs.create_release == 'true'
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.calver.outputs.tag }}
-          name: Release ${{ steps.calver.outputs.tag }}
-          generate_release_notes: true
-          files: |
-            dashboards/*.json
-            alerts/*.json
-            datasources/*.json
-            folders/*.json
-            README.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    uses: Nvision-x/shared-workflows/.github/workflows/calver-release.yml@main
