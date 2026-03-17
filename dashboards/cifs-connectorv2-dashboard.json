@@ -582,11 +582,11 @@
           "sort": "desc"
         }
       },
-      "title": "SMB Pool Wait (p99)",
+      "title": "Work Channel Submit Wait (p99)",
       "type": "timeseries",
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum by (le, job)(rate(cifs_connector_smb_pool_wait_duration_seconds_bucket{job=\"$job\", datasource_id=~\"$datasource_id\"}[1m])))",
+          "expr": "histogram_quantile(0.99, sum by (le, job)(rate(cifs_connector_work_channel_submit_wait_seconds_bucket{job=\"$job\", datasource_id=~\"$datasource_id\"}[1m])))",
           "legendFormat": "p99 wait",
           "refId": "A"
         }
@@ -628,17 +628,17 @@
           "sort": "desc"
         }
       },
-      "title": "Worker Throughput & Active",
+      "title": "ACL Query Duration & Workers Busy",
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (job)(rate(cifs_connector_worker_invocations_total{job=\"$job\", datasource_id=~\"$datasource_id\"}[1m]))",
-          "legendFormat": "{{job}} invocations/s",
+          "expr": "histogram_quantile(0.99, sum by (le, job)(rate(cifs_connector_acl_query_duration_seconds_bucket{job=\"$job\", datasource_id=~\"$datasource_id\"}[1m])))",
+          "legendFormat": "{{job}} ACL p99",
           "refId": "A"
         },
         {
-          "expr": "sum by (job)(cifs_connector_active_workers{job=\"$job\", datasource_id=~\"$datasource_id\"})",
-          "legendFormat": "{{job}} active (gauge)",
+          "expr": "sum by (job)(cifs_connector_worker_busy{job=\"$job\", datasource_id=~\"$datasource_id\"})",
+          "legendFormat": "{{job}} busy (gauge)",
           "refId": "B"
         }
       ]
@@ -679,11 +679,11 @@
           "sort": "desc"
         }
       },
-      "title": "Metadata Queue Depth",
+      "title": "Work Channel Depth",
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (job)(cifs_connector_metadata_queue_depth{job=\"$job\", datasource_id=~\"$datasource_id\"})",
+          "expr": "sum by (job)(cifs_connector_work_channel_depth{job=\"$job\", datasource_id=~\"$datasource_id\"})",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
@@ -1398,7 +1398,7 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "definition": "label_values(cifs_connector_active_workers{job=\"$job\"}, datasource_id)",
+        "definition": "label_values(cifs_connector_worker_busy{job=\"$job\"}, datasource_id)",
         "hide": 0,
         "includeAll": true,
         "multi": true,
@@ -1406,7 +1406,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values(cifs_connector_active_workers{job=\"$job\"}, datasource_id)"
+          "query": "label_values(cifs_connector_worker_busy{job=\"$job\"}, datasource_id)"
         },
         "refresh": 2,
         "type": "query"
