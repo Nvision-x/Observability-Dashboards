@@ -59,7 +59,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 5,
+        "w": 4,
         "x": 0,
         "y": 1
       },
@@ -113,8 +113,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 5,
-        "x": 5,
+        "w": 4,
+        "x": 4,
         "y": 1
       },
       "id": 3,
@@ -167,8 +167,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 5,
-        "x": 10,
+        "w": 4,
+        "x": 8,
         "y": 1
       },
       "id": 4,
@@ -221,8 +221,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 5,
-        "x": 15,
+        "w": 4,
+        "x": 12,
         "y": 1
       },
       "id": 5,
@@ -240,11 +240,69 @@
         },
         "textMode": "auto"
       },
-      "title": "Forks Sent",
+      "title": "Dirs Forked",
       "type": "stat",
       "targets": [
         {
-          "expr": "sum by (job)(cifs_connector_forks_sent_total{job=\"$job\"})",
+          "expr": "sum by (job)(cifs_connector_directories_forked_total{job=\"$job\"})",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 30,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "title": "Dirs Local",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum by (job)(cifs_connector_directories_local_total{job=\"$job\"})",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
@@ -410,7 +468,7 @@
           "sort": "desc"
         }
       },
-      "title": "Items & Forks Sent Rate",
+      "title": "Items & Dirs Forked Rate",
       "type": "timeseries",
       "targets": [
         {
@@ -419,8 +477,8 @@
           "refId": "A"
         },
         {
-          "expr": "sum by (job)(rate(cifs_connector_forks_sent_total{job=\"$job\"}[1m]))",
-          "legendFormat": "{{job}} forks",
+          "expr": "sum by (job)(rate(cifs_connector_directories_forked_total{job=\"$job\"}[1m]))",
+          "legendFormat": "{{job}} dirs forked",
           "refId": "B"
         }
       ]
@@ -791,12 +849,249 @@
       ]
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 32
+      },
+      "id": 31,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "title": "Local Stack Depth",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (job)(cifs_connector_local_stack_depth{job=\"$job\"})",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 40
+      },
+      "id": 32,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "title": "SMB Pool Size",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (job, datasource_id)(cifs_connector_smb_pool_size{job=\"$job\", datasource_id=~\"$datasource_id\"})",
+          "legendFormat": "{{datasource_id}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "auto"
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 40
+      },
+      "id": 33,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "title": "Result Collect Wait (p99)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum by (le, job)(rate(cifs_connector_result_collect_wait_seconds_bucket{job=\"$job\", datasource_id=~\"$datasource_id\"}[1m])))",
+          "legendFormat": "p99 wait",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "auto"
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 40
+      },
+      "id": 34,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "title": "Worker Connect Errors & Reconnects",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (job)(rate(cifs_connector_worker_connect_errors_total{job=\"$job\", datasource_id=~\"$datasource_id\"}[1m]))",
+          "legendFormat": "{{job}} connect errors",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (job)(rate(cifs_connector_worker_reconnects_total{job=\"$job\", datasource_id=~\"$datasource_id\"}[1m]))",
+          "legendFormat": "{{job}} reconnects",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 48
+      },
+      "id": 35,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "title": "Avg Files Per Directory",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (job)(rate(cifs_connector_files_per_scan_sum{job=\"$job\", datasource_id=~\"$datasource_id\"}[1m])) / sum by (job)(rate(cifs_connector_files_per_scan_count{job=\"$job\", datasource_id=~\"$datasource_id\"}[1m]))",
+          "legendFormat": "{{job}} avg",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 56
       },
       "id": 19,
       "title": "Per-Pod Detail",
@@ -1014,13 +1309,13 @@
             },
             "textMode": "auto"
           },
-          "title": "Forks Sent",
+          "title": "Dirs Forked",
           "type": "stat",
           "repeat": "instance",
           "repeatDirection": "h",
           "targets": [
             {
-              "expr": "cifs_connector_forks_sent_total{job=\"$job\", instance=~\"$instance\"}",
+              "expr": "cifs_connector_directories_forked_total{job=\"$job\", instance=~\"$instance\"}",
               "legendFormat": "{{instance}}",
               "refId": "A"
             }
@@ -1175,7 +1470,7 @@
               "sort": "desc"
             }
           },
-          "title": "Items & Forks Rate (per instance)",
+          "title": "Items & Dirs Forked Rate (per instance)",
           "type": "timeseries",
           "targets": [
             {
@@ -1184,8 +1479,8 @@
               "refId": "A"
             },
             {
-              "expr": "rate(cifs_connector_forks_sent_total{job=\"$job\", instance=~\"$instance\"}[1m])",
-              "legendFormat": "{{instance}} forks",
+              "expr": "rate(cifs_connector_directories_forked_total{job=\"$job\", instance=~\"$instance\"}[1m])",
+              "legendFormat": "{{instance}} dirs forked",
               "refId": "B"
             }
           ]
