@@ -1,1228 +1,178 @@
 {
-  "title": "S3 Inventory Connector - Monitoring",
-  "tags": ["prometheus", "s3-inventory-connector", "pulsar", "golang", "kubernetes"],
-  "timezone": "browser",
-  "schemaVersion": 38,
-  "version": 1,
-  "refresh": "30s",
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
   "id": null,
-  "links": [],
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
-  },
-  "templating": {
-    "list": []
-  },
+  "uid": "s3-parquet-processing",
+  "title": "S3 Parquet Processing - Metrics",
+  "tags": ["s3", "parquet", "nats", "metrics", "git-sync"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5m",
   "time": {
-    "from": "now-1h",
+    "from": "now-6h",
     "to": "now"
   },
-  "timepicker": {},
   "panels": [
     {
       "id": 1,
+      "title": "Files Processed Total",
       "type": "stat",
-      "title": "Service Status",
-      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
       "targets": [
-        {
-          "expr": "up{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "{{pod}}",
-          "refId": "A"
-        }
+        { "expr": "sum(s3_parquet_files_processed_total)", "legendFormat": "Files Processed", "refId": "A" }
       ],
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"]
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "none"
-      },
       "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {"text": "DOWN", "color": "red"},
-                "1": {"text": "UP", "color": "green"}
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {"value": null, "color": "red"},
-              {"value": 1, "color": "green"}
-            ]
-          }
-        }
+        "defaults": { "unit": "short", "decimals": 0 }
       }
     },
     {
       "id": 2,
+      "title": "Rows Processed Total",
       "type": "stat",
-      "title": "Files Discovered",
-      "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
       "targets": [
-        {
-          "expr": "s3_connector_files_discovered_total{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "{{pod}}",
-          "refId": "A"
-        }
+        { "expr": "sum(s3_parquet_rows_processed_total)", "legendFormat": "Rows Processed", "refId": "A" }
       ],
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"]
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area"
-      },
       "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          },
-          "unit": "short"
-        }
+        "defaults": { "unit": "short", "decimals": 0 }
       }
     },
     {
       "id": 3,
+      "title": "Rows Latest Total",
       "type": "stat",
-      "title": "Files Processed",
-      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
       "targets": [
-        {
-          "expr": "s3_connector_files_processed_total{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "{{pod}}",
-          "refId": "A"
-        }
+        { "expr": "sum(s3_parquet_rows_latest_total)", "legendFormat": "Rows Latest", "refId": "A" }
       ],
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"]
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area"
-      },
       "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          },
-          "unit": "short"
-        }
+        "defaults": { "unit": "short", "decimals": 0 }
       }
     },
     {
       "id": 4,
+      "title": "Rows Marked Deleted Total",
       "type": "stat",
-      "title": "Pulsar Messages Sent",
-      "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
       "targets": [
-        {
-          "expr": "s3_connector_pulsar_messages_sent_total{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "{{pod}}",
-          "refId": "A"
-        }
+        { "expr": "sum(s3_parquet_rows_marked_deleted_total)", "legendFormat": "Rows Deleted", "refId": "A" }
       ],
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"]
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area"
-      },
       "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          },
-          "unit": "short"
-        }
+        "defaults": { "unit": "short", "decimals": 0 }
       }
     },
     {
       "id": 5,
-      "type": "timeseries",
-      "title": "File Processing Rate",
-      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "title": "Rows Not Latest Total",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 6 },
       "targets": [
-        {
-          "expr": "rate(s3_connector_files_discovered_total{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
-          "legendFormat": "Discovered - {{pod}}",
-          "refId": "A"
-        },
-        {
-          "expr": "rate(s3_connector_files_processed_total{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
-          "legendFormat": "Processed - {{pod}}",
-          "refId": "B"
-        }
+        { "expr": "sum(s3_parquet_rows_not_latest)", "legendFormat": "Rows Not Latest", "refId": "A" }
       ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      },
       "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
+        "defaults": { "unit": "short", "decimals": 0 }
       }
     },
     {
       "id": 6,
-      "type": "timeseries",
-      "title": "Pulsar Message Rate",
-      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "title": "Batches Sent to NATS",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 6 },
       "targets": [
-        {
-          "expr": "rate(s3_connector_pulsar_messages_sent_total{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
-          "legendFormat": "Messages/sec - {{pod}}",
-          "refId": "A"
-        }
+        { "expr": "sum(s3_parquet_batches_sent_to_nats)", "legendFormat": "Batches Sent", "refId": "A" }
       ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      },
       "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
+        "defaults": { "unit": "short", "decimals": 0 }
       }
     },
     {
       "id": 7,
-      "type": "timeseries",
-      "title": "S3 Scan Duration (Percentiles)",
-      "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "title": "Items Sent to NATS",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 6 },
       "targets": [
-        {
-          "expr": "histogram_quantile(0.50, rate(s3_connector_scan_duration_seconds_bucket{job=~\".*applications-s3-inventory-connector.*\"}[5m]))",
-          "legendFormat": "p50 - {{pod}}",
-          "refId": "A"
-        },
-        {
-          "expr": "histogram_quantile(0.95, rate(s3_connector_scan_duration_seconds_bucket{job=~\".*applications-s3-inventory-connector.*\"}[5m]))",
-          "legendFormat": "p95 - {{pod}}",
-          "refId": "B"
-        },
-        {
-          "expr": "histogram_quantile(0.99, rate(s3_connector_scan_duration_seconds_bucket{job=~\".*applications-s3-inventory-connector.*\"}[5m]))",
-          "legendFormat": "p99 - {{pod}}",
-          "refId": "C"
-        }
+        { "expr": "sum(s3_parquet_items_sent_to_nats)", "legendFormat": "Items Sent", "refId": "A" }
       ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": ["mean", "max"]
-        }
-      },
       "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
+        "defaults": { "unit": "short", "decimals": 0 }
       }
     },
     {
       "id": 8,
+      "title": "Rows Processing Rate",
       "type": "timeseries",
-      "title": "Process CPU Usage",
-      "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 12 },
       "targets": [
-        {
-          "expr": "rate(process_cpu_seconds_total{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
-          "legendFormat": "{{pod}}",
-          "refId": "A"
-        }
+        { "expr": "sum(rate(s3_parquet_rows_processed_total[5m]))", "legendFormat": "Rows/sec", "refId": "A" }
       ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      },
       "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
+        "defaults": { "unit": "ops" }
       }
     },
     {
       "id": 9,
+      "title": "Files Processing Rate",
       "type": "timeseries",
-      "title": "Go Heap Memory",
-      "gridPos": {"x": 0, "y": 20, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 12 },
       "targets": [
-        {
-          "expr": "go_memstats_heap_alloc_bytes{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Heap Alloc - {{pod}}",
-          "refId": "A"
-        },
-        {
-          "expr": "go_memstats_heap_inuse_bytes{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Heap In Use - {{pod}}",
-          "refId": "B"
-        },
-        {
-          "expr": "go_memstats_heap_sys_bytes{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Heap Sys - {{pod}}",
-          "refId": "C"
-        }
+        { "expr": "sum(rate(s3_parquet_files_processed_total[5m]))", "legendFormat": "Files/sec", "refId": "A" }
       ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": ["mean", "lastNotNull"]
-        }
-      },
       "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
+        "defaults": { "unit": "ops" }
       }
     },
     {
       "id": 10,
+      "title": "Files Processed by Bucket",
       "type": "timeseries",
-      "title": "Process Memory (RSS & Virtual)",
-      "gridPos": {"x": 12, "y": 20, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 18 },
       "targets": [
-        {
-          "expr": "process_resident_memory_bytes{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "RSS - {{pod}}",
-          "refId": "A"
-        },
-        {
-          "expr": "process_virtual_memory_bytes{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Virtual - {{pod}}",
-          "refId": "B"
-        }
+        { "expr": "sum by (bucket) (s3_parquet_files_processed_total)", "legendFormat": "{{bucket}}", "refId": "A" }
       ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": ["mean", "lastNotNull"]
-        }
-      },
       "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
+        "defaults": { "unit": "short" }
       }
     },
     {
       "id": 11,
+      "title": "Rows Processed by Bucket",
       "type": "timeseries",
-      "title": "Goroutines & Threads",
-      "gridPos": {"x": 0, "y": 28, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 18 },
       "targets": [
-        {
-          "expr": "go_goroutines{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Goroutines - {{pod}}",
-          "refId": "A"
-        },
-        {
-          "expr": "go_threads{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Threads - {{pod}}",
-          "refId": "B"
-        }
+        { "expr": "sum by (bucket) (s3_parquet_rows_processed_total)", "legendFormat": "{{bucket}}", "refId": "A" }
       ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": ["lastNotNull"]
-        }
-      },
       "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
+        "defaults": { "unit": "short" }
       }
     },
     {
       "id": 12,
+      "title": "NATS Throughput",
       "type": "timeseries",
-      "title": "Go GC Duration",
-      "gridPos": {"x": 12, "y": 28, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 24 },
       "targets": [
-        {
-          "expr": "rate(go_gc_duration_seconds_sum{job=~\".*applications-s3-inventory-connector.*\"}[5m]) / rate(go_gc_duration_seconds_count{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
-          "legendFormat": "{{pod}}",
-          "refId": "A"
-        }
+        { "expr": "sum(rate(s3_parquet_batches_sent_to_nats[5m]))", "legendFormat": "Batches/sec", "refId": "A" },
+        { "expr": "sum(rate(s3_parquet_items_sent_to_nats[5m]))", "legendFormat": "Items/sec", "refId": "B" }
       ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      },
       "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
+        "defaults": { "unit": "ops" }
       }
     },
     {
       "id": 13,
+      "title": "Row Status Breakdown",
       "type": "timeseries",
-      "title": "Pulsar Messages Published Rate",
-      "gridPos": {"x": 0, "y": 36, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 24 },
       "targets": [
-        {
-          "expr": "rate(pulsar_client_messages_published{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
-          "legendFormat": "{{pulsar_namespace}} - {{pod}}",
-          "refId": "A"
-        }
+        { "expr": "sum(s3_parquet_rows_latest_total)", "legendFormat": "Latest", "refId": "A" },
+        { "expr": "sum(s3_parquet_rows_not_latest)", "legendFormat": "Not Latest", "refId": "B" },
+        { "expr": "sum(s3_parquet_rows_marked_deleted_total)", "legendFormat": "Deleted", "refId": "C" }
       ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      },
       "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
-      }
-    },
-    {
-      "id": 14,
-      "type": "timeseries",
-      "title": "Pulsar Messages Received Rate",
-      "gridPos": {"x": 12, "y": 36, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "rate(pulsar_client_messages_received{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
-          "legendFormat": "{{pulsar_namespace}} - {{pod}}",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
-      }
-    },
-    {
-      "id": 15,
-      "type": "timeseries",
-      "title": "Pulsar Producer Latency (p95)",
-      "gridPos": {"x": 0, "y": 44, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, rate(pulsar_client_producer_latency_seconds_bucket{job=~\".*applications-s3-inventory-connector.*\"}[5m]))",
-          "legendFormat": "{{pulsar_namespace}} - {{pod}}",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
-      }
-    },
-    {
-      "id": 16,
-      "type": "timeseries",
-      "title": "Pulsar Consumer Processing Time (p95)",
-      "gridPos": {"x": 12, "y": 44, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, rate(pulsar_client_consumer_processing_time_seconds_bucket{job=~\".*applications-s3-inventory-connector.*\"}[5m]))",
-          "legendFormat": "{{pulsar_namespace}} - {{pod}}",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
-      }
-    },
-    {
-      "id": 17,
-      "type": "timeseries",
-      "title": "Pulsar Connections",
-      "gridPos": {"x": 0, "y": 52, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "pulsar_client_connections_opened{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Opened - {{pod}}",
-          "refId": "A"
-        },
-        {
-          "expr": "pulsar_client_connections_closed{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Closed - {{pod}}",
-          "refId": "B"
-        },
-        {
-          "expr": "pulsar_client_connections_establishment_errors{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Establishment Errors - {{pod}}",
-          "refId": "C"
-        },
-        {
-          "expr": "pulsar_client_connections_handshake_errors{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Handshake Errors - {{pod}}",
-          "refId": "D"
-        }
-      ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": ["lastNotNull"]
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
-      }
-    },
-    {
-      "id": 18,
-      "type": "timeseries",
-      "title": "Pulsar Producers & Consumers",
-      "gridPos": {"x": 12, "y": 52, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "pulsar_client_consumers_opened{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Consumers Opened - {{pod}}",
-          "refId": "A"
-        },
-        {
-          "expr": "pulsar_client_producers_opened{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Producers Opened - {{pod}}",
-          "refId": "B"
-        },
-        {
-          "expr": "pulsar_client_consumers_partitions_active{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Consumer Partitions Active - {{pod}}",
-          "refId": "C"
-        },
-        {
-          "expr": "pulsar_client_producers_partitions_active{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Producer Partitions Active - {{pod}}",
-          "refId": "D"
-        }
-      ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": ["lastNotNull"]
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
-      }
-    },
-    {
-      "id": 19,
-      "type": "timeseries",
-      "title": "Network I/O",
-      "gridPos": {"x": 0, "y": 60, "w": 24, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "rate(process_network_receive_bytes_total{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
-          "legendFormat": "RX - {{pod}}",
-          "refId": "A"
-        },
-        {
-          "expr": "rate(process_network_transmit_bytes_total{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
-          "legendFormat": "TX - {{pod}}",
-          "refId": "B"
-        }
-      ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": ["mean", "lastNotNull"]
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "Bps",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
-      }
-    },
-    {
-      "id": 20,
-      "type": "stat",
-      "title": "Parquet Files Processed",
-      "gridPos": {"x": 0, "y": 68, "w": 6, "h": 4},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "sum(s3_parquet_files_processed_total{job=~\".*applications-s3-inventory-connector.*\"})",
-          "legendFormat": "Total",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"]
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          },
-          "unit": "short"
-        }
-      }
-    },
-    {
-      "id": 21,
-      "type": "stat",
-      "title": "Parquet Rows Processed",
-      "gridPos": {"x": 6, "y": 68, "w": 6, "h": 4},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "sum(s3_parquet_rows_processed_total{job=~\".*applications-s3-inventory-connector.*\"})",
-          "legendFormat": "Total",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"]
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          },
-          "unit": "short"
-        }
-      }
-    },
-    {
-      "id": 22,
-      "type": "stat",
-      "title": "Batches Sent to NATS",
-      "gridPos": {"x": 12, "y": 68, "w": 6, "h": 4},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "sum(s3_parquet_batches_sent_to_nats{job=~\".*applications-s3-inventory-connector.*\"})",
-          "legendFormat": "Total",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"]
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          },
-          "unit": "short"
-        }
-      }
-    },
-    {
-      "id": 23,
-      "type": "stat",
-      "title": "Items Sent to NATS",
-      "gridPos": {"x": 18, "y": 68, "w": 6, "h": 4},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "sum(s3_parquet_items_sent_to_nats{job=~\".*applications-s3-inventory-connector.*\"})",
-          "legendFormat": "Total",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"]
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          },
-          "unit": "short"
-        }
-      }
-    },
-    {
-      "id": 24,
-      "type": "timeseries",
-      "title": "Parquet Processing Rate by Bucket",
-      "gridPos": {"x": 0, "y": 72, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "rate(s3_parquet_files_processed_total{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
-          "legendFormat": "{{bucket}} - {{job_id}}",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": ["mean", "lastNotNull"]
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
-      }
-    },
-    {
-      "id": 25,
-      "type": "timeseries",
-      "title": "Parquet Rows Processing Rate",
-      "gridPos": {"x": 12, "y": 72, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "rate(s3_parquet_rows_processed_total{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
-          "legendFormat": "{{bucket}} - {{job_id}}",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": ["mean", "lastNotNull"]
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
-      }
-    },
-    {
-      "id": 26,
-      "type": "timeseries",
-      "title": "Parquet Row Status Distribution",
-      "gridPos": {"x": 0, "y": 80, "w": 24, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "s3_parquet_rows_latest_total{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Latest - {{bucket}}",
-          "refId": "A"
-        },
-        {
-          "expr": "s3_parquet_rows_not_latest{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Not Latest - {{bucket}}",
-          "refId": "B"
-        },
-        {
-          "expr": "s3_parquet_rows_marked_deleted_total{job=~\".*applications-s3-inventory-connector.*\"}",
-          "legendFormat": "Deleted - {{bucket}}",
-          "refId": "C"
-        }
-      ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": ["lastNotNull", "sum"]
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {"mode": "normal", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
-      }
-    },
-    {
-      "id": 27,
-      "type": "timeseries",
-      "title": "NATS Batch Send Rate",
-      "gridPos": {"x": 0, "y": 88, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "rate(s3_parquet_batches_sent_to_nats{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
-          "legendFormat": "{{bucket}} - {{job_id}}",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": ["mean", "lastNotNull"]
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
-      }
-    },
-    {
-      "id": 28,
-      "type": "timeseries",
-      "title": "NATS Items Send Rate",
-      "gridPos": {"x": 12, "y": 88, "w": 12, "h": 8},
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "targets": [
-        {
-          "expr": "rate(s3_parquet_items_sent_to_nats{job=~\".*applications-s3-inventory-connector.*\"}[5m])",
-          "legendFormat": "{{bucket}} - {{job_id}}",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "tooltip": {"mode": "multi", "sort": "none"},
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": ["mean", "lastNotNull"]
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {"mode": "none", "group": "A"},
-            "axisPlacement": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{"value": null, "color": "green"}]
-          }
-        }
+        "defaults": { "unit": "short" }
       }
     }
   ],
-  "uid": "s3-inventory-connector-complete",
-  "weekStart": ""
+  "templating": {
+    "list": []
+  }
 }
