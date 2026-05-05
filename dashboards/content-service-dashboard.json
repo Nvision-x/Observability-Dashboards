@@ -1,0 +1,427 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Content Service operational dashboard — saturation, latency breakdown, failure modes. Drives load-test reads.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "id": 100,
+      "panels": [],
+      "title": "Saturation — load-test row",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Concurrent in-flight Fetch calls. Compare against GLOBAL_MAX_INFLIGHT (default 200) — when this gauge plateaus there, requests start queueing in the semaphore and queue time shows up as request latency.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 200}]},
+          "unit": "short"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 1},
+      "id": 1,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "content_inflight_global", "legendFormat": "global", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "content_inflight_stream", "legendFormat": "stream", "refId": "B"}
+      ],
+      "title": "In-flight requests (global vs stream)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Request rate split by status. Sustained 'failed' is the load-test failure signal.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "stacking": {"mode": "normal"}},
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 1},
+      "id": 2,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (status) (rate(content_requests_total[1m]))", "legendFormat": "{{status}}", "refId": "A"}
+      ],
+      "title": "Request rate by status",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "End-to-end Fetch latency p50/p95/p99 across all api+content_type combinations.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 2, "showPoints": "never"},
+          "unit": "s"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 9},
+      "id": 3,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.50, sum by (le) (rate(content_request_duration_seconds_bucket[1m])))", "legendFormat": "p50", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.95, sum by (le) (rate(content_request_duration_seconds_bucket[1m])))", "legendFormat": "p95", "refId": "B"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le) (rate(content_request_duration_seconds_bucket[1m])))", "legendFormat": "p99", "refId": "C"}
+      ],
+      "title": "Request latency (p50/p95/p99)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Rejections by reason. Non-zero = you've hit a concurrency ceiling. reason ∈ {global_full, stream_full, shutdown}.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "bars", "fillOpacity": 60, "lineWidth": 1, "showPoints": "never"},
+          "unit": "ops"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 9},
+      "id": 4,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (reason) (rate(content_inflight_rejections_total[1m]))", "legendFormat": "{{reason}}", "refId": "A"}
+      ],
+      "title": "Rejections by reason",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 17},
+      "id": 200,
+      "panels": [],
+      "title": "Where the time goes",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Cache S3 op latency p99 split by op. Separates S3 latency from CS code paths.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 2, "showPoints": "never"},
+          "unit": "s"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 18},
+      "id": 5,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, bucket, op) (rate(content_cache_op_duration_seconds_bucket[1m])))", "legendFormat": "{{bucket}}/{{op}}", "refId": "A"}
+      ],
+      "title": "Cache op p99 latency (by bucket/op)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "NATS fetch outcomes per second by connector. outcome ∈ {completed, pickup_timeout, worker_timeout, canceled, error}. The *_timeout series are the load-test failure signals — non-zero pickup_timeout means connectors aren't keeping up; worker_timeout means they're stuck mid-fetch.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "stacking": {"mode": "normal"}},
+          "unit": "ops"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 18},
+      "id": 6,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (connector, outcome) (rate(content_nats_fetch_total[1m]))", "legendFormat": "{{connector}}/{{outcome}}", "refId": "A"}
+      ],
+      "title": "NATS fetch outcomes by connector",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Cache hit ratio by bucket. Drop under load = colder cache or churn.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "max": 1,
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 0.5}, {"color": "green", "value": 0.8}]},
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 26},
+      "id": 7,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "1 - (sum by (bucket) (rate(content_cache_misses_total[5m])) / sum by (bucket) (rate(content_cache_misses_total[5m]) + (rate(content_cache_hits_total[5m]) or content_cache_misses_total * 0)))", "legendFormat": "{{bucket}}", "refId": "A"}
+      ],
+      "title": "Cache hit ratio (by bucket)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Text extraction p99 latency split by outcome. Only `success`/`failed` populate the histogram (skipped/breaker_open record duration=0 by design).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 2, "showPoints": "never"},
+          "unit": "s"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 26},
+      "id": 8,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, status) (rate(content_extraction_duration_seconds_bucket[1m])))", "legendFormat": "p99 — {{status}}", "refId": "A"}
+      ],
+      "title": "Extraction p99 latency (by status)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "NATS two-phase reply latency p99 by connector. pickup = publish → PROCESSING signal; worker = PROCESSING → COMPLETED reply. PICKUP_TIMEOUT and WORKER_TIMEOUT both default to 30s — sustained p99 climbing toward those thresholds means timeouts are imminent. Pairs with the NATS-outcomes panel.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 2, "showPoints": "never"},
+          "unit": "s"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 34},
+      "id": 19,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_pickup_duration_seconds_bucket[1m])))", "legendFormat": "pickup p99 — {{connector}}", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_worker_duration_seconds_bucket[1m])))", "legendFormat": "worker p99 — {{connector}}", "refId": "B"}
+      ],
+      "title": "NATS two-phase reply p99 (by connector)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Cache write latency p50/p95/p99 by result. Pairs with the cache-write outcomes panel (count) and write-size distribution (bytes). p99 climbing on `success` indicates S3 backpressure; p99 on `s3_error` reflects how long failed Puts hang before erroring out.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 2, "showPoints": "never"},
+          "unit": "s"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 34},
+      "id": 20,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.50, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket[1m])))", "legendFormat": "p50 — {{result}}", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket[1m])))", "legendFormat": "p95 — {{result}}", "refId": "B"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket[1m])))", "legendFormat": "p99 — {{result}}", "refId": "C"}
+      ],
+      "title": "Cache write latency (p50/p95/p99)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 42},
+      "id": 300,
+      "panels": [],
+      "title": "Failure modes",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Extractor circuit breaker state — 0=closed, 1=half-open, 2=open. Big and red when open.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [
+            {"options": {"0": {"text": "CLOSED", "color": "green", "index": 0}, "1": {"text": "HALF-OPEN", "color": "yellow", "index": 1}, "2": {"text": "OPEN", "color": "red", "index": 2}}, "type": "value"}
+          ],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}, {"color": "red", "value": 2}]}
+        }
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 43},
+      "id": 9,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "value"},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "max(content_extraction_circuit_state)", "refId": "A"}
+      ],
+      "title": "Extractor circuit",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "S3 cache operation errors per second. error_type ∈ {read_failed, write_failed, other}.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "bars", "fillOpacity": 60, "lineWidth": 1, "showPoints": "never"},
+          "unit": "ops"
+        }
+      },
+      "gridPos": {"h": 6, "w": 9, "x": 6, "y": 43},
+      "id": 10,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (bucket, op, error_type) (rate(content_cache_op_errors_total[1m]))", "legendFormat": "{{bucket}}/{{op}}/{{error_type}}", "refId": "A"}
+      ],
+      "title": "Cache op errors (by error_type)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Cache write outcomes from S3Store. result ∈ {success, read_error, size_mismatch, s3_error, canceled}.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "bars", "fillOpacity": 60, "lineWidth": 1, "showPoints": "never", "stacking": {"mode": "normal"}},
+          "unit": "ops"
+        }
+      },
+      "gridPos": {"h": 6, "w": 9, "x": 15, "y": 43},
+      "id": 11,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (result) (rate(content_cache_write_total[1m]))", "legendFormat": "{{result}}", "refId": "A"}
+      ],
+      "title": "Cache write outcomes",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Requests FAILED during graceful shutdown drain. Should be zero except during deploy/restart.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "bars", "fillOpacity": 60, "lineWidth": 1, "showPoints": "never"},
+          "unit": "ops"
+        }
+      },
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 49},
+      "id": 12,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "rate(content_shutdown_pending_failed_total[1m])", "legendFormat": "shutdown_failed", "refId": "A"}
+      ],
+      "title": "Shutdown-time failures",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "sha256 safety-net activations — fires when the connector didn't supply sha256 in S3 user-metadata. Steady non-zero rate = upstream regression.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "bars", "fillOpacity": 60, "lineWidth": 1, "showPoints": "never"},
+          "unit": "ops"
+        }
+      },
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 49},
+      "id": 14,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (connector, reason) (rate(content_sha256_safety_net_total[1m]))", "legendFormat": "{{connector}}/{{reason}}", "refId": "A"}
+      ],
+      "title": "sha256 safety-net activations",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 55},
+      "id": 400,
+      "panels": [],
+      "title": "Extraction & cache writes",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Text extraction outcomes per second. status ∈ {success, failed, skipped, breaker_open}. Sustained `breaker_open` = kreuzberg is sick; `skipped` rate spikes when files exceed EXTRACTION_MAX_SIZE.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "stacking": {"mode": "normal"}},
+          "unit": "ops"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 56},
+      "id": 15,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (status) (rate(content_extraction_total[1m]))", "legendFormat": "{{status}}", "refId": "A"}
+      ],
+      "title": "Extraction outcomes",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Distribution of bytes written per S3 cache Put — p50/p95/p99. Crosses S3_MULTIPART_THRESHOLD (8 MiB default) → multipart path. Useful for sizing payload-mix in load tests.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 2, "showPoints": "never"},
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 56},
+      "id": 18,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.50, sum by (le, result) (rate(content_cache_write_bytes_bucket[5m])))", "legendFormat": "p50 — {{result}}", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_bytes_bucket[5m])))", "legendFormat": "p95 — {{result}}", "refId": "B"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, result) (rate(content_cache_write_bytes_bucket[5m])))", "legendFormat": "p99 — {{result}}", "refId": "C"}
+      ],
+      "title": "Cache write size distribution",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["content-service", "pipeline", "git-sync"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": {"from": "now-30m", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Content Service",
+  "uid": "content-service",
+  "version": 1,
+  "weekStart": ""
+}
