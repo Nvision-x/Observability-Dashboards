@@ -49,8 +49,8 @@
       "id": 1,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "content_inflight_global", "legendFormat": "global", "refId": "A"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "content_inflight_stream", "legendFormat": "stream", "refId": "B"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "content_inflight_global{namespace=\"$namespace\", job=\"$job\"}", "legendFormat": "global", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "content_inflight_stream{namespace=\"$namespace\", job=\"$job\"}", "legendFormat": "stream", "refId": "B"}
       ],
       "title": "In-flight requests (global vs stream)",
       "type": "timeseries"
@@ -69,7 +69,7 @@
       "id": 2,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (status) (rate(content_requests_total[1m]))", "legendFormat": "{{status}}", "refId": "A"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (status) (rate(content_requests_total{namespace=\"$namespace\", job=\"$job\"}[1m]))", "legendFormat": "{{status}}", "refId": "A"}
       ],
       "title": "Request rate by status",
       "type": "timeseries"
@@ -88,9 +88,9 @@
       "id": 3,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.50, sum by (le) (rate(content_request_duration_seconds_bucket[1m])))", "legendFormat": "p50", "refId": "A"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.95, sum by (le) (rate(content_request_duration_seconds_bucket[1m])))", "legendFormat": "p95", "refId": "B"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le) (rate(content_request_duration_seconds_bucket[1m])))", "legendFormat": "p99", "refId": "C"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.50, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "p50", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.95, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "p95", "refId": "B"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "p99", "refId": "C"}
       ],
       "title": "Request latency (p50/p95/p99)",
       "type": "timeseries"
@@ -109,7 +109,7 @@
       "id": 4,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (reason) (rate(content_inflight_rejections_total[1m]))", "legendFormat": "{{reason}}", "refId": "A"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (reason) (rate(content_inflight_rejections_total{namespace=\"$namespace\", job=\"$job\"}[1m]))", "legendFormat": "{{reason}}", "refId": "A"}
       ],
       "title": "Rejections by reason",
       "type": "timeseries"
@@ -136,7 +136,7 @@
       "id": 5,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, bucket, op) (rate(content_cache_op_duration_seconds_bucket[1m])))", "legendFormat": "{{bucket}}/{{op}}", "refId": "A"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, bucket, op) (rate(content_cache_op_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "{{bucket}}/{{op}}", "refId": "A"}
       ],
       "title": "Cache op p99 latency (by bucket/op)",
       "type": "timeseries"
@@ -155,7 +155,7 @@
       "id": 6,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (connector, outcome) (rate(content_nats_fetch_total[1m]))", "legendFormat": "{{connector}}/{{outcome}}", "refId": "A"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (connector, outcome) (rate(content_nats_fetch_total{namespace=\"$namespace\", job=\"$job\"}[1m]))", "legendFormat": "{{connector}}/{{outcome}}", "refId": "A"}
       ],
       "title": "NATS fetch outcomes by connector",
       "type": "timeseries"
@@ -177,7 +177,7 @@
       "id": 7,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "1 - (sum by (bucket) (rate(content_cache_misses_total[5m])) / sum by (bucket) (rate(content_cache_misses_total[5m]) + (rate(content_cache_hits_total[5m]) or content_cache_misses_total * 0)))", "legendFormat": "{{bucket}}", "refId": "A"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (bucket) (rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\"}[1m])) / (sum by (bucket) (rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\"}[1m])) + sum by (bucket) (rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "{{bucket}}", "refId": "A"}
       ],
       "title": "Cache hit ratio (by bucket)",
       "type": "stat"
@@ -196,7 +196,7 @@
       "id": 8,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, status) (rate(content_extraction_duration_seconds_bucket[1m])))", "legendFormat": "p99 — {{status}}", "refId": "A"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, status) (rate(content_extraction_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "p99 — {{status}}", "refId": "A"}
       ],
       "title": "Extraction p99 latency (by status)",
       "type": "timeseries"
@@ -215,8 +215,8 @@
       "id": 19,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_pickup_duration_seconds_bucket[1m])))", "legendFormat": "pickup p99 — {{connector}}", "refId": "A"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_worker_duration_seconds_bucket[1m])))", "legendFormat": "worker p99 — {{connector}}", "refId": "B"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_pickup_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "pickup p99 — {{connector}}", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_worker_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "worker p99 — {{connector}}", "refId": "B"}
       ],
       "title": "NATS two-phase reply p99 (by connector)",
       "type": "timeseries"
@@ -235,9 +235,9 @@
       "id": 20,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.50, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket[1m])))", "legendFormat": "p50 — {{result}}", "refId": "A"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket[1m])))", "legendFormat": "p95 — {{result}}", "refId": "B"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket[1m])))", "legendFormat": "p99 — {{result}}", "refId": "C"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.50, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "p50 — {{result}}", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "p95 — {{result}}", "refId": "B"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "p99 — {{result}}", "refId": "C"}
       ],
       "title": "Cache write latency (p50/p95/p99)",
       "type": "timeseries"
@@ -266,7 +266,7 @@
       "id": 9,
       "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "value"},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "max(content_extraction_circuit_state)", "refId": "A"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "max(content_extraction_circuit_state{namespace=\"$namespace\", job=\"$job\"})", "refId": "A"}
       ],
       "title": "Extractor circuit",
       "type": "stat"
@@ -285,7 +285,7 @@
       "id": 10,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (bucket, op, error_type) (rate(content_cache_op_errors_total[1m]))", "legendFormat": "{{bucket}}/{{op}}/{{error_type}}", "refId": "A"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (bucket, op, error_type) (rate(content_cache_op_errors_total{namespace=\"$namespace\", job=\"$job\"}[1m]))", "legendFormat": "{{bucket}}/{{op}}/{{error_type}}", "refId": "A"}
       ],
       "title": "Cache op errors (by error_type)",
       "type": "timeseries"
@@ -304,7 +304,7 @@
       "id": 11,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (result) (rate(content_cache_write_total[1m]))", "legendFormat": "{{result}}", "refId": "A"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (result) (rate(content_cache_write_total{namespace=\"$namespace\", job=\"$job\"}[1m]))", "legendFormat": "{{result}}", "refId": "A"}
       ],
       "title": "Cache write outcomes",
       "type": "timeseries"
@@ -323,7 +323,7 @@
       "id": 12,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "rate(content_shutdown_pending_failed_total[1m])", "legendFormat": "shutdown_failed", "refId": "A"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "rate(content_shutdown_pending_failed_total{namespace=\"$namespace\", job=\"$job\"}[1m])", "legendFormat": "shutdown_failed", "refId": "A"}
       ],
       "title": "Shutdown-time failures",
       "type": "timeseries"
@@ -342,7 +342,7 @@
       "id": 14,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (connector, reason) (rate(content_sha256_safety_net_total[1m]))", "legendFormat": "{{connector}}/{{reason}}", "refId": "A"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (connector, reason) (rate(content_sha256_safety_net_total{namespace=\"$namespace\", job=\"$job\"}[1m]))", "legendFormat": "{{connector}}/{{reason}}", "refId": "A"}
       ],
       "title": "sha256 safety-net activations",
       "type": "timeseries"
@@ -369,14 +369,14 @@
       "id": 15,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (status) (rate(content_extraction_total[1m]))", "legendFormat": "{{status}}", "refId": "A"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (status) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\"}[1m]))", "legendFormat": "{{status}}", "refId": "A"}
       ],
       "title": "Extraction outcomes",
       "type": "timeseries"
     },
     {
       "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "Distribution of bytes written per S3 cache Put — p50/p95/p99. Crosses S3_MULTIPART_THRESHOLD (8 MiB default) → multipart path. Useful for sizing payload-mix in load tests.",
+      "description": "Distribution of bytes written per S3 cache Put — p50/p95/p99. Crosses S3_MULTIPART_THRESHOLD (8 MiB default) → multipart path. Useful for sizing payload-mix in load tests. 5m window deliberately wider than other panels — write events are infrequent and benefit from smoothing.",
       "fieldConfig": {
         "defaults": {
           "color": {"mode": "palette-classic"},
@@ -388,21 +388,21 @@
       "id": 18,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.50, sum by (le, result) (rate(content_cache_write_bytes_bucket[5m])))", "legendFormat": "p50 — {{result}}", "refId": "A"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_bytes_bucket[5m])))", "legendFormat": "p95 — {{result}}", "refId": "B"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, result) (rate(content_cache_write_bytes_bucket[5m])))", "legendFormat": "p99 — {{result}}", "refId": "C"}
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.50, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\"}[5m])))", "legendFormat": "p50 — {{result}}", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\"}[5m])))", "legendFormat": "p95 — {{result}}", "refId": "B"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\"}[5m])))", "legendFormat": "p99 — {{result}}", "refId": "C"}
       ],
       "title": "Cache write size distribution",
       "type": "timeseries"
     }
   ],
-  "refresh": "10s",
+  "refresh": "30s",
   "schemaVersion": 39,
   "tags": ["content-service", "pipeline", "git-sync"],
   "templating": {
     "list": [
       {
-        "current": {},
+        "current": {"selected": false, "text": "Prometheus", "value": "Prometheus"},
         "hide": 0,
         "includeAll": false,
         "label": "Datasource",
@@ -414,6 +414,40 @@
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": {"type": "prometheus", "uid": "${datasource}"},
+        "definition": "label_values(content_requests_total, job)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Job",
+        "multi": false,
+        "name": "job",
+        "options": [],
+        "query": {"query": "label_values(content_requests_total, job)", "refId": "PrometheusVariableQueryEditor-VariableQuery"},
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {"type": "prometheus", "uid": "${datasource}"},
+        "definition": "label_values(up{job=\"$job\"}, namespace)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Namespace",
+        "multi": false,
+        "name": "namespace",
+        "options": [],
+        "query": {"query": "label_values(up{job=\"$job\"}, namespace)", "refId": "PrometheusVariableQueryEditor-VariableQuery"},
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
       }
     ]
   },
@@ -422,6 +456,6 @@
   "timezone": "browser",
   "title": "Content Service",
   "uid": "content-service",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
