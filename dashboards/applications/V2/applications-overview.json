@@ -49,7 +49,7 @@
     {
       "id": 1,
       "type": "stat",
-      "title": "Pods Up",
+      "title": "Scanner Pods",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
       "fieldConfig": {
@@ -67,15 +67,39 @@
       },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
-        { "refId": "A", "expr": "sum(up{job=~\"snowflake-connector-be-go.*\", namespace=\"$namespace\"})" }
+        { "refId": "A", "expr": "sum(up{job=\"snowflake-connector-be-go\", namespace=\"$namespace\"})" }
       ]
     },
     {
       "id": 2,
       "type": "stat",
+      "title": "Content Pods",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "green", "value": 1 }
+          ]},
+          "links": [{
+            "title": "Open Snowflake Overview",
+            "url": "/d/apps-v2-snowflake-overview?${namespace:queryparam}"
+          }]
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "sum(up{job=\"snowflake-connector-be-go-content\", namespace=\"$namespace\"})" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
       "title": "Items Sent (rate)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 5, "x": 4, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "ops", "decimals": 2 } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
       "targets": [
@@ -83,11 +107,11 @@
       ]
     },
     {
-      "id": 3,
+      "id": 4,
       "type": "stat",
       "title": "Scan p95",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 5, "x": 9, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "s", "decimals": 1 } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
       "targets": [
@@ -95,11 +119,11 @@
       ]
     },
     {
-      "id": 4,
+      "id": 5,
       "type": "stat",
       "title": "Error Rate",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 5, "x": 14, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
       "fieldConfig": {
         "defaults": {
           "unit": "ops", "decimals": 3,
@@ -116,11 +140,11 @@
       ]
     },
     {
-      "id": 5,
+      "id": 6,
       "type": "stat",
       "title": "Active Pools",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
       "targets": [
