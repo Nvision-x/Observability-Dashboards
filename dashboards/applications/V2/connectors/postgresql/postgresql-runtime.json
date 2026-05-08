@@ -1,0 +1,241 @@
+{
+  "uid": "apps-v2-postgresql-runtime",
+  "title": "PostgreSQL Connector — Runtime",
+  "tags": ["git-sync", "apps-v2", "connector:postgresql", "runtime"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-postgresql-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "PostgreSQL — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-postgresql-overview?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "PostgreSQL — Pipeline",
+      "type": "link",
+      "url": "/d/apps-v2-postgresql-pipeline?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": { "selected": false, "text": "Prometheus", "value": "prometheus-nx" },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(up{job=~\"postgresql-connector-be-go.*\"}, namespace)",
+        "current": { "selected": false, "text": "default", "value": "default" },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "component",
+        "type": "custom",
+        "label": "Component",
+        "query": "All : postgresql-connector-be-go.*, Scanner : postgresql-connector-be-go, Content : postgresql-connector-be-go-content",
+        "current": { "selected": true, "text": "All", "value": "postgresql-connector-be-go.*" },
+        "options": [
+          { "selected": true, "text": "All", "value": "postgresql-connector-be-go.*" },
+          { "selected": false, "text": "Scanner", "value": "postgresql-connector-be-go" },
+          { "selected": false, "text": "Content", "value": "postgresql-connector-be-go-content" }
+        ],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(up{job=~\"$component\", namespace=\"$namespace\"}, pod)",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "refresh": 1,
+        "sort": 1
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "enable": true,
+        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\".*postgresql-connector.*\"}[5m]) > 0",
+        "name": "Pod Restarts",
+        "tagKeys": "pod",
+        "titleFormat": "Pod Restart"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Process — CPU & Memory",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Process CPU (rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [
+        { "refId": "A", "expr": "rate(process_cpu_seconds_total{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Process Resident Memory",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "process_resident_memory_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Process Virtual Memory",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "process_virtual_memory_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Container — Resource Usage",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Container CPU Usage",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*postgresql-connector.*\", pod=~\"$pod\", container!=\"\", container!=\"POD\"}[5m]))", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Container Memory (working set)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*postgresql-connector.*\", pod=~\"$pod\", container!=\"\", container!=\"POD\"})", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "Go Runtime",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Goroutines",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "go_goroutines{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Heap In-Use",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "go_memstats_heap_inuse_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "GC Pause p99",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.99, sum by (le, pod) (rate(go_gc_duration_seconds_bucket{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 400,
+      "title": "File Descriptors & Threads",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Open vs Max FDs",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 25 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "process_open_fds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "open {{pod}}" },
+        { "refId": "B", "expr": "process_max_fds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "max {{pod}}" }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "OS Threads",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 25 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "go_threads{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    }
+  ]
+}
