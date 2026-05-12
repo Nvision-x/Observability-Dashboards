@@ -103,7 +103,7 @@
       "fieldConfig": { "defaults": { "unit": "ops", "decimals": 2 } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(snowflake_connector_items_sent_total{namespace=\"$namespace\"}[5m]))" }
+        { "refId": "A", "expr": "sum(rate(snowflake_scanner_items_sent_total{namespace=\"$namespace\"}[5m]))" }
       ]
     },
     {
@@ -115,7 +115,7 @@
       "fieldConfig": { "defaults": { "unit": "s", "decimals": 1 } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
       "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(snowflake_connector_scan_duration_seconds_bucket{namespace=\"$namespace\"}[5m])))" }
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(snowflake_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\"}[5m])))" }
       ]
     },
     {
@@ -136,7 +136,7 @@
       },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(snowflake_connector_database_errors_total{namespace=\"$namespace\"}[5m])) + sum(rate(snowflake_connector_table_errors_total{namespace=\"$namespace\"}[5m]))" }
+        { "refId": "A", "expr": "sum(rate(snowflake_scanner_database_errors_total{namespace=\"$namespace\"}[5m])) + sum(rate(snowflake_scanner_table_errors_total{namespace=\"$namespace\"}[5m]))" }
       ]
     },
     {
@@ -148,7 +148,7 @@
       "fieldConfig": { "defaults": { "unit": "short" } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
       "targets": [
-        { "refId": "A", "expr": "sum(snowflake_connector_content_pools_active{namespace=\"$namespace\"})" }
+        { "refId": "A", "expr": "sum(snowflake_content_pools_active{namespace=\"$namespace\"})" }
       ]
     },
     {
