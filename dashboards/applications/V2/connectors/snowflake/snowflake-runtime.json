@@ -71,12 +71,13 @@
         "type": "query",
         "label": "Pod",
         "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "query": "label_values(up{job=~\"$component\", namespace=\"$namespace\"}, pod)",
+        "query": "label_values(process_start_time_seconds{job=~\"snowflake-connector-be-go.*\", namespace=\"$namespace\"}, pod)",
         "current": { "selected": true, "text": "All", "value": "$__all" },
         "hide": 0,
         "includeAll": true,
+        "allValue": ".*",
         "multi": true,
-        "refresh": 1,
+        "refresh": 2,
         "sort": 1
       }
     ]
@@ -151,7 +152,7 @@
       "gridPos": { "h": 7, "w": 12, "x": 0, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "percentunit" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*snowflake-connector.*\", pod=~\"$pod\", container!=\"\", container!=\"POD\"}[5m]))", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*snowflake-connector.*\", container!=\"\", container!=\"POD\"}[5m]))", "legendFormat": "{{pod}}" }
       ]
     },
     {
@@ -162,7 +163,7 @@
       "gridPos": { "h": 7, "w": 12, "x": 12, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "bytes" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*snowflake-connector.*\", pod=~\"$pod\", container!=\"\", container!=\"POD\"})", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*snowflake-connector.*\", container!=\"\", container!=\"POD\"})", "legendFormat": "{{pod}}" }
       ]
     },
     {
