@@ -129,7 +129,7 @@
     {
       "id": 1,
       "type": "stat",
-      "title": "Scanner Pods Up",
+      "title": "Pods Up",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -177,15 +177,15 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "Items Sent (rate, 5m)",
+      "title": "Items Sent (5m)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
-        "w": 5,
-        "x": 4,
+        "w": 4,
+        "x": 12,
         "y": 1
       },
       "fieldConfig": {
@@ -213,15 +213,15 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Scan Duration p95",
+      "title": "Scan p95 (5m)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
-        "w": 5,
-        "x": 9,
+        "w": 4,
+        "x": 16,
         "y": 1
       },
       "fieldConfig": {
@@ -256,8 +256,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 5,
-        "x": 14,
+        "w": 4,
+        "x": 20,
         "y": 1
       },
       "fieldConfig": {
@@ -310,8 +310,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 5,
-        "x": 19,
+        "w": 4,
+        "x": 8,
         "y": 1
       },
       "fieldConfig": {
@@ -336,9 +336,44 @@
       ]
     },
     {
+      "id": 6,
+      "type": "stat",
+      "title": "Connections (Open)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(snowflake_scanner_connections_open{namespace=\"$namespace\", pod=~\"$pod\"})"
+        }
+      ]
+    },
+    {
       "id": 10,
       "type": "timeseries",
-      "title": "Throughput \u2014 Items / Tables / Columns (rate)",
+      "title": "Throughput & Errors (rate, 5m)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -369,6 +404,16 @@
           "refId": "C",
           "expr": "sum(rate(snowflake_scanner_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "columns found"
+        },
+        {
+          "refId": "D",
+          "expr": "sum(rate(snowflake_scanner_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "database errors"
+        },
+        {
+          "refId": "E",
+          "expr": "sum(rate(snowflake_scanner_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "table errors"
         }
       ]
     },
@@ -410,38 +455,6 @@
       ]
     },
     {
-      "id": 12,
-      "type": "timeseries",
-      "title": "Errors (rate, 5m)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 24,
-        "x": 0,
-        "y": 13
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(rate(snowflake_scanner_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "database errors"
-        },
-        {
-          "refId": "B",
-          "expr": "sum(rate(snowflake_scanner_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "table errors"
-        }
-      ]
-    },
-    {
       "type": "row",
       "id": 200,
       "title": "Content \u2014 snowflake-connector-be-go-content",
@@ -450,14 +463,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 13
       },
       "panels": []
     },
     {
       "id": 20,
       "type": "stat",
-      "title": "Content Pods Up",
+      "title": "Pods Up",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -466,7 +479,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 21
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -505,7 +518,7 @@
     {
       "id": 21,
       "type": "stat",
-      "title": "Active Content Pools",
+      "title": "Connections (Open)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -514,7 +527,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 21
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -533,14 +546,14 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(snowflake_content_pools_active{namespace=\"$namespace\", pod=~\"$pod\"})"
+          "expr": "sum(snowflake_content_connections_open{namespace=\"$namespace\", pod=~\"$pod\"})"
         }
       ]
     },
     {
       "id": 24,
       "type": "stat",
-      "title": "Content Fetches (rate, 5m)",
+      "title": "Fetches (5m)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -548,8 +561,8 @@
       "gridPos": {
         "h": 4,
         "w": 4,
-        "x": 8,
-        "y": 21
+        "x": 12,
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -576,7 +589,7 @@
     {
       "id": 22,
       "type": "stat",
-      "title": "Content Fetch p95 (success)",
+      "title": "Fetch p95 (5m)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -584,8 +597,8 @@
       "gridPos": {
         "h": 4,
         "w": 4,
-        "x": 12,
-        "y": 21
+        "x": 16,
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -612,7 +625,8 @@
     {
       "id": 23,
       "type": "stat",
-      "title": "Content Stream p95",
+      "title": "Errors (5m)",
+      "description": "Number of content requests that errored in the last 5 minutes. Counter increase on snowflake_content_requests_total{outcome=\"error\"}.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -620,13 +634,21 @@
       "gridPos": {
         "h": 4,
         "w": 4,
-        "x": 16,
-        "y": 21
+        "x": 20,
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
-          "decimals": 2
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 10 }
+            ]
+          }
         }
       },
       "options": {
@@ -635,16 +657,15 @@
             "lastNotNull"
           ]
         },
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(snowflake_content_stream_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))"
+          "expr": "sum(increase(snowflake_content_requests_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"error\"}[5m]))"
         }
-      ],
-      "description": "Wall-clock p95 of the streaming pipeline (Snowflake row pull + gRPC upload running concurrently via io.Pipe). Replaces the old Upload-only metric \u2014 in the new architecture query and upload aren't separable since they run concurrently and the metric reflects whichever leg is slower."
+      ]
     },
     {
       "id": 25,
@@ -658,8 +679,8 @@
       "gridPos": {
         "h": 4,
         "w": 4,
-        "x": 20,
-        "y": 21
+        "x": 8,
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -694,7 +715,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 25
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -721,7 +742,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 25
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
