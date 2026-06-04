@@ -1,0 +1,387 @@
+{
+  "uid": "apps-v2-cifs-pipeline",
+  "title": "CIFS Connector — Pipeline",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "connector:cifs",
+    "pipeline"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-cifs-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "CIFS — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-cifs-overview?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "CIFS — Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-cifs-runtime?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*cifs-connector-be-go.*\"}, namespace)",
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "component",
+        "type": "custom",
+        "label": "Component",
+        "query": "All : .*cifs-connector-be-go.*, Scanner : .*cifs-connector-be-go, Content : .*cifs-connector-be-go-content",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": ".*cifs-connector-be-go.*"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": ".*cifs-connector-be-go.*"
+          },
+          {
+            "selected": false,
+            "text": "Scanner",
+            "value": ".*cifs-connector-be-go"
+          },
+          {
+            "selected": false,
+            "text": "Content",
+            "value": ".*cifs-connector-be-go-content"
+          }
+        ],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\"$component\", namespace=\"$namespace\"}, pod)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      },
+      {
+        "name": "datasource_id",
+        "type": "query",
+        "label": "Datasource ID",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(cifs_scanner_work_channel_depth{namespace=\"$namespace\"}, datasource_id)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Scanner — Discovery & Throughput",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Files Discovered vs Processed vs Sent (rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "discovered" },
+        { "refId": "B", "expr": "sum(rate(cifs_scanner_files_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "processed" },
+        { "refId": "C", "expr": "sum(rate(cifs_scanner_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "sent" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Directories Forked vs Local (rate)",
+      "description": "forked = directories fanned out to the work channel; local = directories walked inline on the local stack.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(cifs_scanner_directories_forked_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "forked" },
+        { "refId": "B", "expr": "sum(rate(cifs_scanner_directories_local_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "local" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 150,
+      "title": "Scanner — Workers & File Operations",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "File Operation Duration p95 by operation",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(cifs_scanner_file_operation_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "{{operation}}" }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Worker Pool — busy / pool size / channel depth",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(cifs_scanner_worker_busy{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"})", "legendFormat": "busy" },
+        { "refId": "B", "expr": "sum(cifs_scanner_smb_pool_size{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"})", "legendFormat": "pool size" },
+        { "refId": "C", "expr": "sum(cifs_scanner_work_channel_depth{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"})", "legendFormat": "channel depth" }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Scanner ACL Query Duration — p50 / p95 / p99",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(cifs_scanner_acl_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_scanner_acl_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(cifs_scanner_acl_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Augmenter — Outcomes & Mounts",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Augmenter Items by Outcome (rate, stacked)",
+      "description": "All 12 outcomes: success, missing, stat_failed, acl_error, acl_skipped, build_failed, send_failed, invalid_urn, mount_failed, unc_mismatch, cancelled_stat, cancelled_acl.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 17 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": { "mode": "normal" },
+            "fillOpacity": 30
+          }
+        }
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum by (outcome) (rate(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))", "legendFormat": "{{outcome}}" }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Augmenter Mount Acquire p95 — success vs failure",
+      "description": "Success and failure acquires are separate histograms so a hung mount.cifs (~120s) does not poison the success p95.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_augmenter_mount_acquire_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))", "legendFormat": "success p95" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_augmenter_mount_acquire_failure_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))", "legendFormat": "failure p95" }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Augmenter Publish Blocked — p99",
+      "description": "Time spent blocked publishing augmented items downstream. Sustained growth means backpressure from the stream.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.99, sum by (le) (rate(cifs_augmenter_publish_blocked_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "Content — Fetch & Streaming",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Content Fetches by error_code (rate, stacked)",
+      "description": "error_code=\"NONE\" is the success path; NAK_* codes are infra-level failures.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 25 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": { "mode": "normal" },
+            "fillOpacity": 30
+          }
+        }
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum by (error_code) (rate(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{error_code}}" }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Content Fetch Duration — p50 / p95 / p99",
+      "description": "End-to-end duration per successful fetch request. The histogram intentionally carries only the success label, so percentiles are computed over success=\"true\".",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 25 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(cifs_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", success=\"true\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", success=\"true\"}[5m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(cifs_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", success=\"true\"}[5m])))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Content Fetch Bytes — p50 / p95 / p99",
+      "description": "Size of files streamed successfully (buckets 1KiB×4^10). Useful for sizing impact of large-payload streaming and spotting outliers.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 25 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(cifs_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(cifs_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Uploaded Bytes (rate)",
+      "description": "Bytes per second confirmed by the content transfer service.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 32 },
+      "fieldConfig": { "defaults": { "unit": "Bps" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(cifs_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "uploaded bytes/s" }
+      ]
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "Content Mount Acquire p95 — success vs failure",
+      "description": "Success and failure acquires are separate histograms so a hung mount.cifs (~120s) does not poison the success p95.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 32 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_content_mount_acquire_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))", "legendFormat": "success p95" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_content_mount_acquire_failure_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))", "legendFormat": "failure p95" }
+      ]
+    },
+    {
+      "id": 35,
+      "type": "table",
+      "title": "Fetch Errors by error_code (increase, 1h)",
+      "description": "Triage table: non-NONE error codes over the last hour. NAK_* codes are infra-level failures (NATS NAK path).",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 32 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "sortBy": [
+          { "displayName": "Value", "desc": true }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (error_code) (increase(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code!=\"NONE\"}[1h])) > 0",
+          "format": "table",
+          "instant": true
+        }
+      ]
+    }
+  ]
+}
