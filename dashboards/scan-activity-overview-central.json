@@ -1,0 +1,416 @@
+{
+  "__comment": "NVisionX Scan Activity Overview — CENTRAL (all clusters) variant of scan-activity-overview.json. Same panels/queries as the per-cluster dashboard, unmodified. The only change: the three datasource-type template variables (prometheus_ds, opensearch_ds, cloudwatch_ds) are now VISIBLE dropdowns instead of hidden auto-picks, so one central Grafana can select which environment's Prometheus/OpenSearch/CloudWatch to query per panel group — same pattern already proven by opensearch-metrics-central.json's 'Environment (Data Source)' picker. IMPORTANT CAVEAT: today only Prometheus has multiple per-environment datasources registered centrally (Demo, Demo2, Integration, IONIS, KrispyKreme, SSB, UAT, ...), which is what drives elasticsearch_exporter-derived totals (files scanned = current doc count, data size = current store size, both via *-nxidx-* index metrics) and the live NATS panels (scans running now, backlog, in-flight/backlog by source, redeliveries). The OpenSearch (grafana-opensearch-datasource) and CloudWatch dropdowns will only populate once per-environment datasources of those types are registered in the central Grafana (not yet provisioned anywhere in nx-mimir-infra-tf) — until then, connector-type breakdown, the recent-scanned-files table, and the AWS/ES CloudWatch domain-health row will show 'No data' for any environment selected, exactly like the ES-cluster panels in opensearch-metrics-central.json do for environments without exporter data. Follow-up: register per-env OpenSearch + CloudWatch datasources centrally to light up the remaining panels.",
+  "title": "NVisionX — Scan Activity Overview (All Clusters)",
+  "uid": "nx-scan-activity-central",
+  "tags": ["git-sync", "nx", "scans", "opensearch", "metrics", "overview", "central", "multi-cluster"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "time": { "from": "now-30d", "to": "now" },
+  "timezone": "",
+  "refresh": "30s",
+  "timepicker": {
+    "refresh_intervals": ["10s", "30s", "1m", "5m", "15m", "1h"],
+    "quick_ranges": [
+      { "display": "Last 5 minutes",  "from": "now-5m",  "to": "now" },
+      { "display": "Last 10 minutes", "from": "now-10m", "to": "now" },
+      { "display": "Last 30 minutes", "from": "now-30m", "to": "now" },
+      { "display": "Last 1 hour",     "from": "now-1h",  "to": "now" },
+      { "display": "Last 7 hours",    "from": "now-7h",  "to": "now" },
+      { "display": "Last 12 hours",   "from": "now-12h", "to": "now" },
+      { "display": "Last 24 hours",   "from": "now-24h", "to": "now" },
+      { "display": "Last 7 days",     "from": "now-7d",  "to": "now" },
+      { "display": "Last 30 days",    "from": "now-30d", "to": "now" }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "prometheus_ds",
+        "label": "Environment (Prometheus / NATS)",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "opensearch_ds",
+        "label": "Environment (OpenSearch)",
+        "type": "datasource",
+        "query": "grafana-opensearch-datasource",
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "cloudwatch_ds",
+        "label": "Environment (CloudWatch)",
+        "type": "datasource",
+        "query": "cloudwatch",
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Totals in selected time range",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Files scanned (records)",
+      "description": "Count of file/object records in OpenSearch (*-nxidx-*) in range — one record per file processed by a scan; equals the number of records stored in OpenSearch. NOTE: cumulative across scan runs, so re-scans of the same datasource are counted again (this is 'files processed', not 'unique files').",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" } } },
+      "options": { "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "*",
+          "metrics": [{ "id": "1", "type": "count" }],
+          "bucketAggs": [
+            { "id": "2", "type": "date_histogram", "field": "date_partition_ingested", "settings": { "interval": "auto" } }
+          ],
+          "timeField": "date_partition_ingested"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Total size of scanned files",
+      "description": "Sum of each record's source file 'size' (bytes) in range — the total size of the FILES that were scanned, NOT data downloaded/stored by the platform. Scanning reads metadata (content collection is off for these records), so OpenSearch storage is only tens of GB; this number is the aggregate size of the catalogued files at the source.",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "fieldConfig": { "defaults": { "unit": "decbytes", "color": { "mode": "fixed", "fixedColor": "green" } } },
+      "options": { "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "*",
+          "metrics": [{ "id": "1", "type": "sum", "field": "size" }],
+          "bucketAggs": [
+            { "id": "2", "type": "date_histogram", "field": "date_partition_ingested", "settings": { "interval": "auto" } }
+          ],
+          "timeField": "date_partition_ingested"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Scans running NOW",
+      "description": "In-flight messages across all *-scanner-v1 NATS consumers. Live gauge — independent of the time range.",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_ds}" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "text", "value": null }, { "color": "orange", "value": 1 }] } } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"}))"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Backlog (pending)",
+      "description": "Files queued but not yet picked up by scanners. Live gauge.",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_ds}" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1000 }, { "color": "red", "value": 50000 }] } } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"}))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Breakdown by source (selected time range)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }
+    },
+    {
+      "type": "piechart",
+      "title": "Files scanned by connector",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 6 },
+      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "reduceOptions": { "values": true, "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "*",
+          "metrics": [{ "id": "1", "type": "count" }],
+          "bucketAggs": [
+            { "id": "2", "type": "terms", "field": "connector_type.keyword", "settings": { "size": "15", "orderBy": "_count", "order": "desc" } }
+          ],
+          "timeField": "date_partition_ingested"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Data scanned by connector",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 6 },
+      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "fieldConfig": { "defaults": { "unit": "decbytes" } },
+      "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "*",
+          "metrics": [{ "id": "1", "type": "sum", "field": "size" }],
+          "bucketAggs": [
+            { "id": "2", "type": "terms", "field": "connector_type.keyword", "settings": { "size": "15", "orderBy": "1", "order": "desc" } }
+          ],
+          "timeField": "date_partition_ingested"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Files scanned by datasource (top 15)",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 6 },
+      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "*",
+          "metrics": [{ "id": "1", "type": "count" }],
+          "bucketAggs": [
+            { "id": "2", "type": "terms", "field": "datasource_access_id.keyword", "settings": { "size": "15", "orderBy": "_count", "order": "desc" } }
+          ],
+          "timeField": "date_partition_ingested"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Trends",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Files scanned over time (by connector)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "stacking": { "mode": "normal" }, "fillOpacity": 70 } } },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "*",
+          "metrics": [{ "id": "1", "type": "count" }],
+          "bucketAggs": [
+            { "id": "3", "type": "terms", "field": "connector_type.keyword", "settings": { "size": "10", "orderBy": "_count", "order": "desc" } },
+            { "id": "2", "type": "date_histogram", "field": "date_partition_ingested", "settings": { "interval": "auto" } }
+          ],
+          "timeField": "date_partition_ingested"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Data scanned over time",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "fieldConfig": { "defaults": { "unit": "decbytes", "custom": { "drawStyle": "bars", "fillOpacity": 50 } } },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "*",
+          "metrics": [{ "id": "1", "type": "sum", "field": "size" }],
+          "bucketAggs": [
+            { "id": "2", "type": "date_histogram", "field": "date_partition_ingested", "settings": { "interval": "auto" } }
+          ],
+          "timeField": "date_partition_ingested"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Live pipeline (Prometheus / NATS)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 }
+    },
+    {
+      "type": "timeseries",
+      "title": "In-flight (scanning now) by source",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_ds}" },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 20 } } },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{stream_name}}",
+          "expr": "max by (stream_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"})"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Backlog (pending) by source",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_ds}" },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 20 } } },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{stream_name}}",
+          "expr": "max by (stream_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"})"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Scan health (running fine vs failing). NOTE: authoritative per-scan-run success/failed lives in the Postgres app DB; this row is a live NATS-redelivery proxy until a Postgres datasource is added.",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Redeliveries / retries by source (processing-error proxy)",
+      "description": "nats_consumer_num_redelivered rising = messages failing and being retried. Sustained growth indicates a scan is NOT running fine. Authoritative per-scan status requires the Postgres scan-jobs table (follow-up).",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_ds}" },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{stream_name}} / {{consumer_name}}",
+          "expr": "max by (stream_name, consumer_name) (nats_consumer_num_redelivered{consumer_name=~\".*-scanner-v1|archiver-v1|extractor-v1\"})"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Recent scanned files",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 39 }
+    },
+    {
+      "type": "table",
+      "title": "Recent scanned files",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 40 },
+      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "description": "Latest scanned documents in range. Narrow with the query box, e.g. connector_type:S3 or datasource_access_id:s3-access-012.",
+      "targets": [
+        {
+          "refId": "A",
+          "query": "*",
+          "metrics": [
+            { "id": "1", "type": "raw_data", "settings": { "size": "200" } }
+          ],
+          "bucketAggs": [],
+          "timeField": "date_partition_ingested"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "OpenSearch domain health — AWS CloudWatch (AWS/ES). Managed-domain ops metrics; requires the CloudWatch datasource + Grafana pod IAM read.",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 50 }
+    },
+    {
+      "type": "gauge",
+      "title": "JVM memory pressure (heap)",
+      "description": "OpenSearch JVM heap usage %. Sustained >80% = GC pressure; >92% triggers protection mechanisms. CloudWatch AWS/ES JVMMemoryPressure.",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 51 },
+      "datasource": { "type": "cloudwatch", "uid": "${cloudwatch_ds}" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 80 }, { "color": "red", "value": 92 }] } } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        { "refId": "A", "namespace": "AWS/ES", "metricName": "JVMMemoryPressure", "dimensions": { "DomainName": "nx-development-os", "ClientId": "769537049595" }, "statistic": "Maximum", "region": "us-east-1", "period": "", "matchExact": true, "metricQueryType": 0, "metricEditorMode": 0 }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Free storage (min / node)",
+      "description": "Minimum free storage across data nodes. CloudWatch AWS/ES FreeStorageSpace (MB). Low free storage will block writes.",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 51 },
+      "datasource": { "type": "cloudwatch", "uid": "${cloudwatch_ds}" },
+      "fieldConfig": { "defaults": { "unit": "decmbytes", "thresholds": { "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 20480 }, { "color": "green", "value": 51200 }] } } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "refId": "A", "namespace": "AWS/ES", "metricName": "FreeStorageSpace", "dimensions": { "DomainName": "nx-development-os", "ClientId": "769537049595" }, "statistic": "Minimum", "region": "us-east-1", "period": "", "matchExact": true, "metricQueryType": 0, "metricEditorMode": 0 }
+      ]
+    },
+    {
+      "type": "gauge",
+      "title": "CPU utilization",
+      "description": "Data-node CPU %. CloudWatch AWS/ES CPUUtilization (Maximum).",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 51 },
+      "datasource": { "type": "cloudwatch", "uid": "${cloudwatch_ds}" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 70 }, { "color": "red", "value": 90 }] } } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        { "refId": "A", "namespace": "AWS/ES", "metricName": "CPUUtilization", "dimensions": { "DomainName": "nx-development-os", "ClientId": "769537049595" }, "statistic": "Maximum", "region": "us-east-1", "period": "", "matchExact": true, "metricQueryType": 0, "metricEditorMode": 0 }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Writes blocked",
+      "description": "1 = the cluster is blocking writes (usually low disk or high JVM pressure). Should be 0. CloudWatch AWS/ES ClusterIndexWritesBlocked.",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 51 },
+      "datasource": { "type": "cloudwatch", "uid": "${cloudwatch_ds}" },
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }, "mappings": [{ "type": "value", "options": { "0": { "text": "OK", "color": "green" } } }] } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "namespace": "AWS/ES", "metricName": "ClusterIndexWritesBlocked", "dimensions": { "DomainName": "nx-development-os", "ClientId": "769537049595" }, "statistic": "Maximum", "region": "us-east-1", "period": "", "matchExact": true, "metricQueryType": 0, "metricEditorMode": 0 }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Cluster status (green / yellow / red)",
+      "description": "CloudWatch AWS/ES ClusterStatus.* — a value of 1 means the domain is currently in that state.",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 55 },
+      "datasource": { "type": "cloudwatch", "uid": "${cloudwatch_ds}" },
+      "fieldConfig": { "defaults": { "min": 0, "max": 1, "custom": { "drawStyle": "line", "fillOpacity": 30, "lineInterpolation": "stepAfter" } } },
+      "targets": [
+        { "refId": "A", "namespace": "AWS/ES", "metricName": "ClusterStatus.green", "dimensions": { "DomainName": "nx-development-os", "ClientId": "769537049595" }, "statistic": "Maximum", "region": "us-east-1", "label": "green", "period": "", "matchExact": true, "metricQueryType": 0, "metricEditorMode": 0 },
+        { "refId": "B", "namespace": "AWS/ES", "metricName": "ClusterStatus.yellow", "dimensions": { "DomainName": "nx-development-os", "ClientId": "769537049595" }, "statistic": "Maximum", "region": "us-east-1", "label": "yellow", "period": "", "matchExact": true, "metricQueryType": 0, "metricEditorMode": 0 },
+        { "refId": "C", "namespace": "AWS/ES", "metricName": "ClusterStatus.red", "dimensions": { "DomainName": "nx-development-os", "ClientId": "769537049595" }, "statistic": "Maximum", "region": "us-east-1", "label": "red", "period": "", "matchExact": true, "metricQueryType": 0, "metricEditorMode": 0 }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Search & indexing latency",
+      "description": "CloudWatch AWS/ES SearchLatency / IndexingLatency (Average, ms).",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 55 },
+      "datasource": { "type": "cloudwatch", "uid": "${cloudwatch_ds}" },
+      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
+      "targets": [
+        { "refId": "A", "namespace": "AWS/ES", "metricName": "SearchLatency", "dimensions": { "DomainName": "nx-development-os", "ClientId": "769537049595" }, "statistic": "Average", "region": "us-east-1", "label": "search", "period": "", "matchExact": true, "metricQueryType": 0, "metricEditorMode": 0 },
+        { "refId": "B", "namespace": "AWS/ES", "metricName": "IndexingLatency", "dimensions": { "DomainName": "nx-development-os", "ClientId": "769537049595" }, "statistic": "Average", "region": "us-east-1", "label": "indexing", "period": "", "matchExact": true, "metricQueryType": 0, "metricEditorMode": 0 }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Searchable documents",
+      "description": "CloudWatch AWS/ES SearchableDocuments (Maximum) — total docs in the domain.",
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 62 },
+      "datasource": { "type": "cloudwatch", "uid": "${cloudwatch_ds}" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "blue" } } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "targets": [
+        { "refId": "A", "namespace": "AWS/ES", "metricName": "SearchableDocuments", "dimensions": { "DomainName": "nx-development-os", "ClientId": "769537049595" }, "statistic": "Maximum", "region": "us-east-1", "period": "", "matchExact": true, "metricQueryType": 0, "metricEditorMode": 0 }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Data nodes",
+      "description": "CloudWatch AWS/ES Nodes (Maximum) — number of nodes reporting in the domain.",
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 62 },
+      "datasource": { "type": "cloudwatch", "uid": "${cloudwatch_ds}" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "targets": [
+        { "refId": "A", "namespace": "AWS/ES", "metricName": "Nodes", "dimensions": { "DomainName": "nx-development-os", "ClientId": "769537049595" }, "statistic": "Maximum", "region": "us-east-1", "period": "", "matchExact": true, "metricQueryType": 0, "metricEditorMode": 0 }
+      ]
+    }
+  ]
+}
