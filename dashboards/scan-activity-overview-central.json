@@ -1,5 +1,5 @@
 {
-  "__comment": "NVisionX Scan Activity Overview — CENTRAL (all clusters) variant of scan-activity-overview.json. Same panels/queries as the per-cluster dashboard, unmodified. The only change: the three datasource-type template variables (prometheus_ds, opensearch_ds, cloudwatch_ds) are now VISIBLE dropdowns instead of hidden auto-picks, so one central Grafana can select which environment's Prometheus/OpenSearch/CloudWatch to query per panel group — same pattern already proven by opensearch-metrics-central.json's 'Environment (Data Source)' picker. IMPORTANT CAVEAT: today only Prometheus has multiple per-environment datasources registered centrally (Demo, Demo2, Integration, IONIS, KrispyKreme, SSB, UAT, ...), which is what drives elasticsearch_exporter-derived totals (files scanned = current doc count, data size = current store size, both via *-nxidx-* index metrics) and the live NATS panels (scans running now, backlog, in-flight/backlog by source, redeliveries). The OpenSearch (grafana-opensearch-datasource) and CloudWatch dropdowns will only populate once per-environment datasources of those types are registered in the central Grafana (not yet provisioned anywhere in nx-mimir-infra-tf) — until then, connector-type breakdown, the recent-scanned-files table, and the AWS/ES CloudWatch domain-health row will show 'No data' for any environment selected, exactly like the ES-cluster panels in opensearch-metrics-central.json do for environments without exporter data. Follow-up: register per-env OpenSearch + CloudWatch datasources centrally to light up the remaining panels.",
+  "__comment": "NVisionX Scan Activity Overview — CENTRAL (all clusters) variant of scan-activity-overview.json. mimir's central Grafana has no direct network path into any environment's VPC (no peering/Transit Gateway exists to any of them), so panels needing live per-document OpenSearch queries or CloudWatch AWS/ES metrics can't reach those sources directly from here - unlike Prometheus, which already arrives via remote_write (push, not pull) from each environment. Files/bytes totals, by-connector and by-datasource breakdowns, and their time trends are now sourced from nx_scan_files_total / nx_scan_bytes_total / nx_scan_files_by_datasource - Prometheus gauges published by a small per-environment exporter (nx-scan-metrics-exporter, see that repo's README) that queries OpenSearch locally and rides the same existing remote_write path everything else uses. Gauges are re-read from OpenSearch every scrape, so a pod restart never causes a visible dip; the by-connector/by-datasource time-series panels use delta() over the panel interval to approximate 'new files in this window' from the running totals. Two panel groups still can't move: 'Recent scanned files' (needs live per-document OpenSearch queries, no Prometheus equivalent) and the AWS/ES CloudWatch domain-health row (needs a CloudWatch datasource, not yet registered anywhere centrally) - both still show 'No data' until OpenSearch/CloudWatch connectivity or datasources exist centrally.",
   "title": "NVisionX — Scan Activity Overview (All Clusters)",
   "uid": "nx-scan-activity-central",
   "tags": ["git-sync", "nx", "scans", "opensearch", "metrics", "overview", "central", "multi-cluster"],
@@ -66,41 +66,25 @@
     {
       "type": "stat",
       "title": "Files scanned (records)",
-      "description": "Count of file/object records in OpenSearch (*-nxidx-*) in range — one record per file processed by a scan; equals the number of records stored in OpenSearch. NOTE: cumulative across scan runs, so re-scans of the same datasource are counted again (this is 'files processed', not 'unique files').",
+      "description": "Current total document count in OpenSearch (*-nxidx-*), summed across connectors. Sourced from nx_scan_files_total (nx-scan-metrics-exporter), a gauge re-read from OpenSearch every scrape — not scoped to the time picker like the old per-document query was, since this is a running total, not new-in-range.",
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
-      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_ds}" },
       "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" } } },
-      "options": { "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area" },
       "targets": [
-        {
-          "refId": "A",
-          "query": "*",
-          "metrics": [{ "id": "1", "type": "count" }],
-          "bucketAggs": [
-            { "id": "2", "type": "date_histogram", "field": "date_partition_ingested", "settings": { "interval": "auto" } }
-          ],
-          "timeField": "date_partition_ingested"
-        }
+        { "refId": "A", "expr": "sum(nx_scan_files_total)" }
       ]
     },
     {
       "type": "stat",
       "title": "Total size of scanned files",
-      "description": "Sum of each record's source file 'size' (bytes) in range — the total size of the FILES that were scanned, NOT data downloaded/stored by the platform. Scanning reads metadata (content collection is off for these records), so OpenSearch storage is only tens of GB; this number is the aggregate size of the catalogued files at the source.",
+      "description": "Current total 'size' (bytes) of scanned files across connectors. Sourced from nx_scan_bytes_total (nx-scan-metrics-exporter) — a running total, not scoped to the time picker.",
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
-      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_ds}" },
       "fieldConfig": { "defaults": { "unit": "decbytes", "color": { "mode": "fixed", "fixedColor": "green" } } },
-      "options": { "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area" },
       "targets": [
-        {
-          "refId": "A",
-          "query": "*",
-          "metrics": [{ "id": "1", "type": "sum", "field": "size" }],
-          "bucketAggs": [
-            { "id": "2", "type": "date_histogram", "field": "date_partition_ingested", "settings": { "interval": "auto" } }
-          ],
-          "timeField": "date_partition_ingested"
-        }
+        { "refId": "A", "expr": "sum(nx_scan_bytes_total)" }
       ]
     },
     {
@@ -142,55 +126,31 @@
       "type": "piechart",
       "title": "Files scanned by connector",
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 6 },
-      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_ds}" },
       "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "reduceOptions": { "values": true, "calcs": ["lastNotNull"] } },
       "targets": [
-        {
-          "refId": "A",
-          "query": "*",
-          "metrics": [{ "id": "1", "type": "count" }],
-          "bucketAggs": [
-            { "id": "2", "type": "terms", "field": "connector_type.keyword", "settings": { "size": "15", "orderBy": "_count", "order": "desc" } }
-          ],
-          "timeField": "date_partition_ingested"
-        }
+        { "refId": "A", "legendFormat": "{{connector_type}}", "expr": "sum by (connector_type) (nx_scan_files_total)" }
       ]
     },
     {
       "type": "barchart",
       "title": "Data scanned by connector",
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 6 },
-      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_ds}" },
       "fieldConfig": { "defaults": { "unit": "decbytes" } },
       "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "targets": [
-        {
-          "refId": "A",
-          "query": "*",
-          "metrics": [{ "id": "1", "type": "sum", "field": "size" }],
-          "bucketAggs": [
-            { "id": "2", "type": "terms", "field": "connector_type.keyword", "settings": { "size": "15", "orderBy": "1", "order": "desc" } }
-          ],
-          "timeField": "date_partition_ingested"
-        }
+        { "refId": "A", "legendFormat": "{{connector_type}}", "expr": "sum by (connector_type) (nx_scan_bytes_total)" }
       ]
     },
     {
       "type": "barchart",
       "title": "Files scanned by datasource (top 15)",
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 6 },
-      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_ds}" },
       "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "targets": [
-        {
-          "refId": "A",
-          "query": "*",
-          "metrics": [{ "id": "1", "type": "count" }],
-          "bucketAggs": [
-            { "id": "2", "type": "terms", "field": "datasource_access_id.keyword", "settings": { "size": "15", "orderBy": "_count", "order": "desc" } }
-          ],
-          "timeField": "date_partition_ingested"
-        }
+        { "refId": "A", "legendFormat": "{{datasource_access_id}}", "expr": "topk(15, sum by (datasource_access_id) (nx_scan_files_by_datasource))" }
       ]
     },
     {
@@ -201,38 +161,23 @@
     {
       "type": "timeseries",
       "title": "Files scanned over time (by connector)",
+      "description": "New files per interval, approximated as delta() of the running nx_scan_files_total gauge (not a per-bucket count query like the old OpenSearch date_histogram).",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
-      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_ds}" },
       "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "stacking": { "mode": "normal" }, "fillOpacity": 70 } } },
       "targets": [
-        {
-          "refId": "A",
-          "query": "*",
-          "metrics": [{ "id": "1", "type": "count" }],
-          "bucketAggs": [
-            { "id": "3", "type": "terms", "field": "connector_type.keyword", "settings": { "size": "10", "orderBy": "_count", "order": "desc" } },
-            { "id": "2", "type": "date_histogram", "field": "date_partition_ingested", "settings": { "interval": "auto" } }
-          ],
-          "timeField": "date_partition_ingested"
-        }
+        { "refId": "A", "legendFormat": "{{connector_type}}", "expr": "delta(nx_scan_files_total[$__interval])" }
       ]
     },
     {
       "type": "timeseries",
       "title": "Data scanned over time",
+      "description": "New bytes per interval, approximated as delta() of the running nx_scan_bytes_total gauge.",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
-      "datasource": { "type": "grafana-opensearch-datasource", "uid": "${opensearch_ds}" },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_ds}" },
       "fieldConfig": { "defaults": { "unit": "decbytes", "custom": { "drawStyle": "bars", "fillOpacity": 50 } } },
       "targets": [
-        {
-          "refId": "A",
-          "query": "*",
-          "metrics": [{ "id": "1", "type": "sum", "field": "size" }],
-          "bucketAggs": [
-            { "id": "2", "type": "date_histogram", "field": "date_partition_ingested", "settings": { "interval": "auto" } }
-          ],
-          "timeField": "date_partition_ingested"
-        }
+        { "refId": "A", "expr": "sum(delta(nx_scan_bytes_total[$__interval]))" }
       ]
     },
     {
