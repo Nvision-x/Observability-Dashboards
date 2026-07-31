@@ -1,0 +1,2273 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 39,
+  "version": 2,
+  "title": "Privacy Pipeline \u2014 Scan Progress & Stall Detection",
+  "uid": "nx-privacy-pipeline",
+  "tags": [
+    "nvision-x",
+    "privacy",
+    "pii",
+    "nxe-2480",
+    "git-sync"
+  ],
+  "description": "PII scan throughput and the sent-minus-received stall detector. Built to catch the silent wedge described in NXE-2480.",
+  "timezone": "browser",
+  "refresh": "1m",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "1h"
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Data source",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "label": "Namespace",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(pii_docs_sent_total, namespace)",
+          "refId": "namespace"
+        },
+        "definition": "label_values(pii_docs_sent_total, namespace)",
+        "multi": false,
+        "includeAll": false,
+        "allValue": null,
+        "current": {},
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "pod",
+        "label": "Pod",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(pii_docs_sent_total{namespace=~\"$namespace\"}, pod)",
+          "refId": "pod"
+        },
+        "definition": "label_values(pii_docs_sent_total{namespace=~\"$namespace\"}, pod)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {},
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "job_id",
+        "label": "Scan job",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(pii_docs_sent_total{namespace=~\"$namespace\"}, job_id)",
+          "refId": "job_id"
+        },
+        "definition": "label_values(pii_docs_sent_total{namespace=~\"$namespace\"}, job_id)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {},
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "consumers",
+        "label": "PIPELINE_CONSUMERS",
+        "type": "custom",
+        "query": "4,16,32",
+        "multi": false,
+        "includeAll": false,
+        "current": {
+          "selected": true,
+          "text": "32",
+          "value": "32"
+        },
+        "options": [
+          {
+            "selected": false,
+            "text": "4",
+            "value": "4"
+          },
+          {
+            "selected": false,
+            "text": "16",
+            "value": "16"
+          },
+          {
+            "selected": true,
+            "text": "32",
+            "value": "32"
+          }
+        ]
+      },
+      {
+        "name": "batch",
+        "label": "ES_SEARCH_BATCH_SIZE",
+        "type": "custom",
+        "query": "250,500,1000",
+        "multi": false,
+        "includeAll": false,
+        "current": {
+          "selected": true,
+          "text": "1000",
+          "value": "1000"
+        },
+        "options": [
+          {
+            "selected": false,
+            "text": "250",
+            "value": "250"
+          },
+          {
+            "selected": false,
+            "text": "500",
+            "value": "500"
+          },
+          {
+            "selected": true,
+            "text": "1000",
+            "value": "1000"
+          }
+        ]
+      },
+      {
+        "name": "lease",
+        "label": "ES_PIT_KEEP_ALIVE (s)",
+        "type": "custom",
+        "query": "300,1800,7200",
+        "multi": false,
+        "includeAll": false,
+        "current": {
+          "selected": true,
+          "text": "1800",
+          "value": "1800"
+        },
+        "options": [
+          {
+            "selected": false,
+            "text": "300",
+            "value": "300"
+          },
+          {
+            "selected": true,
+            "text": "1800",
+            "value": "1800"
+          },
+          {
+            "selected": false,
+            "text": "7200",
+            "value": "7200"
+          }
+        ]
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "\u2b50 PIT LEASE MARGIN \u2014 the actual failure predictor",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": [],
+      "id": 131
+    },
+    {
+      "type": "stat",
+      "title": "Estimated max search gap",
+      "description": "consumers x page_size / throughput, in seconds.\n\nCompare against $lease (ES_PIT_KEEP_ALIVE, default 1800s). Above the lease, the next search returns 404 search_context_missing_exception and the scan dies silently \u2014 privacy discards the reader error, so the job still reports SUCCESS.\n\nGreen below 900s (half the lease). Red at 1800s.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "($consumers * $batch) / (sum(rate(pii_docs_processed_total{job_id=~\"$job_id\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\"}[5m])))",
+          "legendFormat": "",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": [
+                  "green",
+                  null
+                ],
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 900
+              },
+              {
+                "color": "red",
+                "value": 1800
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Search gap vs PIT lease",
+      "description": "The flat reference line is the lease. Any time the gap crosses it, the PIT is already dead \u2014 the scan just has not found out yet, because it only discovers this on its NEXT search.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "($consumers * $batch) / (sum(rate(pii_docs_processed_total{job_id=~\"$job_id\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\"}[5m])))",
+          "legendFormat": "est. search gap",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "$lease",
+          "legendFormat": "PIT lease",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": [
+                  "green",
+                  null
+                ],
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 900
+              },
+              {
+                "color": "red",
+                "value": 1800
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 6,
+        "y": 1
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Critical throughput",
+      "description": "The document rate below which the PIT cannot survive:\n\n    consumers x page_size / lease\n\nAt 32 consumers, 1000-doc pages and a 30m lease this is 17.8 docs/s. Anything slower is living on borrowed time.\n\nNote this is 32x higher than the naive 'one search per page' figure of 0.556 docs/s \u2014 that number is the AVERAGE search rate and it does not predict failure.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "($consumers * $batch) / $lease",
+          "legendFormat": "",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed"
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Document throughput vs critical rate",
+      "description": "Blue is what the pipeline is actually draining. Red is the critical rate from the panel to the left. Blue below red means the lease will expire.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(rate(pii_docs_processed_total{job_id=~\"$job_id\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\"}[5m])))",
+          "legendFormat": "drained docs/s",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "($consumers * $batch) / $lease",
+          "legendFormat": "critical rate",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      }
+    },
+    {
+      "type": "text",
+      "title": "The model, and how to read it",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### Why this row exists\n\nA Point-In-Time lease dies on the **maximum gap between searches**, not the average.\n\n`startConsumers` spawns `PIPELINE_CONSUMERS` goroutines, each holding a **full page** of documents while feeding a shared `requests` channel drained by a shared fetcher pool. They start together and progress at identical rates, so they **finish together** \u2014 and between waves no slice unblocks and **no search is issued**.\n\n```\nMAX SEARCH GAP = PIPELINE_CONSUMERS x ES_SEARCH_BATCH_SIZE / throughput\n```\n\nOn 2026-07-27 the scan was at ~13 docs/s when it died: 32 x 1000 / 13 = **2462s = 41 min**, against a 30-minute lease.\n\n**Evidence for the synchronisation:** slices 1, 2 and 3 all 404'd within **209 ms** of each other. Staggered consumers fail minutes apart.\n\n### Set the variables before trusting the numbers\n`$consumers` \u2014 values.yaml says 16, the configmap renders 4, measured in-flight was 32. **Confirm it.**\n`$batch` \u2014 `ES_SEARCH_BATCH_SIZE`, default 1000.\n`$lease` \u2014 `ES_PIT_KEEP_ALIVE` in seconds, default 30m = 1800.\n\nDropping `$batch` to 250 buys 4x margin with no code change. The real fix is a keep-alive refresher, which decouples the lease from progress entirely \u2014 privacy's reader does not have one."
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      }
+    },
+    {
+      "type": "row",
+      "title": "THE STALL DETECTOR \u2014 read this first",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "panels": [],
+      "id": 1
+    },
+    {
+      "type": "stat",
+      "title": "Fetches in flight (sent - received)",
+      "description": "THE single most important number on this dashboard, and it needs no code change.\n\noscillating near 0     -> healthy\nFLAT at worker count   -> every fetch worker is blocked. THE SCAN IS WEDGED.\nclimbing steadily      -> content-service falling behind\n\nA flat plateau lasting longer than the PIT keep-alive (30m) means the scan is already dead and does not know it yet.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(pii_docs_sent_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}) - sum(pii_docs_received_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"})",
+          "legendFormat": "in flight",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": null,
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 4
+              },
+              {
+                "color": "red",
+                "value": 16
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 64
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 18
+      },
+      "id": 2
+    },
+    {
+      "type": "timeseries",
+      "title": "In-flight fetches over time \u2014 FLAT LINE = WEDGED",
+      "description": "Watch the SHAPE, not the value. A healthy scan is sawtoothed. A horizontal line at the fetch-worker count is the failure: workers blocked forever on replies that will never arrive.\n\nNOTE: the worker count is currently ambiguous \u2014 values.yaml sets PIPELINE_CONSUMERS=16 in the env block while the configmap renders pipelineConsumers=4. Resolve this before interpreting the plateau height.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (job_id) (pii_docs_sent_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}) - sum by (job_id) (pii_docs_received_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"})",
+          "legendFormat": "{{job_id}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 4
+              },
+              {
+                "color": "red",
+                "value": 16
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 6,
+        "y": 18
+      },
+      "id": 3
+    },
+    {
+      "type": "stat",
+      "title": "Documents still unaccounted",
+      "description": "Dispatched but neither analysed nor failed. Should trend to 0 at scan end. A persistent non-zero residue is silently lost work.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(pii_docs_sent_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}) - sum(pii_docs_processed_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}) - sum(pii_errors_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\", kind=\"get_content\"})",
+          "legendFormat": "unaccounted",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": null,
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 48
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 18
+      },
+      "id": 4
+    },
+    {
+      "type": "row",
+      "title": "Pipeline funnel \u2014 where documents are lost",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "panels": [],
+      "id": 5
+    },
+    {
+      "type": "stat",
+      "title": "Generated",
+      "description": "Requests dispatched to content-service",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(increase(pii_docs_sent_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[$__range]))",
+          "legendFormat": "generated",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "auto",
+        "justifyMode": "auto"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 27
+      },
+      "id": 6
+    },
+    {
+      "type": "stat",
+      "title": "Received",
+      "description": "Replies that came back",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(increase(pii_docs_received_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[$__range]))",
+          "legendFormat": "received",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "auto",
+        "justifyMode": "auto"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 27
+      },
+      "id": 7
+    },
+    {
+      "type": "stat",
+      "title": "Analysed",
+      "description": "Completed PII analysis",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(increase(pii_docs_processed_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[$__range]))",
+          "legendFormat": "analysed",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "auto",
+        "justifyMode": "auto"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 27
+      },
+      "id": 8
+    },
+    {
+      "type": "stat",
+      "title": "Persisted",
+      "description": "Written back to OpenSearch",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(increase(pii_bulk_docs_updated_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[$__range]))",
+          "legendFormat": "persisted",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "auto",
+        "justifyMode": "auto"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 27
+      },
+      "id": 9
+    },
+    {
+      "type": "timeseries",
+      "title": "Funnel rates \u2014 these four lines should track each other",
+      "description": "Divergence localises the bottleneck:\nsent >> received    -> content-service (the hypothesis)\nreceived >> analysed-> PII analysis CPU-bound\nanalysed >> persisted-> OpenSearch bulk writer is the constraint\n\nThat last case is the main ALTERNATIVE explanation for a stalled scan and is cheap to rule out here.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(pii_docs_sent_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[5m]))",
+          "legendFormat": "1. sent",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(pii_docs_received_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[5m]))",
+          "legendFormat": "2. received",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(pii_docs_processed_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[5m]))",
+          "legendFormat": "3. analysed",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(pii_bulk_docs_updated_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[5m]))",
+          "legendFormat": "4. persisted",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 33
+      },
+      "id": 10
+    },
+    {
+      "type": "timeseries",
+      "title": "Drop-off between stages (cumulative gaps)",
+      "description": "Each series is a queue depth. Whichever grows without bound is the constraint.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(pii_docs_sent_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}) - sum(pii_docs_received_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"})",
+          "legendFormat": "awaiting content",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(pii_docs_received_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}) - sum(pii_docs_processed_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"})",
+          "legendFormat": "awaiting analysis",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(pii_docs_processed_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}) - sum(pii_bulk_docs_updated_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"})",
+          "legendFormat": "awaiting write",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 33
+      },
+      "id": 11
+    },
+    {
+      "type": "row",
+      "title": "Errors",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      },
+      "panels": [],
+      "id": 12
+    },
+    {
+      "type": "timeseries",
+      "title": "Error rate by kind",
+      "description": "kind='get_content' is privacy's own view of content-service failing it.\n\nIMPORTANT: with CONTENT_GET_TIMEOUT unset this counter UNDERSTATES reality. A lost reply produces no error at all \u2014 the worker just waits forever. Setting CONTENT_GET_TIMEOUT=300s is what makes this metric start telling the truth.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (kind) (rate(pii_errors_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[5m]))",
+          "legendFormat": "{{kind}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 42
+      },
+      "id": 13
+    },
+    {
+      "type": "stat",
+      "title": "get_content failures ($__range)",
+      "description": "Fetches that failed loudly. Compare against the silent wedge count in the top row.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(increase(pii_errors_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\", kind=\"get_content\"}[$__range]))",
+          "legendFormat": "failures",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": null,
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "text": {
+          "valueSize": 48
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 42
+      },
+      "id": 14
+    },
+    {
+      "type": "table",
+      "title": "Errors by job and kind",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (job_id, kind) (increase(pii_errors_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[$__range]))",
+          "legendFormat": "__auto",
+          "range": false,
+          "editorMode": "code",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "instance": true,
+              "otel_scope_name": true,
+              "otel_scope_version": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 42
+      },
+      "id": 15
+    },
+    {
+      "type": "row",
+      "title": "Analysis output & throughput",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 50
+      },
+      "panels": [],
+      "id": 16
+    },
+    {
+      "type": "timeseries",
+      "title": "Detection outcomes",
+      "description": "The actual analytical product \u2014 what the customer is paying for.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (has_detections) (rate(pii_docs_processed_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[5m]))",
+          "legendFormat": "has_detections={{has_detections}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 51
+      },
+      "id": 17
+    },
+    {
+      "type": "stat",
+      "title": "Detection ratio",
+      "description": "Share of documents containing PII. A sudden change with no corpus change suggests a recogniser or locale configuration problem.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(pii_docs_processed_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\", has_detections=\"true\"}[5m])) / clamp_min(sum(rate(pii_docs_processed_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[5m])), 0.0001)",
+          "legendFormat": "with PII",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "auto",
+        "justifyMode": "auto"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 51
+      },
+      "id": 18
+    },
+    {
+      "type": "timeseries",
+      "title": "Content volume analysed",
+      "description": "Throughput in bytes. Useful for cost and capacity, not for this incident.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(pii_bytes_processed_total{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[5m]))",
+          "legendFormat": "bytes/s",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 51
+      },
+      "id": 19
+    },
+    {
+      "type": "timeseries",
+      "title": "Per-document processing time (SEE DESCRIPTION \u2014 buckets are wrong)",
+      "description": "CURRENTLY NEARLY USELESS. This histogram uses prometheus.DefBuckets, whose top bucket is 10 SECONDS, on a path where a 120s extraction is normal. Essentially everything interesting lands in +Inf and these quantiles are extrapolated fiction.\n\nFIX: explicit buckets {0.5,1,2.5,5,10,30,60,120,240,300} in internal/metrics/metrics.go. Until then use the >10s counter beside this.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(pii_doc_duration_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[5m])))",
+          "legendFormat": "p50",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(pii_doc_duration_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[5m])))",
+          "legendFormat": "p95",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(pii_doc_duration_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\"}[5m])))",
+          "legendFormat": "p99",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 59
+      },
+      "id": 20
+    },
+    {
+      "type": "stat",
+      "title": "Documents slower than 10s (top bucket overflow)",
+      "description": "The honest version of the panel beside this one: a straight count of documents exceeding the largest usable bucket.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(pii_doc_duration_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\", le=\"+Inf\"}[5m])) - sum(rate(pii_doc_duration_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\", job_id=~\"$job_id\", le=\"10\"}[5m]))",
+          "legendFormat": ">10s",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": null,
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "area",
+        "colorMode": "value",
+        "textMode": "auto",
+        "justifyMode": "auto"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 59
+      },
+      "id": 21
+    },
+    {
+      "type": "row",
+      "title": "Scrape & pod health \u2014 privacy scales to zero, so read this before trusting anything above",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 67
+      },
+      "panels": [],
+      "id": 22
+    },
+    {
+      "type": "timeseries",
+      "title": "Scrape up/down \u2014 GAPS ARE EXPECTED",
+      "description": "privacyBeGo autoscaling.minReplicas defaults to 0 and the PodMonitor scrapes every 30s. Short scans may be scraped once or not at all, and every counter RESETS on a new pod.\n\nPractical consequences:\n- rate() over a resetting counter is unreliable\n- an empty panel means 'no pod', NOT 'no problem'\n- prefer the equivalent content-service panel where one exists (minReplicas:1, continuous series)\n- pin replicas during any investigation",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "up{namespace=~\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 68
+      },
+      "id": 23
+    },
+    {
+      "type": "timeseries",
+      "title": "Container restarts",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=~\"$namespace\", pod=~\"$pod\"}[10m]))",
+          "legendFormat": "{{pod}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 68
+      },
+      "id": 24
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU vs limit",
+      "description": "Privacy pods are Guaranteed QoS (requests == limits). PIPELINE_GOMAXPROCS is set to 2 because there is no automaxprocs and NumCPU() reports NODE cores.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\", pod=~\"$pod\", container!=\"\"}[5m]))",
+          "legendFormat": "{{pod}} used",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (pod) (kube_pod_container_resource_limits{namespace=~\"$namespace\", pod=~\"$pod\", resource=\"cpu\"})",
+          "legendFormat": "{{pod}} limit",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 68
+      },
+      "id": 25
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory vs limit",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=~\"$namespace\", pod=~\"$pod\", container!=\"\"})",
+          "legendFormat": "{{pod}} used",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (pod) (kube_pod_container_resource_limits{namespace=~\"$namespace\", pod=~\"$pod\", resource=\"memory\"})",
+          "legendFormat": "{{pod}} limit",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 76
+      },
+      "id": 26
+    },
+    {
+      "type": "timeseries",
+      "title": "Replica count (KEDA)",
+      "description": "Scale-from-zero latency is bounded by KEDA pollingInterval (30s). Metrics before the pod exists are simply absent.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(kube_deployment_status_replicas{namespace=~\"$namespace\", deployment=~\".*privacy.*\"})",
+          "legendFormat": "ready",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(kube_deployment_spec_replicas{namespace=~\"$namespace\", deployment=~\".*privacy.*\"})",
+          "legendFormat": "desired",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 76
+      },
+      "id": 27
+    },
+    {
+      "type": "text",
+      "title": "Instrumentation gaps",
+      "transparent": false,
+      "options": {
+        "mode": "markdown",
+        "content": "\n**Missing instrumentation** (ordered by value)\n\n1. **No client-side `GetContent` latency histogram.** Privacy never times its own\ncalls. Server-side metrics cannot see requests that were never picked up or whose\nreply was lost \u2014 exactly the failure modes that matter. ~5 lines at\n`main.go:372`.\n2. **No timeout at all.** `CONTENT_GET_TIMEOUT` unset \u21d2 wait forever. Setting it\nto `300s` converts a silent wedge into a counted error.\n3. **`job_id` on every metric** = unbounded cardinality; a series per scan, forever.\n4. **`pii_doc_duration_seconds` buckets max at 10s** on a 120s path.\n5. **No PIT metrics at all** in privacy's reader \u2014 the extractor got\n`extractor_pit_renewals_total`; privacy's copy has nothing.\n6. **Channel saturation invisible** \u2014 the actual stall point (`hits` and\n`requests` channels) has no gauge.\n"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 76
+      },
+      "id": 28
+    },
+    {
+      "type": "row",
+      "title": "Reference",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 84
+      },
+      "panels": [],
+      "id": 29
+    },
+    {
+      "type": "text",
+      "title": "How to read this dashboard",
+      "transparent": false,
+      "options": {
+        "mode": "markdown",
+        "content": "\n### What this dashboard is for\n\nDetecting a **silent stall** in a PII scan, and localising whether the cause is content-service,\nthe analysis stage, or the OpenSearch writer.\n\n### Why the top-left panel is the whole story\n\nPrivacy dispatches fetches to content-service and waits for replies. `sent - received` is therefore\nthe number of documents currently in flight. That difference is the only visible trace of a failure\nmode that is otherwise completely silent:\n\n- the fetch worker is **not** crashed \u2014 it is blocked on a channel receive\n- liveness probes pass, the pod is `Running 1/1`\n- **no log line is emitted**, because nothing has happened\n- **no counter moves**, because every privacy counter fires on an *event*, and a wait is not an event\n\nThe only observable is that a difference between two counters has stopped changing.\n\n### Two failure shapes\n\n**Some workers wedge** \u2014 throughput decays as workers are lost one by one. Pagination continues,\nslower, with longer gaps between OpenSearch searches. Eventually a gap exceeds the 30-minute PIT\nkeep-alive, the lease dies, and the next search returns 404 on every slice at once. *This is what the\nproduction ticket shows.*\n\n**All workers wedge** \u2014 total silence. No search is ever issued again, so nothing errors. The handler\nnever returns and the job sits in `running` forever. That maps to the long-standing \"jobs stuck\nrunning\" issue rather than to a 404.\n\nEither way the PIT expiry is not the disease \u2014 it is the moment the system finally notices it has\nbeen degrading for half an hour.\n\n### Reading order\n\n1. **Fetches in flight** \u2014 flat line at the worker count means wedged.\n2. **Funnel rates** \u2014 which of the four lines diverges tells you which stage is the constraint.\n3. **Errors by kind** \u2014 remember this understates reality until a timeout is configured.\n4. **Scrape up/down** \u2014 confirm you were actually collecting data before believing any panel above.\n5. Cross-check the **content-service dashboard's restart panel** over the same window.\n\n### Correlating with content-service\n\nThe two dashboards share a time range. The confirming pattern is:\n\n```\nprivacy: sent-minus-received goes flat\n   AND\ncontent-service: restart, OOM, or shutdown_pending_failed spike at the same moment\n```\n\nIf privacy stalls while content-service looks completely healthy, the loss is in NATS transport\nrather than content-service load \u2014 a different fix, and worth knowing early.\n"
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 24,
+        "x": 0,
+        "y": 85
+      },
+      "id": 30
+    }
+  ]
+}

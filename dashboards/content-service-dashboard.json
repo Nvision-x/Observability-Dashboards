@@ -394,6 +394,91 @@
       ],
       "title": "Cache write size distribution",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 64},
+      "id": 500,
+      "panels": [],
+      "title": "Retry amplification — how one connector error becomes a platform stall (NXE-2480)",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Connector fetches issued per document actually drained by the privacy pipeline. 1.0 = healthy: every document fetched exactly once. The retry ladder is extractRetryMaxAttempts (5) × JetStream MaxDeliver (3) = 15, so a value approaching 15 means every failing document is consuming the whole ladder while holding one of the caller's workers. Measured 14.99 throughout the 2026-07-27 outage. NOTE: pii_* is emitted by the privacy job, so this reads true only while a privacy scan is running.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 2}, {"color": "red", "value": 5}]},
+          "unit": "none"
+        }
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 65},
+      "id": 21,
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "value"},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum(rate(content_nats_fetch_total{namespace=\"$namespace\", job=\"$job\"}[5m])) / sum(rate(pii_bulk_docs_updated_total{namespace=\"$namespace\"}[5m]))", "refId": "A"}
+      ],
+      "title": "Fetch amplification (fetches per document)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "`failed` = Nak'd back to JetStream for redelivery — note this path sends NO reply, so a synchronous caller keeps waiting. `failed_terminal` = retry budget exhausted across all deliveries, the only path that does reply. Both were EXACTLY 0.00/s during a clean S3-only window running at 87 completed/s, and both ran sustained through the 2026-07-27 incident. Sustained non-zero here means documents are being retried instead of failing fast.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "stacking": {"mode": "normal"}},
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {"h": 6, "w": 9, "x": 6, "y": 65},
+      "id": 22,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (status) (rate(content_requests_total{namespace=\"$namespace\", job=\"$job\", api=\"nats\", status=~\"failed|failed_terminal\"}[5m]))", "legendFormat": "{{status}}", "refId": "A"}
+      ],
+      "title": "Retry outcomes — failed vs failed_terminal",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Requests slower than the histogram's top bucket. The service permits pickup 60s + worker 180s = 240s but content_request_duration_seconds stops at 60s, so p99 is extrapolated and UNDERSTATES the tail — count the overflow directly instead. During the 2026-07-27 outage p95 pinned at exactly 29.00s for 360 consecutive samples, the interpolation signature of 100% of requests sitting in the (10s, 30s] bucket. NOTE the bucket label is decimal-formatted: le=\"60.0\". Querying le=\"60\" returns nothing.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never"},
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {"h": 6, "w": 9, "x": 15, "y": 65},
+      "id": 23,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum(rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", api=\"nats\", le=\"+Inf\"}[5m])) - sum(rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", api=\"nats\", le=\"60.0\"}[5m]))", "legendFormat": "slower than 60s", "refId": "A"}
+      ],
+      "title": "Requests past the 60s top bucket",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "Privacy document throughput against the rate below which its OpenSearch Point-in-Time lease expires. The reader paginates only as documents drain, and its consumers synchronise, so the gap between searches is 32 consumers × 1000-document pages ÷ throughput. Against a 30-minute lease that gives a critical rate of 32000/1800 = 17.8 docs/s. Sustained operation below the red line ends in a 404 search_context_missing_exception — and because the reader error is discarded at main.go:219, the scan then reports SUCCESS having read only part of the index. Requires a running privacy scan.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 2, "showPoints": "never"},
+          "unit": "ops"
+        }
+      },
+      "gridPos": {"h": 7, "w": 24, "x": 0, "y": 71},
+      "id": 24,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum(rate(pii_docs_processed_total{namespace=\"$namespace\"}[5m]))", "legendFormat": "documents analysed/s", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "vector(17.8)", "legendFormat": "PIT critical rate (32 × 1000 / 1800)", "refId": "B"}
+      ],
+      "title": "Privacy throughput vs the PIT critical rate",
+      "type": "timeseries"
     }
   ],
   "refresh": "30s",
@@ -456,6 +541,6 @@
   "timezone": "browser",
   "title": "Content Service",
   "uid": "content-service",
-  "version": 2,
+  "version": 3,
   "weekStart": ""
 }
