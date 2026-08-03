@@ -56,6 +56,28 @@
         "refresh": 1
       },
       {
+        "name": "job",
+        "label": "Job",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(pii_docs_sent_total, job)",
+          "refId": "job"
+        },
+        "definition": "label_values(pii_docs_sent_total, job)",
+        "multi": false,
+        "includeAll": false,
+        "allValue": null,
+        "current": {},
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "hide": 0
+      },
+      {
         "name": "namespace",
         "label": "Namespace",
         "type": "query",
@@ -242,7 +264,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "($consumers * $batch) / (sum(rate(pii_docs_processed_total{job_id=~\"$job_id\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\"}[5m])))",
+          "expr": "($consumers * $batch) / (sum(rate(pii_docs_processed_total{job_id=~\"$job_id\", job=\"$job\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\", job=\"$job\"}[5m])))",
           "legendFormat": "",
           "range": true,
           "editorMode": "code"
@@ -311,7 +333,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "($consumers * $batch) / (sum(rate(pii_docs_processed_total{job_id=~\"$job_id\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\"}[5m])))",
+          "expr": "($consumers * $batch) / (sum(rate(pii_docs_processed_total{job_id=~\"$job_id\", job=\"$job\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\", job=\"$job\"}[5m])))",
           "legendFormat": "est. search gap",
           "range": true,
           "editorMode": "code"
@@ -460,7 +482,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(sum(rate(pii_docs_processed_total{job_id=~\"$job_id\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\"}[5m])))",
+          "expr": "(sum(rate(pii_docs_processed_total{job_id=~\"$job_id\", job=\"$job\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\", job=\"$job\"}[5m])))",
           "legendFormat": "drained docs/s",
           "range": true,
           "editorMode": "code"
