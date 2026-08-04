@@ -66,7 +66,7 @@
           "uid": "${DS_PROMETHEUS}"
         },
         "enable": true,
-        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\".*archiver.*\"}[5m]) > 0",
+        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\"applications-archiverv2.*\"}[5m]) > 0",
         "name": "Pod Restarts",
         "tagKeys": "pod",
         "titleFormat": "Pod Restart"
@@ -96,7 +96,7 @@
       },
       "targets": [
         {
-          "expr": "",
+          "expr": "sum(kube_pod_status_ready{pod=~\"applications-archiverv2.*\", condition=\"true\"})",
           "refId": "A"
         }
       ],
@@ -110,7 +110,7 @@
           "calcs": ["lastNotNull"],
           "fields": ""
         },
-        "textMode": "value_and_name",
+        "textMode": "value",
         "text": {
           "titleSize": 14,
           "valueSize": 80
@@ -166,7 +166,7 @@
       "transparent": false
     },
     {
-      "title": "Pods Running Total",
+      "title": "Pods Running",
       "type": "stat",
       "gridPos": {
         "h": 3,
@@ -176,7 +176,7 @@
       },
       "targets": [
         {
-          "expr": "",
+          "expr": "count(up{job=\"default/applications-archiver\", namespace=\"$namespace\"} == 1)",
           "refId": "A"
         }
       ],
@@ -190,7 +190,7 @@
           "calcs": ["lastNotNull"],
           "fields": ""
         },
-        "textMode": "value_and_name"
+        "textMode": "value"
       },
       "fieldConfig": {
         "defaults": {
@@ -241,7 +241,7 @@
           "calcs": ["lastNotNull"],
           "fields": ""
         },
-        "textMode": "value_and_name"
+        "textMode": "value"
       },
       "fieldConfig": {
         "defaults": {
@@ -268,9 +268,9 @@
         "x": 14,
         "y": 1
       },
-      "targets": 
+      "targets": [
         {
-          "expr": "",
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\"applications-archiverv2.*\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -284,7 +284,7 @@
           "calcs": ["lastNotNull"],
           "fields": ""
         },
-        "textMode": "value_and_name"
+        "textMode": "value"
       },
       "fieldConfig": {
         "defaults": {
@@ -372,7 +372,7 @@
       },
       "targets": [
         {
-          "expr": "",
+          "expr": "sum(kube_pod_status_ready{pod=~\"applications-archiverv2.*\", condition=\"true\"})",
           "refId": "A"
         }
       ],
@@ -494,7 +494,7 @@
       },
       "targets": [
         {
-          "expr": "sum(kube_pod_status_ready{namespace=\"$namespace\", pod=~\".*archiver.*\", condition=\"true\"})",
+          "expr": "sum(kube_pod_status_ready{namespace=\"$namespace\", pod=~\"applications-archiverv2.*\", condition=\"true\"})",
           "refId": "A"
         }
       ],
@@ -508,7 +508,7 @@
           "calcs": ["lastNotNull"],
           "fields": ""
         },
-        "textMode": "value_and_name"
+        "textMode": "value"
       },
       "fieldConfig": {
         "defaults": {
@@ -545,7 +545,7 @@
       },
       "targets": [
         {
-          "expr": "",
+          "expr": "avg(time() - process_start_time_seconds{namespace=\"default\", job=\"default/applications-archiverv2\"})",
           "refId": "A"
         }
       ],
@@ -559,7 +559,7 @@
           "calcs": ["lastNotNull"],
           "fields": ""
         },
-        "textMode": "value_and_name"
+        "textMode": "value"
       },
       "fieldConfig": {
         "defaults": {
@@ -1359,7 +1359,7 @@
       },
       "targets": [
         {
-          "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\".*archiver.*\"}) by (pod)",
+          "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\"applications-archiverv2.*\"}) by (pod)",
           "legendFormat": "{{pod}}",
           "refId": "A"
         }
@@ -1611,7 +1611,7 @@
       },
       "targets": [
         {
-          "expr": "container_cpu_usage_seconds_total{namespace=\"default\", pod=\"applications-archiverv2-77484ddbc5-nb52n\", container=\"archiverv2\"}",
+          "expr": "sum( rate(container_cpu_usage_seconds_total{pod=~\"applications-archiverv2.*\", container!=\"POD\"}[5m]) )",
           "refId": "A"
         }
       ],
@@ -1662,6 +1662,7 @@
       },
       "targets": [
         {
+          "expr": "sum(container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\"}) / 1024 / 1024",
           "expr": "sum(container_memory_working_set_bytes{pod=~\"applications-archiverv2.*\", container=\"archiverv2\", namespace=\"default\"}) / 1024 / 1024",
           "refId": "A"
         }
@@ -1713,7 +1714,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "expr": "prometheus_sd_kubernetes_http_request_total{job=\"observability-kube-prometh-prometheus\", service=\"observability-kube-prometh-prometheus\"}",
           "refId": "A"
         }
       ],
@@ -2190,7 +2191,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\".*archiver.*\"}[5m])) by (pod)",
+          "expr": "sum(rate(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\".*archiverv2.*\"}[5m])) by (pod)",
           "legendFormat": "{{pod}}",
           "refId": "A"
         }

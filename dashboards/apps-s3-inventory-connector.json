@@ -1,0 +1,178 @@
+{
+  "id": null,
+  "uid": "s3-parquet-processing",
+  "title": "S3 Parquet Processing - Metrics",
+  "tags": ["s3", "parquet", "nats", "metrics", "git-sync"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5m",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Files Processed Total",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum(s3_parquet_files_processed_total)", "legendFormat": "Files Processed", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Rows Processed Total",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        { "expr": "sum(s3_parquet_rows_processed_total)", "legendFormat": "Rows Processed", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Rows Latest Total",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "sum(s3_parquet_rows_latest_total)", "legendFormat": "Rows Latest", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Rows Marked Deleted Total",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        { "expr": "sum(s3_parquet_rows_marked_deleted_total)", "legendFormat": "Rows Deleted", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Rows Not Latest Total",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 6 },
+      "targets": [
+        { "expr": "sum(s3_parquet_rows_not_latest)", "legendFormat": "Rows Not Latest", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Batches Sent to NATS",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 6 },
+      "targets": [
+        { "expr": "sum(s3_parquet_batches_sent_to_nats)", "legendFormat": "Batches Sent", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Items Sent to NATS",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 6 },
+      "targets": [
+        { "expr": "sum(s3_parquet_items_sent_to_nats)", "legendFormat": "Items Sent", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 }
+      }
+    },
+    {
+      "id": 8,
+      "title": "Rows Processing Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        { "expr": "sum(rate(s3_parquet_rows_processed_total[5m]))", "legendFormat": "Rows/sec", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Files Processing Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        { "expr": "sum(rate(s3_parquet_files_processed_total[5m]))", "legendFormat": "Files/sec", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Files Processed by Bucket",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 18 },
+      "targets": [
+        { "expr": "sum by (bucket) (s3_parquet_files_processed_total)", "legendFormat": "{{bucket}}", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Rows Processed by Bucket",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 18 },
+      "targets": [
+        { "expr": "sum by (bucket) (s3_parquet_rows_processed_total)", "legendFormat": "{{bucket}}", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    },
+    {
+      "id": 12,
+      "title": "NATS Throughput",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        { "expr": "sum(rate(s3_parquet_batches_sent_to_nats[5m]))", "legendFormat": "Batches/sec", "refId": "A" },
+        { "expr": "sum(rate(s3_parquet_items_sent_to_nats[5m]))", "legendFormat": "Items/sec", "refId": "B" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      }
+    },
+    {
+      "id": 13,
+      "title": "Row Status Breakdown",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 24 },
+      "targets": [
+        { "expr": "sum(s3_parquet_rows_latest_total)", "legendFormat": "Latest", "refId": "A" },
+        { "expr": "sum(s3_parquet_rows_not_latest)", "legendFormat": "Not Latest", "refId": "B" },
+        { "expr": "sum(s3_parquet_rows_marked_deleted_total)", "legendFormat": "Deleted", "refId": "C" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    }
+  ],
+  "templating": {
+    "list": []
+  }
+}

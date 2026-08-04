@@ -1,0 +1,199 @@
+{
+  "uid": "apps-v2-overview",
+  "title": "Applications V2 — Overview",
+  "tags": ["git-sync", "apps-v2", "overview"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "applications-v2-folder",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {
+    "hidden": true
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": { "selected": false, "text": "Prometheus", "value": "prometheus-nx" },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(up{job=~\".*-connector-be-go.*\"}, namespace)",
+        "current": { "selected": false, "text": "default", "value": "default" },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Snowflake — Scanner",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "green", "value": 1 }
+          ]},
+          "links": [{
+            "title": "Open Snowflake Overview",
+            "url": "/d/apps-v2-snowflake-overview?${namespace:queryparam}"
+          }]
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "sum(up{job=~\".*snowflake-connector-be-go\", namespace=\"$namespace\"})" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Items Sent (rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "ops", "decimals": 2 } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(snowflake_scanner_items_sent_total{namespace=\"$namespace\"}[5m]))" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Scan p95",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 1 } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(snowflake_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\"}[5m])))" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Error Rate",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops", "decimals": 3,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.01 },
+            { "color": "red", "value": 0.1 }
+          ]}
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(snowflake_scanner_database_errors_total{namespace=\"$namespace\"}[5m])) + sum(rate(snowflake_scanner_table_errors_total{namespace=\"$namespace\"}[5m]))" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Snowflake — Content",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "green", "value": 1 }
+          ]},
+          "links": [{
+            "title": "Open Snowflake Overview",
+            "url": "/d/apps-v2-snowflake-overview?${namespace:queryparam}"
+          }]
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "sum(up{job=~\".*snowflake-connector-be-go-content\", namespace=\"$namespace\"})" }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Requests (rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "ops", "decimals": 2 } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(snowflake_content_requests_total{namespace=\"$namespace\"}[5m]))" }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Fetch p95",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 1 } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(snowflake_content_duration_seconds_bucket{namespace=\"$namespace\", outcome=\"success\"}[5m])))" }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Error Rate",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops", "decimals": 3,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.01 },
+            { "color": "red", "value": 0.1 }
+          ]}
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(snowflake_content_requests_total{namespace=\"$namespace\", outcome=\"error\"}[5m]))" }
+      ]
+    }
+  ]
+}
