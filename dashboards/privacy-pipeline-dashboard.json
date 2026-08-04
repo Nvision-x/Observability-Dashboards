@@ -56,6 +56,50 @@
         "refresh": 1
       },
       {
+        "name": "job",
+        "label": "Job",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(pii_docs_sent_total, job)",
+          "refId": "job"
+        },
+        "definition": "label_values(pii_docs_sent_total, job)",
+        "multi": false,
+        "includeAll": false,
+        "allValue": null,
+        "current": {},
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "extractor_job",
+        "label": "Extractor job",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(process_start_time_seconds{job=~\".*extractor.*\"}, job)",
+          "refId": "extractor_job"
+        },
+        "definition": "label_values(process_start_time_seconds{job=~\".*extractor.*\"}, job)",
+        "multi": false,
+        "includeAll": false,
+        "allValue": null,
+        "current": {},
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "hide": 0
+      },
+      {
         "name": "namespace",
         "label": "Namespace",
         "type": "query",
@@ -242,7 +286,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "($consumers * $batch) / (sum(rate(pii_docs_processed_total{job_id=~\"$job_id\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\"}[5m])))",
+          "expr": "($consumers * $batch) / (sum(rate(pii_docs_processed_total{job_id=~\"$job_id\", job=\"$job\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\", job=\"$job\"}[5m])))",
           "legendFormat": "",
           "range": true,
           "editorMode": "code"
@@ -311,7 +355,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "($consumers * $batch) / (sum(rate(pii_docs_processed_total{job_id=~\"$job_id\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\"}[5m])))",
+          "expr": "($consumers * $batch) / (sum(rate(pii_docs_processed_total{job_id=~\"$job_id\", job=\"$job\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\", job=\"$job\"}[5m])))",
           "legendFormat": "est. search gap",
           "range": true,
           "editorMode": "code"
@@ -460,7 +504,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(sum(rate(pii_docs_processed_total{job_id=~\"$job_id\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\"}[5m])))",
+          "expr": "(sum(rate(pii_docs_processed_total{job_id=~\"$job_id\", job=\"$job\"}[5m])) + sum(rate(pii_errors_total{job_id=~\"$job_id\", job=\"$job\"}[5m])))",
           "legendFormat": "drained docs/s",
           "range": true,
           "editorMode": "code"
@@ -2262,6 +2306,80 @@
         "y": 85
       },
       "id": 30
+    },
+    {
+      "id": 600,
+      "type": "row",
+      "title": "\u2b50 EXTRACTOR \u2014 PIT expiry, the OBSERVED failure signal",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 98}
+    },
+    {
+      "id": 601,
+      "type": "stat",
+      "title": "PIT expiries ($__range)",
+      "description": "extractor_pit_renewals_total is incremented ONLY when a search fails with search_context_missing_exception and the reader rebuilds the PIT to resume. ANY non-zero value means a slice stalled long enough to lose its lease \u2014 the NXE-2480 condition, observed rather than modelled.\n\nCompare with 'Estimated max search gap' at the top: that panel PREDICTS this one. If the estimate is under the lease and this is non-zero, the model's inputs (consumers/batch/lease) are wrong.\n\nNote maxPitRenewals = 3: after three consecutive renewals a slice gives up and the remaining documents are dropped. There is no metric for that yet.",
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum(increase(extractor_pit_renewals_total{job=\"$extractor_job\"}[$__range]))", "legendFormat": "", "instant": true, "editorMode": "code"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}
+        },
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none", "justifyMode": "auto"},
+      "gridPos": {"h": 8, "w": 6, "x": 0, "y": 99}
+    },
+    {
+      "id": 602,
+      "type": "timeseries",
+      "title": "PIT expiries over time, by scan job",
+      "description": "When the lease was lost, and for which job. Correlate the timestamps against 'Search gap vs PIT lease' above \u2014 an expiry should land shortly after the modelled gap crosses the lease line. If it lands earlier, the consumer/batch assumptions need revisiting.",
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (job_id) (rate(extractor_pit_renewals_total{job=\"$extractor_job\"}[5m]))", "legendFormat": "{{job_id}}", "range": true, "editorMode": "code"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "auto"}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 6, "y": 99}
+    },
+    {
+      "id": 603,
+      "type": "stat",
+      "title": "Publish failures ($__range)",
+      "description": "extractor_publish_failures_total counts ItemBatches that could not be handed to the next pipeline stage. Its own source comment notes these 'were previously discarded silently' \u2014 the same class of bug as the NXE-2480 truncation. Non-zero means documents were read from OpenSearch and then lost before privacy ever saw them.",
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum(increase(extractor_publish_failures_total{job=\"$extractor_job\"}[$__range]))", "legendFormat": "", "instant": true, "editorMode": "code"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}
+        },
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none", "justifyMode": "auto"},
+      "gridPos": {"h": 8, "w": 6, "x": 18, "y": 99}
+    },
+    {
+      "id": 604,
+      "type": "timeseries",
+      "title": "Item conversion errors by connector type",
+      "description": "extractor_item_conversion_errors_total fires when a document in the index cannot be turned into a pipeline Item. Directly relevant to the V1.5 -> V2 reindex work: the CIFS and Box converters hard-fail an item with no source_url, so a migration that omitted it shows up here as a steady error rate for that connector_type.",
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "targets": [
+        {"refId": "A", "datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (connector_type) (rate(extractor_item_conversion_errors_total{job=\"$extractor_job\"}[5m]))", "legendFormat": "{{connector_type}}", "range": true, "editorMode": "code"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "auto"}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 107}
     }
   ]
 }

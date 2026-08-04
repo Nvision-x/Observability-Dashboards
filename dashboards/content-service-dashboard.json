@@ -474,7 +474,7 @@
       "id": 24,
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum(rate(pii_docs_processed_total{namespace=\"$namespace\"}[5m]))", "legendFormat": "documents analysed/s", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum(rate(pii_docs_processed_total{namespace=\"$namespace\", job=\"$privacy_job\"}[5m]))", "legendFormat": "documents analysed/s", "refId": "A"},
         {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "vector(17.8)", "legendFormat": "PIT critical rate (32 × 1000 / 1800)", "refId": "B"}
       ],
       "title": "Privacy throughput vs the PIT critical rate",
@@ -528,6 +528,23 @@
         "name": "namespace",
         "options": [],
         "query": {"query": "label_values(up{job=\"$job\"}, namespace)", "refId": "PrometheusVariableQueryEditor-VariableQuery"},
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {"type": "prometheus", "uid": "${datasource}"},
+        "definition": "label_values(pii_docs_processed_total, job)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Privacy job",
+        "multi": false,
+        "name": "privacy_job",
+        "options": [],
+        "query": {"query": "label_values(pii_docs_processed_total, job)", "refId": "PrometheusVariableQueryEditor-VariableQuery"},
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
