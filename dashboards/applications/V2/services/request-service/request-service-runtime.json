@@ -190,12 +190,13 @@
     {
       "id": 22,
       "type": "timeseries",
-      "title": "GC Pause p99",
+      "title": "GC Pause (max)",
+      "description": "Longest stop-the-world GC pause per pod. go_gc_duration_seconds is a Prometheus summary, not a histogram: there is no _bucket series, so histogram_quantile cannot be used here. The Go collector exposes quantiles 0, 0.25, 0.5, 0.75 and 1 only — there is no 0.99. quantile=\"1\" is the max pause over the runtime's buffer of recent GC cycles, so it reports the worst recent pause rather than a windowed percentile.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 17 },
       "fieldConfig": { "defaults": { "unit": "s" } },
       "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.99, sum by (le, pod) (rate(go_gc_duration_seconds_bucket{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "go_gc_duration_seconds{quantile=\"1\", job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
       ]
     },
     {
