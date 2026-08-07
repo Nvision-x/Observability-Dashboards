@@ -101,26 +101,34 @@ dashboards/applications/V2/
       <connector>-overview.json           # RED golden signals + drill-down links
       <connector>-pipeline.json           # connector-specific business metrics
       <connector>-runtime.json            # process / container / Go runtime / FDs
+  services/
+    <service>/
+      <service>-overview.json             # RED golden signals + domain metrics
+      <service>-runtime.json              # process / container / Go runtime / FDs
 folders/
   applications-v2-folder.json             # parentUid: applications-folder
   connectors/
     <connector>-folder.json               # parentUid: applications-v2-folder
+  services/
+    <service>-folder.json                 # parentUid: applications-v2-folder
 ```
 
-Snowflake is the V2 reference implementation. Use it as the template for new connectors.
+Snowflake is the V2 reference implementation for connectors. Use it as the template for new connectors.
+
+**Connectors vs services.** Connectors get three dashboards (`overview` / `pipeline` / `runtime`); their business metrics are substantial enough to warrant a dedicated pipeline view. Platform services (registration, request) get two — `overview` carries both the RED signals and the domain metrics, because there aren't enough of the latter to fill a third dashboard. Registration and request service are the reference implementations for services.
 
 ## V2 Conventions
 
 ### Naming
-- Dashboard UIDs: `apps-v2-<connector>-<view>` (e.g., `apps-v2-snowflake-pipeline`).
-- Connector folder UIDs: `apps-v2-<connector>-folder`.
-- File path encodes the structure: `dashboards/applications/V2/connectors/<connector>/<connector>-<view>.json`.
+- Dashboard UIDs: `apps-v2-<name>-<view>` (e.g., `apps-v2-snowflake-pipeline`, `apps-v2-request-service-overview`).
+- Folder UIDs: `apps-v2-<name>-folder`. For services the name includes the `-service` suffix (`apps-v2-request-service-folder`).
+- File path encodes the structure: `dashboards/applications/V2/{connectors,services}/<name>/<name>-<view>.json`.
 
 ### Tags
 Every V2 dashboard MUST include in `tags`:
 - `git-sync` — required for sync.
 - `apps-v2` — identifies V2 set.
-- `connector:<name>` — e.g., `connector:snowflake`.
+- `connector:<name>` for connectors (e.g., `connector:snowflake`), or `service:<name>` for services (e.g., `service:request-service`).
 - One view tag: `overview` | `pipeline` | `runtime`.
 
 ### Folder placement
@@ -128,49 +136,113 @@ Every V2 dashboard MUST include in `tags`:
 - Folder JSONs use `parentUid` to nest. The parent V2 folder lives under the V1 `applications-folder` to avoid colliding with existing navigation.
 
 ### Template variables (V2 standard)
-Every connector dashboard declares these in `templating.list`, in this order:
+Every V2 dashboard declares these in `templating.list`, in this order:
 - `$datasource` — type `datasource`, query `prometheus`. Default value should match the actual Prometheus datasource UID used in your Grafana (CLAUDE.md previously claimed `prometheus-nx` but V1 dashboards use `${DS_PROMETHEUS}` or `Prometheus` — confirm against your real Grafana before relying on the default).
-- `$namespace` — `label_values(up{job=~"<connector>-be-go.*"}, namespace)`.
-- `$component` — custom variable with `All` / `Scanner` / `Content` options for connectors that have a content-fetch pod (e.g., Snowflake, Box, PostgreSQL); single-value, used as a job-regex selector.
-- `$pod` — `label_values(up{job=~"$component", namespace="$namespace"}, pod)`, multi-value with `includeAll`.
+- `$namespace` — `label_values(process_start_time_seconds{job=~".*<name>.*"}, namespace)`.
+- `$component` — **connectors only.** Custom variable with `All` / `Scanner` / `Content` options for connectors that have a content-fetch pod; single-value, used as a job-regex selector. Its option values are full job regexes, not bare names — see the job-label table below. Services have a single pod type and omit this variable.
+- `$pod` — `label_values(process_start_time_seconds{job=~"$component", namespace="$namespace"}, pod)` for connectors, or `job=~".*<name>.*"` for services. Multi-value with `includeAll`.
+
+Use `process_start_time_seconds` rather than `up` to drive `$namespace` / `$pod`. The process collector always exports it — including when `METRICS_ENABLED=false`, where only the Go and process collectors are served — so the variables still resolve on a pod whose app instruments are switched off.
 
 Pipeline dashboards add view-specific variables when needed (e.g., `$query_type` for Snowflake/PostgreSQL, `$datasource_id` for CIFS).
 
 ### Job-label conventions
-The `nx-application-helm` chart sets `app.kubernetes.io/name: <connector>-be-go` on every connector pod. Kube-prometheus PodMonitors map that label to Prometheus's `job` label. So the canonical selectors are:
 
-| Connector | Job label(s) |
+**The `job` label is not the pod's `app.kubernetes.io/name`.** No PodMonitor in `nx-application-helm/charts/applications/templates` sets `spec.jobLabel` (checked: all 28), and none set `podTargetLabels` or custom `relabelings`. Prometheus Operator therefore uses its default and sets:
+
+```
+job = "<podmonitor-namespace>/<podmonitor-name>"
+```
+
+PodMonitor names are `{{ include "applications.fullname" . }}-<suffix>`, i.e. `<release>-applications-<suffix>`. So for release `nx` in namespace `default`, the Snowflake scanner job is:
+
+```
+default/nx-applications-snowflake-connector-be-go
+```
+
+The pod *does* carry `app.kubernetes.io/name: snowflake-connector-be-go` — that label simply never reaches `job` without `jobLabel` instructing the operator to copy it.
+
+**Always lead a job selector with `.*`.** Prometheus label matchers are fully anchored (`=~"foo"` means `^foo$`), so a selector must absorb the `<namespace>/<release>-applications-` prefix:
+
+| Selector | Matches |
 |---|---|
-| Snowflake | `snowflake-connector-be-go`, `snowflake-connector-be-go-content` |
-| CIFS | `cifs-connector-be-go` |
-| PostgreSQL | `postgresql-connector-be-go`, `postgresql-connector-be-go-content` |
-| Box | `box-connector-be-go`, `box-connector-be-go-content` |
-| SharePoint | `sharepoint-connector-be-go` |
-| NFS | `nfs-connector-be-go` (no app metrics yet — runtime dashboard only) |
+| `job=~".*snowflake-connector-be-go.*"` | scanner + content — use for aggregate panels |
+| `job=~".*snowflake-connector-be-go"` | scanner only; the implicit trailing anchor excludes `-content` |
+| `job=~".*snowflake-connector-be-go-content"` | content only |
+| `job=~"snowflake-connector-be-go.*"` | ❌ nothing — missing leading `.*` |
 
-Use `job=~"<connector>-be-go.*"` to cover both scanner and content variants in one selector.
+That last row is the trap. It fails silently and confusingly: `$namespace` resolves to an empty list, so every panel renders "No data" as though the component weren't emitting metrics at all.
+
+Match on the **PodMonitor name suffix**, not the pod label. Current suffixes:
+
+| Component | PodMonitor name suffix(es) |
+|---|---|
+| Snowflake | `-snowflake-connector-be-go`, `-snowflake-connector-be-go-content` |
+| CIFS | `-cifs-connector-be-go`, `-cifs-connector-be-go-content` |
+| PostgreSQL | `-postgresql-connector-be-go`, `-postgresql-connector-be-go-content` |
+| Box | `-box-connector-be-go`, `-box-connector-be-go-content` |
+| SharePoint | `-sharepoint-connector-be-go`, `-sharepoint-connector-be-go-content` |
+| NFS | **none — no PodMonitor exists**, so NFS is not scraped at all (not even runtime metrics) |
+| Registration Service | `-registration-service` (note: no `-be-go`) |
+| Request Service | `-request-service` (note: no `-be-go`) |
+
+Two things to note: the service suffixes drop the `-be-go` that the repo names carry, and CIFS/SharePoint do have content PodMonitors (an earlier version of this table said they didn't).
+
+Confirm the real values against a live Prometheus before trusting any of the above:
+
+```
+curl -s 'http://<prometheus>/api/v1/label/job/values' | jq
+```
+
+V1 independently corroborates the `<namespace>/<podmonitor-name>` shape — `dashboards/apps-connector.json` hard-codes `job="default/applications-connector"`, and `apps-archiver.json` hard-codes `job="default/applications-archiver"`.
 
 ### Cross-dashboard links
-Every connector dashboard's `links` array includes links to its sibling overview / pipeline / runtime dashboards plus the V2 root `apps-v2-overview`. Use `${var:queryparam}` to propagate `$namespace` and `$component` across links so the user keeps their context when drilling.
+A V2 dashboard's `links` array contains exactly two kinds of entry, and nothing else:
+
+1. Its **own component's** other views — the sibling `overview` / `pipeline` / `runtime` dashboards for that same connector or service.
+2. The V2 root, `apps-v2-overview`.
+
+**Never link to another component.** A connector dashboard does not link to another connector, and a service dashboard does not link to another service — the registration and request service dashboards originally cross-linked to each other and that was removed. The root is the crossroads: navigating between components goes up to `apps-v2-overview` and back down through its per-row `Pods Up` drill-down. Direct component-to-component links don't scale — every new component would have to be added to every existing dashboard's header.
+
+Every non-root dashboard must include the root link. Use `${var:queryparam}` to propagate `$namespace` and `$component` on the sibling links so context survives the drill; the root link takes no query params.
+
+`applications-overview.json` is the exception: as the root it has an empty `links` array, and reaches components through the `fieldConfig.defaults.links` drill-down on each row's `Pods Up` stat.
 
 ### Metric naming
 Native Prometheus connectors emit `<connector>_connector_*` (e.g., `snowflake_connector_items_sent_total`). OTel-based connectors emit different prefixes (Box: `box_*`, SharePoint: `graph_*`). Histograms use `_seconds` suffix and exponential buckets — **note that bucket ranges differ across connectors**, so latency panels are connector-specific (no shared library panel for histograms today).
 
-## Creating a New V2 Connector Dashboard Set
+Services differ from connectors here:
+- **Domain metrics are per-service and not prefixed by the service name automatically.** Request service names its own instruments `request_service_*`; registration service does not, and emits a bare `connector_registrations_total`. The `Namespace` field on `pipeline-lib-go/metrics.Config` sets the OTel *meter* name (instrumentation scope), **not** a Prometheus metric prefix — the exporter is created with a plain `prometheus.New()`. Do not assume a service prefix.
+- **Services on `pipeline-lib-go` also emit a shared HTTP/gRPC set** when they install it: `http_requests_total`, `http_request_duration_seconds`, `http_active_requests`, `http_request_size_bytes`, `http_response_size_bytes`, `grpc_requests_total`, `grpc_request_duration_seconds`, `grpc_active_requests`. Labels are `method` / `route` / `status` (HTTP) and `method` / `code` / `status` (gRPC). Group and filter gRPC by `code` (`"0"` is OK), never by `status` — that label is free text including the error message, so its cardinality is unbounded.
+- Installing that set is opt-in per service. Registration service installs both. Request service installs the HTTP set only — it serves Connect RPC over HTTP, so its RPCs are counted as HTTP requests and there are no `grpc_*` series. Its SSE `/events` route is deliberately excluded from instrumentation (the middleware's `ResponseWriter` wrapper has no `Flush`, which would break the stream), so it never appears as a `route` and never inflates `http_active_requests`.
+- ⚠️ **Bucket boundaries on the shared histograms are opt-in — check before writing a percentile panel.** `pipeline-lib-go` does not apply boundaries for you: `NewGRPCMetrics(provider, buckets)` and `NewHTTPMetrics(provider, map[HTTPHistogram][]float64{...})` take them per histogram, and passing nil keeps the OTel SDK default. That default is tuned for milliseconds (`0, 5, 10, 25 … 10000`); against a `s` unit every real request lands in `le=5` and `histogram_quantile` returns noise, and against a `By` unit anything over ~10 KB lands in `+Inf`. A percentile is only trustworthy where the service opted in — read its construction call, and prefer `rate(_sum)/rate(_count)` where it didn't.
+  - Ready-made ladders: `SubsecondLatencyBuckets()` (0.005s–10s), `BodySizeBuckets()`, `LargeBodySizeBuckets()`.
+  - Registration service opts in for gRPC and HTTP duration, and passes its own wider `BodySizeBuckets()` for both size histograms. All its percentiles are valid.
+  - Request service opts in for HTTP duration and **response** size, and deliberately leaves **request** size on the SDK default (finer below 256 B, which suits the small Connect messages and bare probes it accepts). Don't write a request-size percentile for it.
+  - Service-defined histograms carry their own boundaries independently: `request_service_connectiontest_duration_seconds` uses a 0.1s–300s ladder, because a connection test runs on a different timescale from an HTTP request.
+- ⚠️ **`go_gc_duration_seconds` is a summary, not a histogram.** There is no `_bucket` series, so `histogram_quantile(…, rate(go_gc_duration_seconds_bucket[…]))` returns nothing. Use `go_gc_duration_seconds{quantile="1"}` (max pause); available quantiles are `0`, `0.25`, `0.5`, `0.75`, `1` — there is no `0.99`.
+
+## Creating a New V2 Connector or Service Dashboard Set
 
 1. Verify the connector emits Prometheus metrics. Check `<repo>-connector-be-go/internal/metrics/metrics.go` (or equivalent). If there are no metrics, scaffold only the `runtime` dashboard and open a follow-up to instrument the connector.
-2. Confirm the helm `selectorLabels` in `nx-application-helm/charts/applications/templates/_helpers.tpl` to derive the exact `job=` label.
-3. Copy the Snowflake folder under `dashboards/applications/V2/connectors/snowflake/` to `<connector>/`, rename files, and update:
+2. Read the metric names off a real scrape, not off the source. The OTel→Prometheus exporter rewrites names (appends `_total` to monotonic counters unless already suffixed, appends the unit for `s`/`By`, splits histograms into `_bucket`/`_sum`/`_count`), so names in `metrics.go` are not the names to query. Either `curl` a running pod's `/metrics`, or write a throwaway `main.go` in the connector repo that inits the instruments, records one point on each, and serves the Prometheus handler.
+3. Find the connector's PodMonitor in `nx-application-helm/charts/applications/templates/<connector>-podmonitor.yaml` and take its **name suffix** — that, not `selectorLabels`, determines the `job` label. See "Job-label conventions" above. If no PodMonitor exists, the connector isn't scraped and a dashboard is premature.
+4. Copy the Snowflake folder under `dashboards/applications/V2/connectors/snowflake/` to `<connector>/`, rename files, and update:
    - `uid` (per dashboard)
    - `folderUid`
    - `tags` (`connector:<name>`)
    - All `<connector>_connector_*` metric names
    - `links` URLs to point to the new `apps-v2-<connector>-<view>` UIDs
-   - `templating.list` `query` strings (replace `snowflake-connector-be-go.*` with `<connector>-be-go.*`)
-4. Create `folders/connectors/<connector>-folder.json` with `parentUid: applications-v2-folder`.
-5. Add a new collapsed row to `dashboards/applications/V2/applications-overview.json` with at minimum a `Pods Up` stat panel and a link to the new `<connector>-overview` dashboard.
+   - Every job selector and `templating.list` `query` string — replace `.*snowflake-connector-be-go` with `.*<connector>-be-go`, **keeping the leading `.*`**
+5. Create `folders/connectors/<connector>-folder.json` with `parentUid: applications-v2-folder`.
 6. Validate JSON parses (`python3 -c "import json; json.load(open('path.json'))"`).
-7. Open in Grafana — confirm template variables resolve, drill-down links carry the namespace, and at least one panel returns data.
+7. Open in Grafana — confirm template variables resolve, drill-down links carry the namespace, and at least one panel returns data. An all-blank dashboard usually means a front-anchored job selector (step 3), not a missing metric.
+
+8. Add a row for the new component to `dashboards/applications/V2/applications-overview.json` — the V2 roll-up. The established shape is four `stat` panels across: `Pods Up` (with a `fieldConfig.defaults.links` drill-down to the component's own overview, propagating `${namespace:queryparam}`), a throughput stat, a latency stat, and an error-rate stat. Only use a `histogram_quantile` latency stat if the component's histogram has explicit boundaries — see the bucket note above.
+
+**Which overview file.** V2 components belong in `dashboards/applications/V2/applications-overview.json` and **only** there. Never add them to the V1 roll-ups — `dashboards/nx-applications-dashboard.json` and `dashboards/nx-applications-monitoring.json` — which cover the pre-V2 applications and stay untouched by V2 work. The two files are unrelated despite the similar names; V1 is in maintenance mode.
+
+For a **service** rather than a connector, copy `dashboards/applications/V2/services/request-service/` instead, drop the `$component` variable, and skip the `pipeline` dashboard — put the domain metrics in `overview`.
 
 ---
 
