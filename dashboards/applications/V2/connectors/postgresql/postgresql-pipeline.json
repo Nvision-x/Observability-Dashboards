@@ -1,0 +1,248 @@
+{
+  "uid": "apps-v2-postgresql-pipeline",
+  "title": "PostgreSQL Connector — Pipeline",
+  "tags": ["git-sync", "apps-v2", "connector:postgresql", "pipeline"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-postgresql-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "PostgreSQL — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-postgresql-overview?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "PostgreSQL — Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-postgresql-runtime?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": { "selected": false, "text": "Prometheus", "value": "prometheus-nx" },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(process_start_time_seconds{job=~\"postgresql-connector-be-go.*\"}, namespace)",
+        "current": { "selected": true, "text": "default", "value": "default" },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "component",
+        "type": "custom",
+        "label": "Component",
+        "query": "All : postgresql-connector-be-go.*, Scanner : postgresql-connector-be-go, Content : postgresql-connector-be-go-content",
+        "current": { "selected": true, "text": "All", "value": "postgresql-connector-be-go.*" },
+        "options": [
+          { "selected": true, "text": "All", "value": "postgresql-connector-be-go.*" },
+          { "selected": false, "text": "Scanner", "value": "postgresql-connector-be-go" },
+          { "selected": false, "text": "Content", "value": "postgresql-connector-be-go-content" }
+        ],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(process_start_time_seconds{job=~\"$component\", namespace=\"$namespace\"}, pod)",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      },
+      {
+        "name": "query_type",
+        "type": "query",
+        "label": "Query Type",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(postgresql_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}, query_type)",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 1,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Discovery & Throughput",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Tables Scanned (rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(postgresql_scanner_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "tables/s" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Columns Found (rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(postgresql_scanner_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "cols/s" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Items Sent (rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(postgresql_scanner_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "items/s" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Query Performance — by query_type",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "heatmap",
+      "title": "Query Duration Heatmap",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "options": { "calculate": false, "yAxis": { "unit": "s" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (le) (rate(postgresql_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[5m]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Query p95 by query_type",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, query_type) (rate(postgresql_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[5m])))",
+          "legendFormat": "{{query_type}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "Content Fetch",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Content Requests by Outcome (rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 19 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (success, error_code) (rate(postgresql_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "success={{success}} ({{error_code}})" }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Content Fetch Duration — p50 / p95 / p99",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 19 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(postgresql_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(postgresql_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(postgresql_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Content Upload Duration p95",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 19 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(postgresql_content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p95" }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Content Requests In Flight",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 26 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (postgresql_content_fetch_in_flight{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Errors (rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 26 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(postgresql_scanner_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "database" },
+        { "refId": "B", "expr": "sum(rate(postgresql_scanner_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "table" }
+      ]
+    }
+  ]
+}
