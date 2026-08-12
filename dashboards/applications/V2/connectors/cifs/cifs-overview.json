@@ -126,7 +126,7 @@
       "type": "stat",
       "title": "Pods Up",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 1 },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -152,11 +152,32 @@
       ]
     },
     {
+      "id": 7,
+      "type": "stat",
+      "title": "Restarts (1h)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 3, "x": 3, "y": 1 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", container=\"cifs-connector-be-go\"}[1h]))"
+        }
+      ]
+    },
+    {
       "id": 2,
       "type": "stat",
       "title": "Mounts Active",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 6, "y": 1 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -177,7 +198,7 @@
       "type": "stat",
       "title": "Files Discovered (5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 9, "y": 1 },
       "fieldConfig": {
         "defaults": { "unit": "ops", "decimals": 2 }
       },
@@ -198,7 +219,7 @@
       "type": "stat",
       "title": "Files Processed (5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 12, "y": 1 },
       "fieldConfig": {
         "defaults": { "unit": "ops", "decimals": 2 }
       },
@@ -219,7 +240,7 @@
       "type": "stat",
       "title": "Items Sent (5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 15, "y": 1 },
       "fieldConfig": {
         "defaults": { "unit": "ops", "decimals": 2 }
       },
@@ -240,7 +261,7 @@
       "type": "stat",
       "title": "ACL Errors (5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 18, "y": 1 },
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
@@ -268,12 +289,35 @@
       ]
     },
     {
+      "id": 8,
+      "type": "stat",
+      "title": "Scan p95 (5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 3, "x": 21, "y": 1 },
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))"
+        }
+      ]
+    },
+    {
       "id": 10,
       "type": "timeseries",
       "title": "Scanner Throughput (rate, 5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
-      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      },
       "targets": [
         {
           "refId": "A",
@@ -295,25 +339,81 @@
     {
       "id": 11,
       "type": "timeseries",
-      "title": "Scanner Errors (rate, 5m)",
+      "title": "Errors by Source (rate, 5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
-      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      },
       "targets": [
         {
           "refId": "A",
           "expr": "sum(rate(cifs_scanner_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "acl errors"
+          "legendFormat": "scanner acl errors"
         },
         {
           "refId": "B",
+          "expr": "sum(rate(cifs_augmenter_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "augmenter acl errors"
+        },
+        {
+          "refId": "C",
           "expr": "sum(rate(cifs_scanner_worker_connect_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "worker connect errors"
         },
         {
-          "refId": "C",
+          "refId": "D",
           "expr": "sum(rate(cifs_scanner_worker_reconnects_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "worker reconnects"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Scan Duration — p50 / p95 / p99",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Local Stack Depth (DFS backlog)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(cifs_scanner_local_stack_depth{namespace=\"$namespace\", pod=~\"$pod\"})",
+          "legendFormat": "max depth"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(cifs_scanner_local_stack_depth{namespace=\"$namespace\", pod=~\"$pod\"})",
+          "legendFormat": "sum across pods"
         }
       ]
     },
@@ -322,7 +422,7 @@
       "id": 200,
       "title": "Augmenter — cifs-connector-be-go",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
       "panels": []
     },
     {
@@ -330,14 +430,11 @@
       "type": "timeseries",
       "title": "Augmenter Items by Outcome (rate, 5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 14 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 22 },
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
-          "custom": {
-            "stacking": { "mode": "normal" },
-            "fillOpacity": 30
-          }
+          "custom": { "stacking": { "mode": "normal" }, "fillOpacity": 30 }
         }
       },
       "targets": [
@@ -353,8 +450,10 @@
       "type": "timeseries",
       "title": "Skipped Not-Found (rate, 5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 14 },
-      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 22 },
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      },
       "targets": [
         {
           "refId": "A",
@@ -368,8 +467,10 @@
       "type": "timeseries",
       "title": "Augmenter ACL Query Duration — p50 / p95 / p99",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 14 },
-      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 22 },
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      },
       "targets": [
         {
           "refId": "A",
@@ -393,7 +494,7 @@
       "id": 300,
       "title": "Content — cifs-connector-be-go-content",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 },
       "panels": []
     },
     {
@@ -402,7 +503,7 @@
       "title": "Pods Up",
       "description": "Content pods scale 0↔N with KEDA — 0 pods with an empty queue is normal.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 23 },
+      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 31 },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -428,11 +529,32 @@
       ]
     },
     {
+      "id": 36,
+      "type": "stat",
+      "title": "Restarts (1h)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 3, "x": 3, "y": 31 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", container=\"cifs-connector-be-go-content\"}[1h]))"
+        }
+      ]
+    },
+    {
       "id": 31,
       "type": "stat",
       "title": "Fetches (5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 23 },
+      "gridPos": { "h": 4, "w": 3, "x": 6, "y": 31 },
       "fieldConfig": {
         "defaults": { "unit": "ops", "decimals": 2 }
       },
@@ -453,7 +575,7 @@
       "type": "stat",
       "title": "Fetch p95 (5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 23 },
+      "gridPos": { "h": 4, "w": 3, "x": 9, "y": 31 },
       "fieldConfig": {
         "defaults": { "unit": "s", "decimals": 2 }
       },
@@ -475,7 +597,7 @@
       "title": "Errors (5m)",
       "description": "Number of content fetch requests that failed in the last 5 minutes. Counter increase on cifs_content_fetch_total{success=\"false\"}.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 23 },
+      "gridPos": { "h": 4, "w": 3, "x": 12, "y": 31 },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -508,7 +630,7 @@
       "title": "Upload Throughput",
       "description": "Bytes per second confirmed by the content transfer service (rate over cifs_content_uploaded_bytes_total).",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 23 },
+      "gridPos": { "h": 4, "w": 3, "x": 15, "y": 31 },
       "fieldConfig": {
         "defaults": { "unit": "Bps", "decimals": 2 }
       },
@@ -530,7 +652,7 @@
       "title": "Mount Acquire p95 (5m)",
       "description": "p95 of successful mount acquires on the content pod. Failed acquires are tracked separately (cifs_content_mount_acquire_failure_duration_seconds).",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 23 },
+      "gridPos": { "h": 4, "w": 3, "x": 18, "y": 31 },
       "fieldConfig": {
         "defaults": { "unit": "s", "decimals": 2 }
       },
@@ -547,19 +669,37 @@
       ]
     },
     {
+      "id": 37,
+      "type": "stat",
+      "title": "Fetch Backlog",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 3, "x": 21, "y": 31 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\"content-fetch-cifs.*\"}))"
+        }
+      ]
+    },
+    {
       "id": 40,
       "type": "timeseries",
       "title": "Content Fetches by error_code (rate, 5m)",
       "description": "error_code=\"NONE\" is the success path; NAK_* codes are infra-level failures.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 27 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 35 },
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
-          "custom": {
-            "stacking": { "mode": "normal" },
-            "fillOpacity": 30
-          }
+          "custom": { "stacking": { "mode": "normal" }, "fillOpacity": 30 }
         }
       },
       "targets": [
@@ -575,13 +715,73 @@
       "type": "timeseries",
       "title": "Uploaded Bytes (rate)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 27 },
-      "fieldConfig": { "defaults": { "unit": "Bps" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 35 },
+      "fieldConfig": {
+        "defaults": { "unit": "Bps" }
+      },
       "targets": [
         {
           "refId": "A",
           "expr": "sum(rate(cifs_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "uploaded bytes/s"
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Content Requests In-Flight",
+      "description": "Requests currently inside the handler — content-mode saturation signal (the counterpart of the scanner's worker_busy). Authoritative backlog (num_pending) lives on the NATS server.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 43 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(cifs_content_requests_in_flight{namespace=\"$namespace\", pod=~\"$pod\"})",
+          "legendFormat": "in-flight"
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "type": "timeseries",
+      "title": "Content Consumer Backlog",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 43 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (consumer_name) (nats_consumer_num_pending{consumer_name=~\"content-fetch-cifs.*\"})",
+          "legendFormat": "{{consumer_name}} pending"
+        },
+        {
+          "refId": "B",
+          "expr": "max by (consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\"content-fetch-cifs.*\"})",
+          "legendFormat": "{{consumer_name}} ack pending"
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "type": "timeseries",
+      "title": "Content Consumer Redelivery",
+      "description": "nats_consumer_num_redelivered for the content durable (content-fetch-cifs). Rising = fetch requests failing and being retried; sustained growth toward MaxDeliver=3 means messages are about to be dropped as poison. Server-side signal from the NATS exporter (no namespace/pod labels).",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 43 },
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (stream_name, consumer_name) (nats_consumer_num_redelivered{consumer_name=~\"content-fetch-cifs.*\"})",
+          "legendFormat": "{{stream_name}}/{{consumer_name}}"
         }
       ]
     }
