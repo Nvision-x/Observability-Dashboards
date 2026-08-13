@@ -660,7 +660,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Extractor circuit breaker state — 0=closed, 1=half-open, 2=open. Big and red when open.",
+      "description": "DISABLED — pending future work. content-service does not emit `content_extraction_circuit_state`, so this panel shows No data; there is no extractor circuit breaker in the service today. It is a placeholder for the breaker described in the xberg backpressure work, and will start working unchanged if that lands (the breaker is specified to report 0=closed / 1=half-open / 2=open, which the value mappings below already expect).\n\nUntil then, use `Retry attempts by error code` for extractor-saturation signal: a rising SERVICE_UNAVAILABLE line is xberg answering 503, which is what a breaker would trip on.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -738,7 +738,7 @@
           "refId": "A"
         }
       ],
-      "title": "Extractor circuit",
+      "title": "Extractor circuit (DISABLED — pending breaker)",
       "type": "stat"
     },
     {
@@ -1444,7 +1444,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "`failed` = Nak'd back to JetStream for redelivery — note this path sends NO reply, so a synchronous caller keeps waiting. `failed_terminal` = retry budget exhausted across all deliveries, the only path that does reply. Both were EXACTLY 0.00/s during a clean S3-only window running at 87 completed/s, and both ran sustained through the 2026-07-27 incident. Sustained non-zero here means documents are being retried instead of failing fast.",
+      "description": "`failed_budget` is the one to read first — it is the common outcome now. The caller-wait budget (CALLER_WAIT_BUDGET_SECONDS, 5s) stops the in-handler retry ladder early, REPLIES to the caller so its worker is released, then Nak's with a 30s delay so the document is still retried. It was previously absent from this panel's query, which hid the majority of retry activity.\n\n`failed` is a mixed bag: the two silent-Nak paths (in-handler attempts exhausted with deliveries left, and the request deadline firing) send NO reply, but a malformed request and a non-retryable manager failure also land here and DO reply. Treat a rising `failed` as \"documents are being retried\", not as \"callers are stranded\".\n\n`failed_terminal` is the only outcome that both replies and Ack's — either MaxDeliver was reached or the budget was spent on the last allowed delivery. It is the end of the line for that document in this scan.\n\nAll three were EXACTLY 0.00/s during a clean S3-only window running at 87 completed/s, and ran sustained through the 2026-07-27 incident.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1484,12 +1484,12 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (status) (rate(content_requests_total{namespace=\"$namespace\", job=\"$job\", api=\"nats\", status=~\"failed|failed_terminal\"}[5m]))",
+          "expr": "sum by (status) (rate(content_requests_total{namespace=\"$namespace\", job=\"$job\", api=\"nats\", status=~\"failed|failed_budget|failed_terminal\"}[5m]))",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
       ],
-      "title": "Retry outcomes — failed vs failed_terminal",
+      "title": "Retry outcomes — failed vs budget vs terminal",
       "type": "timeseries"
     },
     {
@@ -1600,6 +1600,427 @@
       ],
       "title": "Privacy throughput vs the PIT critical rate",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 92
+      },
+      "id": 600,
+      "panels": [],
+      "title": "Backpressure & cross-pod dedup",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Time a request spent waiting for an extraction slot before reaching xberg. This is the panel that separates \"we queued\" from \"xberg was slow on this file\" — without it both surface as the same error codes. Rising p95 here with `Extraction slots in use` pinned at capacity is a queueing problem, not a document problem. Buckets run to 600s because the extraction semaphore has no acquire timeout.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 93
+      },
+      "id": 30,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
+          "legendFormat": "p99",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
+          "legendFormat": "p50",
+          "refId": "C"
+        }
+      ],
+      "title": "Extraction queue wait (admitted)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Occupancy of the extraction gate against EXTRACTION_MAX_CONCURRENCY (60 — the red line). Occupancy SATURATES: once it is pinned it cannot tell you how far behind you are, which is what the queue-wait panel is for. `aborted/s` is requests whose deadline expired while queueing — sustained non-zero means the gate is shedding work rather than pacing it.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 93
+      },
+      "id": 31,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(content_extraction_slots_in_use{namespace=\"$namespace\", job=\"$job\"})",
+          "legendFormat": "slots in use",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_extraction_queue_wait_seconds_count{namespace=\"$namespace\", job=\"$job\", outcome=\"aborted\"}[5m]))",
+          "legendFormat": "aborted/s",
+          "refId": "B"
+        }
+      ],
+      "title": "Extraction slots in use (cap 60) + abandoned waits",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "In-handler retry attempts, by the extraction/content error code that caused them. This is the amplification signal: a busy extractor answers 503 (SERVICE_UNAVAILABLE), which is retryable and earns roughly three attempts per delivery across three deliveries — so the code meaning \"stop sending me work\" is the one that generates the most. TIMEOUT is deliberately capped lower. A rising SERVICE_UNAVAILABLE line during an incident is content-service making the backlog worse.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 101
+      },
+      "id": 32,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (error_code) (rate(content_retry_attempts_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{error_code}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Retry attempts by error code",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Fetch failures by the connector's own error code, which is the pivot from an error spike back to the URNs that caused it — the contentpb taxonomy collapses most connector codes onto INTERNAL, so `code` alone cannot say why. `retryable` splits \"will be tried again\" from terminal. CONNECTOR_UNAVAILABLE means no connector answered our reply inbox within PICKUP_TIMEOUT_SECONDS; it does NOT mean the request was lost — it stays queued on CONTENT_FETCH.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 101
+      },
+      "id": 33,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (code, retryable) (rate(content_fetch_errors_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{code}} (retryable={{retryable}})",
+          "refId": "A"
+        }
+      ],
+      "title": "Connector fetch errors by code",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Valkey claims taken before a connector fetch or an xberg extraction, so two replicas don't do the same work. `won` = this pod does it; `lost` = another replica already is, so this one waits for the output instead. `unavailable` is the one to alert on: Valkey is unreachable and dedup has silently degraded — everything still works, it just costs duplicate fetches and extractions. Expect `lost` to sit at zero until KEDA scales past one replica.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 109
+      },
+      "id": 34,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (phase, outcome) (rate(content_dedup_claims_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{phase}} — {{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Cross-pod dedup — claim outcomes",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Outcome of waiting for output another worker is producing, split by who we are waiting on. `peer` is dedup working: another replica holds the claim, so a `peer`/`satisfied` is a connector fetch or xberg run that did NOT happen twice. `connector` is NOT dedup: we hold the claim ourselves and our own reply timeout fired, so those count connector slowness — reading them as dedup overstates the payoff by exactly the number of reply timeouts. The two move for different reasons: `peer` rises with replica count and hot keys, `connector` with source-system load. phase=extract is always `peer`, since an extraction is synchronous and has no dispatched request that could outlive our timeout. Non-`satisfied` outcomes mean this request did the work itself, which is correct behaviour — the wait can only save effort, never cause a failure. `skipped` means there was no deadline left to wait within (CONNECTOR_WAIT_SECONDS is a ceiling; GET_CONTENT_DEADLINE_SECONDS governs), so a high `skipped` with a flat `satisfied` is a timing problem, not a dedup problem.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 109
+      },
+      "id": 35,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (phase, source, outcome) (rate(content_dedup_waits_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{phase}}/{{source}} — {{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Cross-pod dedup — work avoided vs redone",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "How long a wait took before it paid off, split by who we waited on. Filtered to outcome=\"satisfied\" on purpose: an expired wait always equals the full CONNECTOR_WAIT_SECONDS budget, so including it would flatten every quantile onto the ceiling and say nothing. Read with `Cross-pod dedup — work avoided vs redone`, which gives the counts these durations belong to.\n\n`fetch/peer` is how long a follower waits for the replica holding the claim — it tracks connector latency plus whatever was left of the holder's lease when we joined. `fetch/connector` is how far past our own reply timeout the connector actually ran, which is the number to size PICKUP_TIMEOUT_SECONDS and the worker timeout against. `extract/peer` is how long another replica's xberg run took to land.\n\np50 and p95 only, since splitting by phase and source already yields three series per quantile. Buckets run to 600s (cacheWriteBuckets), so waits longer than that are unresolvable — but the wait budget is well under it, so that ceiling should never bind.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 117
+      },
+      "id": 36,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, phase, source) (rate(content_dedup_wait_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"satisfied\"}[5m])))",
+          "legendFormat": "p95 {{phase}}/{{source}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le, phase, source) (rate(content_dedup_wait_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"satisfied\"}[5m])))",
+          "legendFormat": "p50 {{phase}}/{{source}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Cross-pod dedup — how long a paying wait took",
+      "type": "timeseries"
     }
   ],
   "refresh": "30s",
@@ -1708,6 +2129,6 @@
   "timezone": "browser",
   "title": "Content Service",
   "uid": "content-service",
-  "version": 3,
+  "version": 5,
   "weekStart": ""
 }
