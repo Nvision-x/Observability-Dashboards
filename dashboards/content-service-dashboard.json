@@ -1619,7 +1619,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Time a request spent waiting for an extraction slot before reaching xberg. This is the panel that separates \"we queued\" from \"xberg was slow on this file\" — without it both surface as the same error codes. Rising p95 here with `Extraction slots in use` pinned at capacity is a queueing problem, not a document problem. Buckets run to 600s because the extraction semaphore has no acquire timeout.",
+      "description": "Time a request spent waiting for an extraction slot before reaching xberg. This is the panel that separates \"we queued\" from \"xberg was slow on this file\" — without it both surface as the same error codes. Rising p95 here with `Extraction slots in use` pinned at capacity is a queueing problem, not a document problem. Buckets run to 600s because the extraction semaphore has no acquire timeout.\n\nSplit by lane, because that is the question the gate exists to answer. EXTRACTION_PRIORITY_MAX_CONSECUTIVE is wired so interactive extractions are not starved by pipeline ones, and undimensioned this panel shows the queue is deep without saying whether the requests waiting are the ones a human is waiting on. `interactive` climbing toward `bulk` means the priority lane is no longer buying anything.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1656,8 +1656,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
-          "legendFormat": "p99",
+          "expr": "histogram_quantile(0.99, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
+          "legendFormat": "p99 {{lane}}",
           "refId": "A"
         },
         {
@@ -1665,8 +1665,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
-          "legendFormat": "p95",
+          "expr": "histogram_quantile(0.95, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
+          "legendFormat": "p95 {{lane}}",
           "refId": "B"
         },
         {
@@ -1674,8 +1674,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
-          "legendFormat": "p50",
+          "expr": "histogram_quantile(0.50, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
+          "legendFormat": "p50 {{lane}}",
           "refId": "C"
         }
       ],
@@ -1687,7 +1687,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Occupancy of the extraction gate against EXTRACTION_MAX_CONCURRENCY (60 — the red line). Occupancy SATURATES: once it is pinned it cannot tell you how far behind you are, which is what the queue-wait panel is for. `aborted/s` is requests whose deadline expired while queueing — sustained non-zero means the gate is shedding work rather than pacing it.",
+      "description": "Occupancy of the extraction gate against EXTRACTION_MAX_CONCURRENCY (60 — the red line). That 60 is the DEPLOYED value, set under `contentService.env` in the applications chart; the code default is 10, so re-check the red line if dev retunes it. Occupancy SATURATES: once it is pinned it cannot tell you how far behind you are, which is what the queue-wait panel is for. `aborted/s` is requests whose deadline expired while queueing — sustained non-zero means the gate is shedding work rather than pacing it.\n\nThe total is kept as its own series because the red line applies to it, not to either lane alone. The per-lane split is what tells you who is holding the gate: `bulk` filling it during a scan is expected, but interactive extractions should still get in — read alongside `Extraction queue wait`, and note that slots held by extractions whose caller already left are counted in `Extractions that outlived their caller`.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1738,7 +1738,7 @@
             "uid": "${datasource}"
           },
           "expr": "sum(content_extraction_slots_in_use{namespace=\"$namespace\", job=\"$job\"})",
-          "legendFormat": "slots in use",
+          "legendFormat": "slots in use (total)",
           "refId": "A"
         },
         {
@@ -1746,9 +1746,18 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(content_extraction_queue_wait_seconds_count{namespace=\"$namespace\", job=\"$job\", outcome=\"aborted\"}[5m]))",
-          "legendFormat": "aborted/s",
+          "expr": "sum by (lane) (content_extraction_slots_in_use{namespace=\"$namespace\", job=\"$job\"})",
+          "legendFormat": "slots — {{lane}}",
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (lane) (rate(content_extraction_queue_wait_seconds_count{namespace=\"$namespace\", job=\"$job\", outcome=\"aborted\"}[5m]))",
+          "legendFormat": "aborted/s — {{lane}}",
+          "refId": "C"
         }
       ],
       "title": "Extraction slots in use (cap 60) + abandoned waits",
@@ -1865,7 +1874,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Valkey claims taken before a connector fetch or an xberg extraction, so two replicas don't do the same work. `won` = this pod does it; `lost` = another replica already is, so this one waits for the output instead. `unavailable` is the one to alert on: Valkey is unreachable and dedup has silently degraded — everything still works, it just costs duplicate fetches and extractions. Expect `lost` to sit at zero until KEDA scales past one replica.",
+      "description": "Valkey claims taken before a connector fetch or an xberg extraction, so two replicas don't do the same work. Expect everything but `won` to sit at zero until KEDA scales past one replica.\n\n`won` — this pod took the claim and is doing the work.\n`lost` — another replica holds it, so this one waits for the output instead.\n`preempted` — interactive work took a bulk holder's claim. A DELIBERATE duplicate: the displaced holder keeps working, so for a window two replicas do the same work. That is the price of putting a human ahead of a scan, and it is a separate label so the price is visible rather than folded into `won`.\n`held_by_self` — this pod found its OWN earlier claim, almost always a fetch claim retained past a reply timeout. No peer is involved and the work is at a connector. Split out of `lost` on purpose: counted as a cross-pod loss, a connector slowdown on one pod read as a dedup success story.\n`duplicated` — gave up waiting and did the work anyway knowing a peer holds the claim. Only interactive requests do this, because a synchronous call has no redelivery to defer to. Buys a full duplicate.\n`lease_lost` — a renewal found the claim gone while the work was still running: it lapsed, or an interactive claimant preempted it. This is the LEADING INDICATOR of duplicate work.\n`unavailable` — Valkey is unreachable and dedup has silently degraded. Everything still works, it just costs duplicate fetches and extractions.\n`disabled` — dedup is not running at all for that phase: VALKEY_HOST unset, or that phase's marker TTL zeroed. Emitted deliberately so \"dedup is off\" is visible; an absent series looks identical to no traffic. With both TTLs set and Valkey wired, this should be flat zero.\n\nThe two worth watching are `disabled` (off by configuration, a likelier regression than an outage) and `lease_lost` (duplicate work is now happening).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1915,7 +1924,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Outcome of waiting for output another worker is producing, split by who we are waiting on. `peer` is dedup working: another replica holds the claim, so a `peer`/`satisfied` is a connector fetch or xberg run that did NOT happen twice. `connector` is NOT dedup: we hold the claim ourselves and our own reply timeout fired, so those count connector slowness — reading them as dedup overstates the payoff by exactly the number of reply timeouts. The two move for different reasons: `peer` rises with replica count and hot keys, `connector` with source-system load. phase=extract is always `peer`, since an extraction is synchronous and has no dispatched request that could outlive our timeout. Non-`satisfied` outcomes mean this request did the work itself, which is correct behaviour — the wait can only save effort, never cause a failure. `skipped` means there was no deadline left to wait within (CONNECTOR_WAIT_SECONDS is a ceiling; GET_CONTENT_DEADLINE_SECONDS governs), so a high `skipped` with a flat `satisfied` is a timing problem, not a dedup problem.",
+      "description": "Outcome of waiting for output another worker is producing, split by who we are waiting on. `peer` is dedup working: another replica holds the claim, so a `peer`/`satisfied` is a connector fetch or xberg run that did NOT happen twice. `connector` is NOT dedup: we hold the claim ourselves and our own reply timeout fired, so those count connector slowness — reading them as dedup overstates the payoff by exactly the number of reply timeouts. The two move for different reasons: `peer` rises with replica count and hot keys, `connector` with source-system load. phase=extract is always `peer`, since an extraction is synchronous and has no dispatched request that could outlive our timeout. Non-`satisfied` outcomes mean this request did the work itself, which is correct behaviour — the wait can only save effort, never cause a failure. `skipped` means there was no deadline left to wait within (PEER_WAIT_SECONDS bounds a peer wait and CONNECTOR_WAIT_SECONDS a connector one, but GET_CONTENT_DEADLINE_SECONDS caps both), so a high `skipped` with a flat `satisfied` is a timing problem, not a dedup problem.\n\n`took_over` is the one to read carefully: the holder stopped renewing its claim with nothing written, so it died, and this request claimed the work and did it itself. In wall-clock terms it looks identical to `expired` and means the opposite — `expired` is \"someone is still working and we gave up\", `took_over` is \"nobody was working and we found out\". A steady trickle is pods being recycled mid-fetch; a spike means replicas are dying under load.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1968,7 +1977,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "How long a wait took before it paid off, split by who we waited on. Filtered to outcome=\"satisfied\" on purpose: an expired wait always equals the full CONNECTOR_WAIT_SECONDS budget, so including it would flatten every quantile onto the ceiling and say nothing. Read with `Cross-pod dedup — work avoided vs redone`, which gives the counts these durations belong to.\n\n`fetch/peer` is how long a follower waits for the replica holding the claim — it tracks connector latency plus whatever was left of the holder's lease when we joined. `fetch/connector` is how far past our own reply timeout the connector actually ran, which is the number to size PICKUP_TIMEOUT_SECONDS and the worker timeout against. `extract/peer` is how long another replica's xberg run took to land.\n\np50 and p95 only, since splitting by phase and source already yields three series per quantile. Buckets run to 600s (cacheWriteBuckets), so waits longer than that are unresolvable — but the wait budget is well under it, so that ceiling should never bind.",
+      "description": "How long a wait took before it paid off, split by who we waited on. Filtered to outcome=\"satisfied\" on purpose: an expired wait always equals its whole budget, so including it would flatten every quantile onto the ceiling and say nothing. Which budget depends on who we waited on — PEER_WAIT_SECONDS bounds a peer wait, CONNECTOR_WAIT_SECONDS a connector one, and GET_CONTENT_DEADLINE_SECONDS caps both. They are the same number in dev today only because PEER_WAIT_SECONDS is not templated into the configmap and inherits the connector value. Read with `Cross-pod dedup — work avoided vs redone`, which gives the counts these durations belong to.\n\n`fetch/peer` is how long a follower waits for the replica holding the claim — it tracks connector latency plus whatever was left of the holder's lease when we joined. `fetch/connector` is how far past our own reply timeout the connector actually ran, which is the number to size PICKUP_TIMEOUT_SECONDS and the worker timeout against. `extract/peer` is how long another replica's xberg run took to land.\n\np50 and p95 only, since splitting by phase and source already yields three series per quantile. Buckets run to 600s (cacheWriteBuckets), so waits longer than that are unresolvable — but the wait budget is well under it, so that ceiling should never bind.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2020,6 +2029,56 @@
         }
       ],
       "title": "Cross-pod dedup — how long a paying wait took",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Extractions that finished after the caller had already gone. This is DELIBERATE, not a leak: cancelling a POST to xberg mid-flight throws the whole run away, because nothing is persisted until the extractor returns. Carrying on means the caller's retry finds the text cached and pays for a HEAD instead of a second full run.\n\nWhat it costs is an extraction slot held for work nobody is waiting on, which is why it is counted here rather than left to be inferred from queue depth. Read it against `Extraction slots in use`: a rising count while the gate is pinned means part of your capacity is committed to callers who have left, and the queue behind it is waiting on them.\n\nA steady low rate is the design working — bulk requests hit their delivery deadline and retry into the cache. Sustained `interactive` is worse than sustained `bulk`: a human gave up waiting, and the deadline is doing the abandoning rather than the extractor being slow, so check GET_CONTENT_DEADLINE_SECONDS against the extraction phase before tuning anything else.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 117
+      },
+      "id": 37,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (lane) (rate(content_extraction_after_caller_left_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{lane}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Extractions that outlived their caller",
       "type": "timeseries"
     }
   ],
@@ -2129,6 +2188,6 @@
   "timezone": "browser",
   "title": "Content Service",
   "uid": "content-service",
-  "version": 5,
+  "version": 6,
   "weekStart": ""
 }
