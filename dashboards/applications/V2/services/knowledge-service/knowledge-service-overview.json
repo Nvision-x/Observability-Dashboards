@@ -1,0 +1,358 @@
+{
+  "uid": "apps-v2-knowledge-service-overview",
+  "title": "Knowledge Service — Overview",
+  "tags": ["git-sync", "apps-v2", "service:knowledge-service", "overview"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-knowledge-service-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "Knowledge Service — Pipeline",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-service-pipeline?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Knowledge Service — Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-service-runtime?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": { "selected": false, "text": "Prometheus", "value": "prometheus-nx" },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(process_start_time_seconds{job=~\".*knowledge-service-be-go.*\"}, namespace)",
+        "current": { "selected": true, "text": "default", "value": "default" },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "description": "Applies only to the per-pod panels at the bottom of this dashboard. Aggregate panels deliberately ignore it so pod churn does not gap the graphs.",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(process_start_time_seconds{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}, pod)",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Service Health",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "green", "value": 1 }
+          ]}
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "sum(up{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"})" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Documents In Flight",
+      "description": "Documents being processed right now. Read alongside the throughput stat: a non-zero in-flight with zero throughput means work is stuck, not idle — that distinction is the whole reason this gauge exists.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "refId": "A", "expr": "sum(knowledge_service_pipeline_documents_in_flight{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"})" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Ingested (rate)",
+      "description": "outcome=\"forwarded\" only — the single outcome that means the document was actually ingested and forwarded on.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "ops", "decimals": 2 } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"forwarded\"}[5m]))" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Not Ingested (rate)",
+      "description": "outcome=\"failed_permanent\" — documents this service gave up on. NOT a loss rate: the item is still forwarded downstream carrying its failure in knowledge_hub, so nothing is dropped. Retryable conditions never reach here at all — they are retried in-process until they resolve.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops", "decimals": 3,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.01 },
+            { "color": "red", "value": 0.1 }
+          ]}
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"failed_permanent\"}[5m]))" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Processing p95",
+      "description": "Per-document processing time from first submission to terminal outcome, spanning every in-process retry pass. The histogram uses explicit exponential boundaries (0.05s-102.4s), so this quantile is meaningful.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 2 } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_service_pipeline_documents_processed_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))" }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Ingest Failure Ratio",
+      "description": "forwarded_not_ingested as a share of everything forwarded. The ingester accepted the call but reported success == false, so the item still moves downstream carrying the failure. This is an ingest-failure rate, not a pipeline-failure rate. No clamp on the denominator: with no traffic the query returns no data rather than a misleading 0%.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit", "max": 1, "min": 0,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.05 },
+            { "color": "red", "value": 0.2 }
+          ]}
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"forwarded_not_ingested\"}[5m])) / sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=~\"forwarded|forwarded_not_ingested\"}[5m]))" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Document Outcomes",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Outcomes by Type (rate)",
+      "description": "One sample per document, not per attempt: retries are in-process and counted on document_retries_total instead. All three outcomes are forwarded downstream — they differ in whether the document was ingested, not in whether it survived.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (outcome) (rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "{{outcome}}" }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Permanent Failures by Error Code",
+      "description": "Only outcome=\"failed_permanent\". error_code is the failure recorded on the document itself, in knowledge_hub.msg — not an ItemError. The item is forwarded regardless.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (error_code) (rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"failed_permanent\"}[5m]))", "legendFormat": "{{error_code}}" }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Ingest vs Retry vs Give-up (rate)",
+      "description": "The three signals that get confused with each other. ingested is real progress. retrying is in-process churn against a dependency that has not finished — it is NOT loss, and it is counted per pass so it can exceed the document rate. not ingested is this service giving up, which still forwards the document with its failure attached. Nothing here is a dropped document.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"forwarded\"}[5m]))", "legendFormat": "ingested" },
+        { "refId": "B", "expr": "sum(rate(knowledge_service_pipeline_document_retries_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "retrying" },
+        { "refId": "C", "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"failed_permanent\"}[5m]))", "legendFormat": "not ingested (gave up)" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "Processing Latency",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Processing Duration — p50 / p95 / p99",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 14 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(knowledge_service_pipeline_documents_processed_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_service_pipeline_documents_processed_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(knowledge_service_pipeline_documents_processed_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Processing p95 by Outcome",
+      "description": "Split by outcome on purpose: permanent failures often fail fast, so mixing them into one series drags the forwarded quantiles down and hides a real slowdown.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 14 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, outcome) (rate(knowledge_service_pipeline_documents_processed_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "{{outcome}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 400,
+      "title": "Dependencies — Content & Ingester",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Dependency p95 (success path)",
+      "description": "status=\"success\" only. A fast failure would otherwise land in the same bucket stream as real work and pull the success-path quantiles down.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 22 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_service_pipeline_content_request_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", status=\"success\"}[5m])))", "legendFormat": "content" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_service_pipeline_ingester_request_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", status=\"success\"}[5m])))", "legendFormat": "ingester" }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Dependency Requests In Flight",
+      "description": "Localizes a stall to one dependency. Sustained non-zero here with flat throughput points at the named dependency rather than at this service.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 22 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (dependency) (knowledge_service_pipeline_dependency_requests_in_flight{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"})", "legendFormat": "{{dependency}}" }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Dependency Error Rate",
+      "description": "Derived from the duration histograms' _count with status=\"error\": transport failures plus responses carrying an application error instead of usable data.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 22 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(knowledge_service_pipeline_content_request_duration_seconds_count{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", status=\"error\"}[5m]))", "legendFormat": "content" },
+        { "refId": "B", "expr": "sum(rate(knowledge_service_pipeline_ingester_request_duration_seconds_count{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", status=\"error\"}[5m]))", "legendFormat": "ingester" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 500,
+      "title": "Per-Pod Drill-Down",
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 29 },
+      "panels": [
+        {
+          "id": 50,
+          "type": "timeseries",
+          "title": "Outcomes by Pod (rate)",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 7, "w": 8, "x": 0, "y": 30 },
+          "fieldConfig": { "defaults": { "unit": "ops" } },
+          "targets": [
+            { "refId": "A", "expr": "sum by (pod) (rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{pod}}" }
+          ]
+        },
+        {
+          "id": 51,
+          "type": "timeseries",
+          "title": "Documents In Flight by Pod",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 7, "w": 8, "x": 8, "y": 30 },
+          "fieldConfig": { "defaults": { "unit": "short" } },
+          "targets": [
+            { "refId": "A", "expr": "sum by (pod) (knowledge_service_pipeline_documents_in_flight{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "{{pod}}" }
+          ]
+        },
+        {
+          "id": 52,
+          "type": "timeseries",
+          "title": "Dropped by Pod (rate)",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 7, "w": 8, "x": 16, "y": 30 },
+          "fieldConfig": { "defaults": { "unit": "ops" } },
+          "targets": [
+            { "refId": "A", "expr": "sum by (pod) (rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", pod=~\"$pod\", outcome=\"failed_permanent\"}[5m]))", "legendFormat": "{{pod}}" }
+          ]
+        }
+      ]
+    }
+  ]
+}

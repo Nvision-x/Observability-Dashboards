@@ -236,6 +236,468 @@
         "service": "nx-applications",
         "alerttype": "database"
       }
+    },
+    {
+      "uid": "nx-ks-retry-loop-not-converging",
+      "title": "Retry Loop Not Converging - Knowledge Service",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 300,
+            "to": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-nx"
+          },
+          "model": {
+            "expr": "sum(rate(knowledge_service_pipeline_document_retries_total{job=~\".*knowledge-service-be-go.*\"}[10m])) > 0 and sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\"}[10m])) == 0",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "A",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "reducer": "last",
+            "refId": "B",
+            "type": "reduce"
+          }
+        },
+        {
+          "refId": "C",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "B > 0",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "refId": "C",
+            "type": "threshold"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "15m",
+      "annotations": {
+        "description": "Documents are being retried with zero completions for 15m. The retry loop is unbounded by design, so this will not self-resolve: a batch holds its JetStream message indefinitely while it makes no progress. Check retry_queue_depth to see which phase is stuck and document_retries_total's error_code label for why. CONTENT_TIMEOUT on a slow extraction is ordinary cache-warming; the same code with a flat completion rate for 15m is not.",
+        "summary": "Knowledge Service retry loop is turning but no documents are completing"
+      },
+      "labels": {
+        "severity": "critical",
+        "team": "development",
+        "service": "knowledge-service-be-go",
+        "alerttype": "application"
+      }
+    },
+    {
+      "uid": "nx-ks-batches-abandoned",
+      "title": "Batches Abandoned Outside Deploy - Knowledge Service",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 300,
+            "to": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-nx"
+          },
+          "model": {
+            "expr": "sum(rate(knowledge_service_pipeline_batches_abandoned_total{job=~\".*knowledge-service-be-go.*\"}[10m]))",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "A",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "reducer": "last",
+            "refId": "B",
+            "type": "reduce"
+          }
+        },
+        {
+          "refId": "C",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "B > 0",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "refId": "C",
+            "type": "threshold"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "20m",
+      "annotations": {
+        "description": "Batches are being returned to JetStream unfinished because pods are shutting down mid-batch. A burst during a deploy is expected and harmless (work is redone from content-service's cache and the ingester dedupes on content_sha256). Sustained for 20m outside a deploy means pods are being collected while working — check the KEDA ack-capacity threshold against JOBENGINE_MAX_INFLIGHT_MESSAGE, and terminationGracePeriodSeconds against how long a batch actually takes.",
+        "summary": "Knowledge Service is abandoning batches on pod shutdown"
+      },
+      "labels": {
+        "severity": "warning",
+        "team": "development",
+        "service": "knowledge-service-be-go",
+        "alerttype": "application"
+      }
+    },
+    {
+      "uid": "nx-ks-unrecorded-failures",
+      "title": "Unrecorded Failures - Knowledge Service",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 300,
+            "to": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-nx"
+          },
+          "model": {
+            "expr": "sum(rate(knowledge_service_pipeline_unrecorded_failures_total{job=~\".*knowledge-service-be-go.*\"}[10m]))",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "A",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "reducer": "last",
+            "refId": "B",
+            "type": "reduce"
+          }
+        },
+        {
+          "refId": "C",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "B > 0",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "refId": "C",
+            "type": "threshold"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "5m",
+      "annotations": {
+        "description": "A document's payload could not be unmarshalled or re-marshalled, so its verdict could not be written to knowledge_hub and was published as an ItemError instead. This is the only path in the service that writes to the job's item-errors hash and should sit at zero. A non-zero rate means malformed payloads are arriving from upstream.",
+        "summary": "Knowledge Service cannot record failures on the document"
+      },
+      "labels": {
+        "severity": "warning",
+        "team": "development",
+        "service": "knowledge-service-be-go",
+        "alerttype": "application"
+      }
+    },
+    {
+      "uid": "nx-ks-ingest-failure-rate",
+      "title": "High Ingest Failure Rate - Knowledge Service",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 300,
+            "to": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-nx"
+          },
+          "model": {
+            "expr": "100 * sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", outcome!=\"forwarded\"}[10m])) / clamp_min(sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\"}[10m])), 0.001)",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "A",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "reducer": "last",
+            "refId": "B",
+            "type": "reduce"
+          }
+        },
+        {
+          "refId": "C",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "B > 10",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "refId": "C",
+            "type": "threshold"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "10m",
+      "annotations": {
+        "description": "Over 10% of documents reached a terminal outcome without being ingested. Split by outcome: forwarded_not_ingested is the ingester's own verdict (an ingest-failure rate), failed_permanent is this service giving up (a pipeline-failure rate). Nothing is dropped either way — every document is forwarded with the reason in knowledge_hub — so this is a quality signal, not data loss.",
+        "summary": "More than 10% of Knowledge Service documents are not being ingested"
+      },
+      "labels": {
+        "severity": "warning",
+        "team": "development",
+        "service": "knowledge-service-be-go",
+        "alerttype": "application"
+      }
+    },
+    {
+      "uid": "nx-ks-worker-pool-saturated",
+      "title": "Worker Pool Saturated - Knowledge Service",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 300,
+            "to": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-nx"
+          },
+          "model": {
+            "expr": "100 * sum(knowledge_service_pipeline_documents_queued{job=~\".*knowledge-service-be-go.*\"}) / clamp_min(sum(knowledge_service_pipeline_documents_queued{job=~\".*knowledge-service-be-go.*\"}) + sum(knowledge_service_pipeline_documents_in_flight{job=~\".*knowledge-service-be-go.*\"}), 1)",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "A",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "reducer": "mean",
+            "refId": "B",
+            "type": "reduce"
+          }
+        },
+        {
+          "refId": "C",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "B > 50",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "refId": "C",
+            "type": "threshold"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "15m",
+      "annotations": {
+        "description": "More than half of submitted documents are queued rather than executing, sustained for 15m, so the pool is the constraint rather than the dependencies. Raise WORKER_POOL_SIZE if content-service and the ingester have headroom. If documents_in_flight is pinned at WORKER_POOL_SIZE with little queued instead, the dependencies are slow and a bigger pool would only add pressure to them.",
+        "summary": "Knowledge Service worker pool is the bottleneck"
+      },
+      "labels": {
+        "severity": "warning",
+        "team": "development",
+        "service": "knowledge-service-be-go",
+        "alerttype": "application"
+      }
+    },
+    {
+      "uid": "nx-ks-dependency-stalled",
+      "title": "Dependency Stalled - Knowledge Service",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 300,
+            "to": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-nx"
+          },
+          "model": {
+            "expr": "sum(knowledge_service_pipeline_dependency_requests_in_flight{job=~\".*knowledge-service-be-go.*\"}) > 0 and (sum(rate(knowledge_service_pipeline_content_request_duration_seconds_count{job=~\".*knowledge-service-be-go.*\"}[10m])) + sum(rate(knowledge_service_pipeline_ingester_request_duration_seconds_count{job=~\".*knowledge-service-be-go.*\"}[10m]))) == 0",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "A",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "reducer": "last",
+            "refId": "B",
+            "type": "reduce"
+          }
+        },
+        {
+          "refId": "C",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "B > 0",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "refId": "C",
+            "type": "threshold"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "10m",
+      "annotations": {
+        "description": "Calls to content-service or the ingester are outstanding while no call has completed for 10m — a stalled dependency rather than a slow one. Use dependency_requests_in_flight's dependency label to localise it. For the ingester, a flat ingester_progress_frames_total with a non-zero in-flight count confirms a hung stream.",
+        "summary": "Knowledge Service has outstanding dependency calls but none are completing"
+      },
+      "labels": {
+        "severity": "critical",
+        "team": "development",
+        "service": "knowledge-service-be-go",
+        "alerttype": "application"
+      }
     }
   ]
 }

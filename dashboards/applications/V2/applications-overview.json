@@ -505,6 +505,85 @@
       "targets": [
         { "refId": "A", "expr": "sum(rate(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", outcome=\"error\"}[5m]))" }
       ]
+    },
+    {
+      "type": "row",
+      "id": 500,
+      "title": "Knowledge Service",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 },
+      "panels": []
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 21 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "green", "value": 1 }
+          ]},
+          "links": [{
+            "title": "Open Knowledge Service Overview",
+            "url": "/d/apps-v2-knowledge-service-overview?${namespace:queryparam}"
+          }]
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "sum(up{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"})" }
+      ]
+    },
+    {
+      "id": 18,
+      "type": "stat",
+      "title": "Ingested (rate)",
+      "description": "outcome=\"forwarded\" only — the one outcome that means a document was actually ingested.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 21 },
+      "fieldConfig": { "defaults": { "unit": "ops", "decimals": 2 } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"forwarded\"}[5m]))" }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "stat",
+      "title": "Processing p95",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 21 },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 1 } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_service_pipeline_documents_processed_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))" }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "stat",
+      "title": "Not Ingested",
+      "description": "outcome=\"failed_permanent\" — documents knowledge-service gave up on. NOT a drop rate: the item is still forwarded downstream carrying its failure in knowledge_hub. Retryable conditions never appear here — they are retried in-process until they resolve, so this counter only moves on a terminal verdict.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 21 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops", "decimals": 3,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.01 },
+            { "color": "red", "value": 0.1 }
+          ]}
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"failed_permanent\"}[5m]))" }
+      ]
     }
   ]
 }

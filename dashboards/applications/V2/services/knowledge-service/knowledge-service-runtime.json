@@ -1,0 +1,255 @@
+{
+  "uid": "apps-v2-knowledge-service-runtime",
+  "title": "Knowledge Service — Runtime",
+  "tags": ["git-sync", "apps-v2", "service:knowledge-service", "runtime"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-knowledge-service-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "Knowledge Service — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-service-overview?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Knowledge Service — Pipeline",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-service-pipeline?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": { "selected": false, "text": "Prometheus", "value": "prometheus-nx" },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(process_start_time_seconds{job=~\".*knowledge-service-be-go.*\"}, namespace)",
+        "current": { "selected": true, "text": "default", "value": "default" },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "description": "Applies only to the per-pod panels. Aggregate panels deliberately ignore it so pod churn does not gap the graphs.",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(process_start_time_seconds{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}, pod)",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Process — CPU & Memory",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Process CPU (rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [
+        { "refId": "A", "expr": "rate(process_cpu_seconds_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Process Resident Memory",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "process_resident_memory_bytes{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Process Virtual Memory",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "process_virtual_memory_bytes{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Container — Resource Usage",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Container CPU Usage",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\", container!=\"\", container!=\"POD\"}[5m]))", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Container Memory (working set)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\", container!=\"\", container!=\"POD\"})", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "Go Runtime",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Goroutines",
+      "description": "This service fans work out to one goroutine per document, so goroutine count tracks concurrency. A climb that does not come back down alongside a flat documents_in_flight is a leak, not load.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "go_goroutines{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Heap In-Use",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "go_memstats_heap_inuse_bytes{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "GC Pause (max)",
+      "description": "Longest stop-the-world GC pause per pod. go_gc_duration_seconds is a Prometheus summary, not a histogram: there is no _bucket series, so histogram_quantile cannot be used here. The Go collector exposes quantiles 0, 0.25, 0.5, 0.75 and 1 only — there is no 0.99. quantile=\"1\" is the max pause over the runtime's buffer of recent GC cycles, so it reports the worst recent pause rather than a windowed percentile.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "go_gc_duration_seconds{quantile=\"1\", job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 400,
+      "title": "File Descriptors & Threads",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Open vs Max FDs",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 25 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "process_open_fds{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "open {{pod}}" },
+        { "refId": "B", "expr": "process_max_fds{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "max {{pod}}" }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "OS Threads",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 25 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "go_threads{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 500,
+      "title": "Uptime & Restarts",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 },
+      "panels": []
+    },
+    {
+      "id": 40,
+      "type": "timeseries",
+      "title": "Process Uptime",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 33 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "time() - process_start_time_seconds{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Container Restarts (1h increase)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 33 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\"}[1h]))", "legendFormat": "{{pod}}" }
+      ]
+    }
+  ]
+}
