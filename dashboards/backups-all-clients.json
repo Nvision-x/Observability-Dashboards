@@ -1,5 +1,5 @@
 {
-  "__comment": "NVisionX Backup Status — ALL EKS CLIENTS, ONE DASHBOARD. Same pattern as scan-activity-all-clients.json: top row = combined status across every selected client, below = one collapsible row per client with PostgreSQL + OpenSearch backup detail. Unlike the scan dashboard, this needs NO new exporter/metric - kube-state-metrics already exposes kube_job_status_*/kube_cronjob_* for every CronJob-spawned Job in every EKS cluster, so there's no mimir series-limit risk from adding brand-new series here. CronJob names (confirmed from nx-application-helm/charts/databases/templates/{postgresqlBackup,opensearchBackup}-cronjob.yaml): '<release>-postgres-backup' and '<release>-opensearch-backup', both in the 'default' namespace on every EKS client. Job status queries wrap in max() per client to avoid over-counting when successfulJobsHistoryLimit/failedJobsHistoryLimit retain more than one completed Job object at a time (each retained Job carries its own kube_job_status_succeeded=1 series). NOT YET VERIFIED LIVE - built by pattern-matching the existing single-cluster 'NX Database Backups' dashboard (uid nx-database-backups) rather than confirmed against real data. Check the combined-overview tiles first after import, same way the scan dashboard needed 3 iterations to get the cross-datasource sum transform right (reduce[reduceFields,sum] -> merge -> calculateField[reduceRow,sum] is the proven-working chain, reused here).",
+  "__comment": "NVisionX Backup Status — ALL EKS CLIENTS, ONE DASHBOARD. Same layout pattern as scan-activity-all-clients.json (combined overview + one collapsible row per client). CONFIRMED LIVE against Integration (2026-08-19): kube_job_status_succeeded/_failed/_completion_time/_start_time are USELESS here - both backup CronJobs set ttlSecondsAfterFinished: 600, so kube-state-metrics only ever sees the completed Job object for a 10-minute window after each run (daily for postgres, weekly for opensearch); outside that window the query returns nothing at all, which is what 'No data' on the first version of this dashboard actually meant. Rebuilt around kube_cronjob_status_last_successful_time instead, which lives on the permanent CronJob object (never garbage-collected) - confirmed present with real values: cronjob='databases-postgres-backup' (namespace default, schedule '0 2 * * *' daily) and cronjob='databases-opensearch-backup' (schedule '0 2 * * 0' weekly). Health per client = freshness of that timestamp vs. 1.5x the expected schedule interval (36h for daily postgres, 216h/9d for weekly opensearch) - a generous grace window, not exact-schedule matching, since exact run time can drift a little run to run. Per-run duration and multi-run history panels were dropped entirely rather than shipped broken - that data doesn't survive the Job's 10-minute TTL and there is no CronJob-level substitute for it.",
   "annotations": {
     "list": [
       {
@@ -23,7 +23,7 @@
       "id": 100,
       "options": {
         "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
-        "content": "**Overview** counts how many selected clients had their most recent PostgreSQL / OpenSearch backup succeed vs fail. **Below, one row per client** (expand for status, last-run time, duration, and 7-day success trend for both backup types). Add/remove clients with the **Clients** picker above.",
+        "content": "**Overview** counts how many selected clients have a fresh vs. stale/overdue backup — \"fresh\" means the last successful run completed within 1.5x its expected schedule (36h for daily PostgreSQL, 9 days for weekly OpenSearch). **Below, one row per client**: hours since the last successful backup (colored) and when that was, for both backup types. Add/remove clients with the **Clients** picker above.",
         "mode": "markdown"
       },
       "pluginVersion": "11.5.2",
@@ -64,15 +64,15 @@
       },
       "pluginVersion": "11.5.2",
       "targets": [
-        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo" },
-        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo2" },
-        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Integration" },
-        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "IONIS" },
-        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
-        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "SSB" },
-        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "UAT" }
+        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600", "instant": true, "legendFormat": "value", "refId": "Demo" },
+        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600", "instant": true, "legendFormat": "value", "refId": "Demo2" },
+        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600", "instant": true, "legendFormat": "value", "refId": "Integration" },
+        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600", "instant": true, "legendFormat": "value", "refId": "IONIS" },
+        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
+        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600", "instant": true, "legendFormat": "value", "refId": "SSB" },
+        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600", "instant": true, "legendFormat": "value", "refId": "UAT" }
       ],
-      "title": "PostgreSQL: clients with a healthy last backup",
+      "title": "PostgreSQL: clients with a fresh backup",
       "transformations": [
         { "id": "reduce", "options": { "reducers": ["sum"], "mode": "reduceFields" } },
         { "id": "merge", "options": {} },
@@ -106,15 +106,15 @@
       },
       "pluginVersion": "11.5.2",
       "targets": [
-        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo" },
-        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo2" },
-        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Integration" },
-        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "IONIS" },
-        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
-        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "SSB" },
-        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "UAT" }
+        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) >= bool 129600", "instant": true, "legendFormat": "value", "refId": "Demo" },
+        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) >= bool 129600", "instant": true, "legendFormat": "value", "refId": "Demo2" },
+        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) >= bool 129600", "instant": true, "legendFormat": "value", "refId": "Integration" },
+        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) >= bool 129600", "instant": true, "legendFormat": "value", "refId": "IONIS" },
+        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) >= bool 129600", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
+        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) >= bool 129600", "instant": true, "legendFormat": "value", "refId": "SSB" },
+        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) >= bool 129600", "instant": true, "legendFormat": "value", "refId": "UAT" }
       ],
-      "title": "PostgreSQL: clients with a failed backup",
+      "title": "PostgreSQL: clients with a stale/overdue backup",
       "transformations": [
         { "id": "reduce", "options": { "reducers": ["sum"], "mode": "reduceFields" } },
         { "id": "merge", "options": {} },
@@ -147,15 +147,15 @@
       },
       "pluginVersion": "11.5.2",
       "targets": [
-        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo" },
-        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo2" },
-        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Integration" },
-        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "IONIS" },
-        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
-        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "SSB" },
-        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "UAT" }
+        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600", "instant": true, "legendFormat": "value", "refId": "Demo" },
+        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600", "instant": true, "legendFormat": "value", "refId": "Demo2" },
+        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600", "instant": true, "legendFormat": "value", "refId": "Integration" },
+        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600", "instant": true, "legendFormat": "value", "refId": "IONIS" },
+        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
+        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600", "instant": true, "legendFormat": "value", "refId": "SSB" },
+        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600", "instant": true, "legendFormat": "value", "refId": "UAT" }
       ],
-      "title": "OpenSearch: clients with a healthy last backup",
+      "title": "OpenSearch: clients with a fresh backup",
       "transformations": [
         { "id": "reduce", "options": { "reducers": ["sum"], "mode": "reduceFields" } },
         { "id": "merge", "options": {} },
@@ -189,15 +189,15 @@
       },
       "pluginVersion": "11.5.2",
       "targets": [
-        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo" },
-        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo2" },
-        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Integration" },
-        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "IONIS" },
-        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
-        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "SSB" },
-        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "UAT" }
+        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) >= bool 777600", "instant": true, "legendFormat": "value", "refId": "Demo" },
+        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) >= bool 777600", "instant": true, "legendFormat": "value", "refId": "Demo2" },
+        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) >= bool 777600", "instant": true, "legendFormat": "value", "refId": "Integration" },
+        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) >= bool 777600", "instant": true, "legendFormat": "value", "refId": "IONIS" },
+        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) >= bool 777600", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
+        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) >= bool 777600", "instant": true, "legendFormat": "value", "refId": "SSB" },
+        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) >= bool 777600", "instant": true, "legendFormat": "value", "refId": "UAT" }
       ],
-      "title": "OpenSearch: clients with a failed backup",
+      "title": "OpenSearch: clients with a stale/overdue backup",
       "transformations": [
         { "id": "reduce", "options": { "reducers": ["sum"], "mode": "reduceFields" } },
         { "id": "merge", "options": {} },
@@ -216,145 +216,79 @@
       "panels": [
         {
           "datasource": { "type": "prometheus", "uid": "${client_ds}" },
-          "description": "PostgreSQL backup - status of the most recently retained job (successfulJobsHistoryLimit/failedJobsHistoryLimit controls how many old runs stay visible).",
+          "description": "Hours since the last successful PostgreSQL backup completed. Schedule is daily (~24h expected).",
           "fieldConfig": {
             "defaults": {
-              "mappings": [{ "type": "value", "options": { "0": { "color": "red", "text": "Failed" }, "1": { "color": "green", "text": "Success" } } }],
-              "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": 0 }, { "color": "green", "value": 1 }] },
-              "unit": "none"
+              "color": { "mode": "thresholds" },
+              "unit": "h",
+              "decimals": 1,
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 24 }, { "color": "red", "value": 36 }] }
             },
             "overrides": []
           },
-          "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
           "id": 200,
           "options": {
             "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto",
-            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name", "wideLayout": true
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value", "wideLayout": true
           },
           "pluginVersion": "11.5.2",
-          "targets": [ { "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "refId": "A" } ],
-          "title": "Postgres: Last Status",
+          "targets": [ { "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) / 3600", "instant": true, "refId": "A" } ],
+          "title": "Postgres: Hours Since Last Success",
           "type": "stat"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${client_ds}" },
           "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" }, "unit": "dateTimeFromNow" }, "overrides": [] },
-          "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
           "id": 201,
           "options": {
             "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto",
             "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value", "wideLayout": true
           },
           "pluginVersion": "11.5.2",
-          "targets": [ { "expr": "max(kube_job_status_completion_time{namespace=\"default\", job_name=~\".*postgres-backup.*\"}) * 1000", "instant": true, "refId": "A" } ],
-          "title": "Postgres: Last Backup",
+          "targets": [ { "expr": "max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"}) * 1000", "instant": true, "refId": "A" } ],
+          "title": "Postgres: Last Successful Backup",
           "type": "stat"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${client_ds}" },
-          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "purple" }, "unit": "m", "decimals": 1 }, "overrides": [] },
-          "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
-          "id": 202,
-          "options": {
-            "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto",
-            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value", "wideLayout": true
-          },
-          "pluginVersion": "11.5.2",
-          "targets": [ { "expr": "(max(kube_job_status_completion_time{namespace=\"default\", job_name=~\".*postgres-backup.*\"}) - max(kube_job_status_start_time{namespace=\"default\", job_name=~\".*postgres-backup.*\"})) / 60", "instant": true, "refId": "A" } ],
-          "title": "Postgres: Last Duration",
-          "type": "stat"
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
-          "description": "OpenSearch backup - status of the most recently retained job.",
+          "description": "Hours since the last successful OpenSearch backup completed. Schedule is weekly, Sunday (~168h expected).",
           "fieldConfig": {
             "defaults": {
-              "mappings": [{ "type": "value", "options": { "0": { "color": "red", "text": "Failed" }, "1": { "color": "green", "text": "Success" } } }],
-              "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": 0 }, { "color": "green", "value": 1 }] },
-              "unit": "none"
+              "color": { "mode": "thresholds" },
+              "unit": "h",
+              "decimals": 1,
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 168 }, { "color": "red", "value": 216 }] }
             },
             "overrides": []
           },
-          "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
-          "id": 203,
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "id": 202,
           "options": {
             "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto",
-            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name", "wideLayout": true
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value", "wideLayout": true
           },
           "pluginVersion": "11.5.2",
-          "targets": [ { "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "refId": "A" } ],
-          "title": "OpenSearch: Last Status",
+          "targets": [ { "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) / 3600", "instant": true, "refId": "A" } ],
+          "title": "OpenSearch: Hours Since Last Success",
           "type": "stat"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${client_ds}" },
           "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" }, "unit": "dateTimeFromNow" }, "overrides": [] },
-          "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
-          "id": 204,
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "id": 203,
           "options": {
             "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto",
             "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value", "wideLayout": true
           },
           "pluginVersion": "11.5.2",
-          "targets": [ { "expr": "max(kube_job_status_completion_time{namespace=\"default\", job_name=~\".*opensearch-backup.*\"}) * 1000", "instant": true, "refId": "A" } ],
-          "title": "OpenSearch: Last Backup",
+          "targets": [ { "expr": "max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"}) * 1000", "instant": true, "refId": "A" } ],
+          "title": "OpenSearch: Last Successful Backup",
           "type": "stat"
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
-          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "purple" }, "unit": "m", "decimals": 1 }, "overrides": [] },
-          "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
-          "id": 205,
-          "options": {
-            "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto",
-            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value", "wideLayout": true
-          },
-          "pluginVersion": "11.5.2",
-          "targets": [ { "expr": "(max(kube_job_status_completion_time{namespace=\"default\", job_name=~\".*opensearch-backup.*\"}) - max(kube_job_status_start_time{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})) / 60", "instant": true, "refId": "A" } ],
-          "title": "OpenSearch: Last Duration",
-          "type": "stat"
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
-          "description": "PostgreSQL backup success/failure over the last 7 days - one point per retained job run.",
-          "fieldConfig": {
-            "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "points", "pointSize": 8 } },
-            "overrides": [
-              { "matcher": { "id": "byName", "options": "Successful" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
-              { "matcher": { "id": "byName", "options": "Failed" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
-            ]
-          },
-          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 4 },
-          "id": 206,
-          "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
-          "pluginVersion": "11.5.2",
-          "targets": [
-            { "expr": "kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"}", "legendFormat": "Successful", "refId": "A" },
-            { "expr": "kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"}", "legendFormat": "Failed", "refId": "B" }
-          ],
-          "title": "Postgres: 7-day run history",
-          "type": "timeseries"
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
-          "description": "OpenSearch backup success/failure over the last 7 days - one point per retained job run.",
-          "fieldConfig": {
-            "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "points", "pointSize": 8 } },
-            "overrides": [
-              { "matcher": { "id": "byName", "options": "Successful" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
-              { "matcher": { "id": "byName", "options": "Failed" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
-            ]
-          },
-          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 4 },
-          "id": 207,
-          "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
-          "pluginVersion": "11.5.2",
-          "targets": [
-            { "expr": "kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"}", "legendFormat": "Successful", "refId": "A" },
-            { "expr": "kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"}", "legendFormat": "Failed", "refId": "B" }
-          ],
-          "title": "OpenSearch: 7-day run history",
-          "type": "timeseries"
         }
       ]
     }
@@ -385,6 +319,6 @@
   "timezone": "",
   "title": "NVisionX — Backup Status Overview (ALL EKS CLIENTS)",
   "uid": "nx-backups-all-clients",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
