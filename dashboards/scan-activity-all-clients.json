@@ -1,0 +1,404 @@
+{
+  "__comment": "NVisionX Scan Activity + OpenSearch Overview — ALL EKS CLIENTS, ONE DASHBOARD. Supersedes the loose hand-imported nx-scan-activity-all-clients.json (workspace root) — same uid, so once this git-synced copy lands it updates that dashboard in place instead of living as a second copy. EKS-only by design: the $client_ds picker only ever lists each client's own Prometheus datasource (Demo/Demo2/Integration/IONIS/KrispyKreme/SSB/UAT), which is how every EKS environment already reaches this central Grafana via remote_write; Replicated/on-prem clients use a completely separate deployment path (KOTS) and are intentionally not in this picker. Layout: top row = combined totals across every selected client. Below that, ONE COLLAPSIBLE ROW PER CLIENT (Grafana row-repeat on $client_ds) — expand a client's row to see, under that client's name: files scanned, data size, scans running now, backlog, a breakdown of WHAT TYPE of scans ran (by connector_type: S3/BOX/SHAREPOINT/etc), HOW MANY per source datasource, and a trend of scan volume + queue health over time. All per-client numbers come from OpenSearch indirectly: nx-scan-metrics-exporter (nx-application-helm's observability chart, component scanMetricsExporter) runs inside each EKS cluster, queries that cluster's OpenSearch domain directly (same VPC, no cross-VPC hop needed), and republishes nx_scan_files_total{connector_type}/nx_scan_bytes_total{connector_type}/nx_scan_files_by_datasource{datasource_access_id} as Prometheus gauges that ride the existing scrape->remote_write->mimir path. nats_consumer_* (Running/Backlog) comes straight from NATS's own exporter and needs no extra wiring. IMPORTANT PREREQUISITE: as of 2026-08-19 `scanMetricsExporter.enabled` defaults to false in nx-application-helm and no client's env-specific values file turns it on yet — until it's flipped to true and the observability layer is redeployed for a given client, that client's Files/Data/connector-type/datasource panels will read 0 while Running/Backlog (NATS-sourced) still show real numbers. That's a deploy-time toggle per client, not a dashboard bug.",
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "options": {
+        "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
+        "content": "**Overview** sums Files / Data / Running / Backlog across every selected client. **Below, one row per client** (expand to see full detail: scan types, per-source counts, trends). Add/remove clients with the **Clients** picker above — the per-client rows auto-onboard; the 4 Overview tiles need one target added per new client (Grafana can't auto-sum a multi-value datasource variable without concrete series).",
+        "mode": "markdown"
+      },
+      "pluginVersion": "11.5.2",
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 2 },
+      "id": 1,
+      "panels": [],
+      "title": "Overview — combined across selected clients",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "datasource", "uid": "-- Mixed --" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] },
+          "unit": "short",
+          "decimals": 1,
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 3 },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "sum(nx_scan_files_total)", "instant": true, "legendFormat": "value", "refId": "Demo" },
+        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "sum(nx_scan_files_total)", "instant": true, "legendFormat": "value", "refId": "Demo2" },
+        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "sum(nx_scan_files_total)", "instant": true, "legendFormat": "value", "refId": "Integration" },
+        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "sum(nx_scan_files_total)", "instant": true, "legendFormat": "value", "refId": "IONIS" },
+        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "sum(nx_scan_files_total)", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
+        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "sum(nx_scan_files_total)", "instant": true, "legendFormat": "value", "refId": "SSB" },
+        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "sum(nx_scan_files_total)", "instant": true, "legendFormat": "value", "refId": "UAT" }
+      ],
+      "title": "Files scanned (records)",
+      "transformations": [
+        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "seriesToRows" } },
+        { "id": "groupBy", "options": { "fields": { "Field": { "aggregations": [], "operation": "groupby" }, "Total": { "aggregations": ["sum"], "operation": "aggregate" } } } },
+        { "id": "organize", "options": { "excludeByName": { "Field": true } } }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "datasource", "uid": "-- Mixed --" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] },
+          "unit": "decbytes",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 3 },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "sum(nx_scan_bytes_total)", "instant": true, "legendFormat": "value", "refId": "Demo" },
+        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "sum(nx_scan_bytes_total)", "instant": true, "legendFormat": "value", "refId": "Demo2" },
+        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "sum(nx_scan_bytes_total)", "instant": true, "legendFormat": "value", "refId": "Integration" },
+        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "sum(nx_scan_bytes_total)", "instant": true, "legendFormat": "value", "refId": "IONIS" },
+        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "sum(nx_scan_bytes_total)", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
+        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "sum(nx_scan_bytes_total)", "instant": true, "legendFormat": "value", "refId": "SSB" },
+        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "sum(nx_scan_bytes_total)", "instant": true, "legendFormat": "value", "refId": "UAT" }
+      ],
+      "title": "Total size of scanned files",
+      "transformations": [
+        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "seriesToRows" } },
+        { "id": "groupBy", "options": { "fields": { "Field": { "aggregations": [], "operation": "groupby" }, "Total": { "aggregations": ["sum"], "operation": "aggregate" } } } },
+        { "id": "organize", "options": { "excludeByName": { "Field": true } } }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "datasource", "uid": "-- Mixed --" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "short",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "text", "value": null },
+              { "color": "orange", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 3 },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "legendFormat": "value", "refId": "Demo" },
+        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "legendFormat": "value", "refId": "Demo2" },
+        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "legendFormat": "value", "refId": "Integration" },
+        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "legendFormat": "value", "refId": "IONIS" },
+        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
+        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "legendFormat": "value", "refId": "SSB" },
+        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "legendFormat": "value", "refId": "UAT" }
+      ],
+      "title": "Scans running NOW",
+      "transformations": [
+        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "seriesToRows" } },
+        { "id": "groupBy", "options": { "fields": { "Field": { "aggregations": [], "operation": "groupby" }, "Total": { "aggregations": ["sum"], "operation": "aggregate" } } } },
+        { "id": "organize", "options": { "excludeByName": { "Field": true } } }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "datasource", "uid": "-- Mixed --" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "short",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1000 },
+              { "color": "red", "value": 50000 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 3 },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "legendFormat": "value", "refId": "Demo" },
+        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "legendFormat": "value", "refId": "Demo2" },
+        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "legendFormat": "value", "refId": "Integration" },
+        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "legendFormat": "value", "refId": "IONIS" },
+        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
+        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "legendFormat": "value", "refId": "SSB" },
+        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "legendFormat": "value", "refId": "UAT" }
+      ],
+      "title": "Backlog (pending)",
+      "transformations": [
+        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "seriesToRows" } },
+        { "id": "groupBy", "options": { "fields": { "Field": { "aggregations": [], "operation": "groupby" }, "Total": { "aggregations": ["sum"], "operation": "aggregate" } } } },
+        { "id": "organize", "options": { "excludeByName": { "Field": true } } }
+      ],
+      "type": "stat"
+    },
+    {
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "id": 20,
+      "repeat": "client_ds",
+      "repeatDirection": "v",
+      "title": "$client_ds",
+      "type": "row",
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" }, "unit": "short" },
+            "overrides": []
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "id": 200,
+          "options": {
+            "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true
+          },
+          "pluginVersion": "11.5.2",
+          "targets": [ { "expr": "sum(nx_scan_files_total)", "instant": true, "refId": "A" } ],
+          "title": "Files scanned",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "fixed", "fixedColor": "green" }, "unit": "decbytes" },
+            "overrides": []
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "id": 201,
+          "options": {
+            "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true
+          },
+          "pluginVersion": "11.5.2",
+          "targets": [ { "expr": "sum(nx_scan_bytes_total)", "instant": true, "refId": "A" } ],
+          "title": "Total size scanned",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" }, "unit": "short",
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }, { "color": "orange", "value": 1 }] }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "id": 202,
+          "options": {
+            "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true
+          },
+          "pluginVersion": "11.5.2",
+          "targets": [ { "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "refId": "A" } ],
+          "title": "Scans running NOW",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" }, "unit": "short",
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1000 }, { "color": "red", "value": 50000 }] }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "id": 203,
+          "options": {
+            "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true
+          },
+          "pluginVersion": "11.5.2",
+          "targets": [ { "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "refId": "A" } ],
+          "title": "Backlog (pending)",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "description": "What TYPE of scans ran — file count by connector (S3/BOX/SHAREPOINT/CIFS/SNOWFLAKE/POSTGRESQL/...).",
+          "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 4 },
+          "id": 204,
+          "options": {
+            "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] },
+            "reduceOptions": { "values": true, "calcs": ["lastNotNull"] }
+          },
+          "pluginVersion": "11.5.2",
+          "targets": [ { "expr": "sum by (connector_type) (nx_scan_files_total)", "legendFormat": "{{connector_type}}", "instant": true, "refId": "A" } ],
+          "title": "Files scanned by type",
+          "type": "piechart"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "description": "Data volume by connector type.",
+          "fieldConfig": { "defaults": { "unit": "decbytes" }, "overrides": [] },
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 4 },
+          "id": 205,
+          "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "pluginVersion": "11.5.2",
+          "targets": [ { "expr": "sum by (connector_type) (nx_scan_bytes_total)", "legendFormat": "{{connector_type}}", "instant": true, "refId": "A" } ],
+          "title": "Data scanned by type",
+          "type": "barchart"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "description": "HOW MANY files scanned per individual connected datasource (e.g. a specific S3 bucket or SharePoint site).",
+          "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 4 },
+          "id": 206,
+          "options": { "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "pluginVersion": "11.5.2",
+          "targets": [ { "expr": "topk(10, sum by (datasource_access_id) (nx_scan_files_by_datasource))", "legendFormat": "{{datasource_access_id}}", "instant": true, "refId": "A" } ],
+          "title": "Files scanned by datasource (top 10)",
+          "type": "barchart"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "description": "New files scanned per interval, by type — delta() of the running total (a running gauge, so a pod restart never shows as a dip).",
+          "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "stacking": { "mode": "normal" }, "fillOpacity": 70 } }, "overrides": [] },
+          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 12 },
+          "id": 207,
+          "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+          "pluginVersion": "11.5.2",
+          "targets": [ { "expr": "delta(nx_scan_files_total[$__interval])", "legendFormat": "{{connector_type}}", "refId": "A" } ],
+          "title": "Scan volume over time (by type)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "description": "Live queue health: in-flight (running) vs pending (backlog) messages on the scanner consumers.",
+          "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 20 } }, "overrides": [] },
+          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 12 },
+          "id": 208,
+          "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+          "pluginVersion": "11.5.2",
+          "targets": [
+            { "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"}))", "legendFormat": "running", "refId": "A" },
+            { "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"}))", "legendFormat": "backlog", "refId": "B" }
+          ],
+          "title": "Running vs backlog over time",
+          "type": "timeseries"
+        }
+      ]
+    }
+  ],
+  "preload": false,
+  "refresh": "30s",
+  "schemaVersion": 40,
+  "tags": ["git-sync", "nx", "scans", "opensearch", "metrics", "overview", "all-clients", "eks"],
+  "templating": {
+    "list": [
+      {
+        "name": "client_ds",
+        "label": "Clients",
+        "type": "datasource",
+        "query": "prometheus",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "text": ["Demo", "Demo2", "Integration", "IONIS", "KrispyKreme", "SSB", "UAT"],
+          "value": ["dfmklaiqtfif4c", "efl7hw5ukkwzkd", "efl6f47f8cj5sb", "efs7yusoeq680e", "efs2d1k3se39ca", "dfs2d5r9cp0qob", "efmkjlznz8ykgb"]
+        }
+      }
+    ]
+  },
+  "time": { "from": "now-30d", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "NVisionX — Scan Activity & OpenSearch Overview (ALL EKS CLIENTS)",
+  "uid": "nx-scan-activity-all-clients",
+  "version": 3,
+  "weekStart": ""
+}
