@@ -2080,6 +2080,235 @@
       ],
       "title": "Extractions that outlived their caller",
       "type": "timeseries"
+    },
+    {
+      "type": "row",
+      "id": 700,
+      "title": "KEDA inflight trigger — baseline before retuning the threshold",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 125
+      },
+      "panels": []
+    },
+    {
+      "id": 701,
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "title": "What the autoscaler sees vs what is really in flight",
+      "description": "The KEDA trigger runs sum(content_inflight_global) with NO label filter, so it is the series to read before changing contentService.autoscaling.triggers.inflight.threshold (default 100) or activationThreshold (default 20).\n\nTwo things inflate it against the job-filtered series below it.\n\n1. Dual scrape. Every app metric in eks-integration is scraped twice, by job=\"kubernetes-services\" and by the PodMonitor job, both reporting identical values — so an unfiltered sum() counts each pod twice. The three NATS triggers use max(), which is idempotent under that duplication; this trigger is the only one using sum(), so it is the only one affected.\n\n2. No namespace filter. If this Prometheus serves more than one namespace, they are all in the KEDA number and none of them are in $namespace.\n\nDivide the KEDA series by the threshold to get the replicas this trigger asks for. KEDA takes the highest count any trigger requests, so this one can only ever raise the count the queue triggers ask for.",
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 0,
+        "y": 126
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 20
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(content_inflight_global)",
+          "legendFormat": "KEDA query — unfiltered sum",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(content_inflight_global{job=\"$job\"})",
+          "legendFormat": "job-filtered (removes dual scrape)",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(content_inflight_global{job=\"$job\", namespace=\"$namespace\"})",
+          "legendFormat": "job + namespace filtered",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(content_inflight_stream{job=\"$job\"})",
+          "legendFormat": "stream gauge — zero means a pre-fix build",
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "id": 702,
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "title": "Replicas this trigger is asking for",
+      "description": "ceil(KEDA query / threshold), clamped to maxReplicas (default 5). Red at 5 means the trigger is pinned at the ceiling, where it can no longer distinguish \"full\" from \"far behind\" — the state to avoid when picking a new threshold. The admission gate refuses work past globalMaxInflight (deployed 200) per pod, so the gauge has a hard ceiling of its own.",
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 126
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 3
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "clamp_max(ceil(sum(content_inflight_global) / 100), 5)",
+          "legendFormat": "replicas requested",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 703,
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "title": "Is there any See Content load to scale on?",
+      "description": "content_inflight_global carries no scope label, so the gauge cannot be split into NATS vs gRPC. Request rate by api is the closest proxy: grpc_get_content and grpc_fetch_stream are See Content, nats is the scan lane.\n\nThis is the traffic that was never counted in the gauge before the IncInflight scope fix. If these series are flat zero, the threshold does not need to move at all — nothing new is being added to the sum.",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 135
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "reqps"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (api) (rate(content_requests_total{job=\"$job\", namespace=\"$namespace\"}[$__rate_interval]))",
+          "legendFormat": "{{api}}",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "30s",

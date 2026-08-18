@@ -134,7 +134,7 @@
       "id": 4,
       "type": "stat",
       "title": "Not Ingested (rate)",
-      "description": "outcome=\"failed_permanent\" — documents this service gave up on. NOT a loss rate: the item is still forwarded downstream carrying its failure in knowledge_hub, so nothing is dropped. Retryable conditions never reach here at all — they are retried in-process until they resolve.",
+      "description": "outcome!=\"forwarded\" — every document that reached a terminal outcome WITHOUT being ingested. \"forwarded\" is the only outcome meaning the ingester accepted it, so this is its exact complement. Two things land here and they fail differently: forwarded_not_ingested is the ingester's own terminal verdict (an ingest-failure rate — see Ingest Failure Ratio), failed_permanent is this service giving up (a pipeline-failure rate — see Permanent Failures by Error Code). This panel used to filter failed_permanent alone, so it read as a complete not-ingested rate while omitting every ingester rejection. NOT a loss rate: the item is still forwarded downstream carrying its failure in knowledge_hub, so nothing is dropped. Retryable conditions never reach here at all — they are retried in-process until they resolve. The negative matcher is deliberate: the outcome set is open (metrics.Outcome is a string, not a closed enum), so a new terminal value is counted the day it ships instead of going silently missing.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
       "fieldConfig": {
@@ -149,7 +149,7 @@
       },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"failed_permanent\"}[5m]))" }
+        { "refId": "A", "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome!=\"forwarded\"}[5m]))" }
       ]
     },
     {
@@ -222,15 +222,16 @@
     {
       "id": 12,
       "type": "timeseries",
-      "title": "Ingest vs Retry vs Give-up (rate)",
-      "description": "The three signals that get confused with each other. ingested is real progress. retrying is in-process churn against a dependency that has not finished — it is NOT loss, and it is counted per pass so it can exceed the document rate. not ingested is this service giving up, which still forwards the document with its failure attached. Nothing here is a dropped document.",
+      "title": "Ingest vs Retry vs Not Ingested (rate)",
+      "description": "The signals that get confused with each other. ingested is real progress — outcome=\"forwarded\" is the only value meaning the ingester accepted the document. retrying is in-process churn against a dependency that has not finished: it is NOT loss, it comes from a different metric (document_retries_total), and it is counted per pass, so it can exceed the document rate and does not belong in any sum with the others. The two failure series are separate because they have different owners and different fixes — rejected by ingester is the ingester's own terminal verdict (forwarded_not_ingested), gave up is this service abandoning the document (failed_permanent). This panel used to plot only the second, labelled \"not ingested (gave up)\", so every ingester rejection was missing from a chart that read as the complete picture. ingested + rejected by ingester + gave up covers every terminal outcome, so those three sum to the document rate. Nothing here is a dropped document.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 6 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
       "targets": [
         { "refId": "A", "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"forwarded\"}[5m]))", "legendFormat": "ingested" },
-        { "refId": "B", "expr": "sum(rate(knowledge_service_pipeline_document_retries_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "retrying" },
-        { "refId": "C", "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"failed_permanent\"}[5m]))", "legendFormat": "not ingested (gave up)" }
+        { "refId": "B", "expr": "sum(rate(knowledge_service_pipeline_document_retries_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "retrying (per pass)" },
+        { "refId": "C", "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"forwarded_not_ingested\"}[5m]))", "legendFormat": "rejected by ingester" },
+        { "refId": "D", "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"failed_permanent\"}[5m]))", "legendFormat": "gave up (this service)" }
       ]
     },
     {

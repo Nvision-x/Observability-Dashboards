@@ -470,7 +470,7 @@
     },
     {
       "uid": "nx-ks-ingest-failure-rate",
-      "title": "High Ingest Failure Rate - Knowledge Service",
+      "title": "High Not-Ingested Rate - Knowledge Service",
       "condition": "C",
       "data": [
         {
@@ -535,7 +535,7 @@
       "execErrState": "Alerting",
       "for": "10m",
       "annotations": {
-        "description": "Over 10% of documents reached a terminal outcome without being ingested. Split by outcome: forwarded_not_ingested is the ingester's own verdict (an ingest-failure rate), failed_permanent is this service giving up (a pipeline-failure rate). Nothing is dropped either way — every document is forwarded with the reason in knowledge_hub — so this is a quality signal, not data loss.",
+        "description": "Over 10% of documents reached a terminal outcome without being ingested. The query is outcome!=\"forwarded\", so it is the COMBINED not-ingested rate, not the narrower ingest-failure rate the old title implied. When it fires, split by outcome to tell the two apart: forwarded_not_ingested is the ingester's own terminal verdict (an ingest-failure rate, graphed as \"Ingest Failure Ratio\"), failed_permanent is this service giving up (a pipeline-failure rate, graphed as \"Permanent Failures by Error Code\"). They have different owners and different fixes. Nothing is dropped either way — every document is forwarded with the reason in knowledge_hub — so this is a quality signal, not data loss.",
         "summary": "More than 10% of Knowledge Service documents are not being ingested"
       },
       "labels": {
