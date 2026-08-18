@@ -1,0 +1,390 @@
+{
+  "__comment": "NVisionX Backup Status — ALL EKS CLIENTS, ONE DASHBOARD. Same pattern as scan-activity-all-clients.json: top row = combined status across every selected client, below = one collapsible row per client with PostgreSQL + OpenSearch backup detail. Unlike the scan dashboard, this needs NO new exporter/metric - kube-state-metrics already exposes kube_job_status_*/kube_cronjob_* for every CronJob-spawned Job in every EKS cluster, so there's no mimir series-limit risk from adding brand-new series here. CronJob names (confirmed from nx-application-helm/charts/databases/templates/{postgresqlBackup,opensearchBackup}-cronjob.yaml): '<release>-postgres-backup' and '<release>-opensearch-backup', both in the 'default' namespace on every EKS client. Job status queries wrap in max() per client to avoid over-counting when successfulJobsHistoryLimit/failedJobsHistoryLimit retain more than one completed Job object at a time (each retained Job carries its own kube_job_status_succeeded=1 series). NOT YET VERIFIED LIVE - built by pattern-matching the existing single-cluster 'NX Database Backups' dashboard (uid nx-database-backups) rather than confirmed against real data. Check the combined-overview tiles first after import, same way the scan dashboard needed 3 iterations to get the cross-datasource sum transform right (reduce[reduceFields,sum] -> merge -> calculateField[reduceRow,sum] is the proven-working chain, reused here).",
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "options": {
+        "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
+        "content": "**Overview** counts how many selected clients had their most recent PostgreSQL / OpenSearch backup succeed vs fail. **Below, one row per client** (expand for status, last-run time, duration, and 7-day success trend for both backup types). Add/remove clients with the **Clients** picker above.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "11.5.2",
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 2 },
+      "id": 1,
+      "panels": [],
+      "title": "Overview — combined across selected clients",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "datasource", "uid": "-- Mixed --" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "green" },
+          "unit": "short",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 3 },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo" },
+        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo2" },
+        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Integration" },
+        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "IONIS" },
+        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
+        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "SSB" },
+        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "UAT" }
+      ],
+      "title": "PostgreSQL: clients with a healthy last backup",
+      "transformations": [
+        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "reduceFields" } },
+        { "id": "merge", "options": {} },
+        { "id": "calculateField", "options": { "mode": "reduceRow", "reduce": { "reducer": "sum" }, "replaceFields": true, "alias": "Total" } }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "datasource", "uid": "-- Mixed --" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "short",
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }, { "color": "red", "value": 1 }] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 3 },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo" },
+        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo2" },
+        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Integration" },
+        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "IONIS" },
+        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
+        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "SSB" },
+        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "UAT" }
+      ],
+      "title": "PostgreSQL: clients with a failed backup",
+      "transformations": [
+        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "reduceFields" } },
+        { "id": "merge", "options": {} },
+        { "id": "calculateField", "options": { "mode": "reduceRow", "reduce": { "reducer": "sum" }, "replaceFields": true, "alias": "Total" } }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "datasource", "uid": "-- Mixed --" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "green" },
+          "unit": "short",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 3 },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo" },
+        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo2" },
+        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Integration" },
+        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "IONIS" },
+        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
+        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "SSB" },
+        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "UAT" }
+      ],
+      "title": "OpenSearch: clients with a healthy last backup",
+      "transformations": [
+        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "reduceFields" } },
+        { "id": "merge", "options": {} },
+        { "id": "calculateField", "options": { "mode": "reduceRow", "reduce": { "reducer": "sum" }, "replaceFields": true, "alias": "Total" } }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "datasource", "uid": "-- Mixed --" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "short",
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }, { "color": "red", "value": 1 }] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 3 },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "dfmklaiqtfif4c" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo" },
+        { "datasource": { "type": "prometheus", "uid": "efl7hw5ukkwzkd" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Demo2" },
+        { "datasource": { "type": "prometheus", "uid": "efl6f47f8cj5sb" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "Integration" },
+        { "datasource": { "type": "prometheus", "uid": "efs7yusoeq680e" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "IONIS" },
+        { "datasource": { "type": "prometheus", "uid": "efs2d1k3se39ca" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "KrispyKreme" },
+        { "datasource": { "type": "prometheus", "uid": "dfs2d5r9cp0qob" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "SSB" },
+        { "datasource": { "type": "prometheus", "uid": "efmkjlznz8ykgb" }, "expr": "max(kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "legendFormat": "value", "refId": "UAT" }
+      ],
+      "title": "OpenSearch: clients with a failed backup",
+      "transformations": [
+        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "reduceFields" } },
+        { "id": "merge", "options": {} },
+        { "id": "calculateField", "options": { "mode": "reduceRow", "reduce": { "reducer": "sum" }, "replaceFields": true, "alias": "Total" } }
+      ],
+      "type": "stat"
+    },
+    {
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "id": 20,
+      "repeat": "client_ds",
+      "repeatDirection": "v",
+      "title": "$client_ds",
+      "type": "row",
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "description": "PostgreSQL backup - status of the most recently retained job (successfulJobsHistoryLimit/failedJobsHistoryLimit controls how many old runs stay visible).",
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [{ "type": "value", "options": { "0": { "color": "red", "text": "Failed" }, "1": { "color": "green", "text": "Success" } } }],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": 0 }, { "color": "green", "value": 1 }] },
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+          "id": 200,
+          "options": {
+            "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name", "wideLayout": true
+          },
+          "pluginVersion": "11.5.2",
+          "targets": [ { "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"})", "instant": true, "refId": "A" } ],
+          "title": "Postgres: Last Status",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" }, "unit": "dateTimeFromNow" }, "overrides": [] },
+          "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+          "id": 201,
+          "options": {
+            "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value", "wideLayout": true
+          },
+          "pluginVersion": "11.5.2",
+          "targets": [ { "expr": "max(kube_job_status_completion_time{namespace=\"default\", job_name=~\".*postgres-backup.*\"}) * 1000", "instant": true, "refId": "A" } ],
+          "title": "Postgres: Last Backup",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "purple" }, "unit": "m", "decimals": 1 }, "overrides": [] },
+          "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+          "id": 202,
+          "options": {
+            "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value", "wideLayout": true
+          },
+          "pluginVersion": "11.5.2",
+          "targets": [ { "expr": "(max(kube_job_status_completion_time{namespace=\"default\", job_name=~\".*postgres-backup.*\"}) - max(kube_job_status_start_time{namespace=\"default\", job_name=~\".*postgres-backup.*\"})) / 60", "instant": true, "refId": "A" } ],
+          "title": "Postgres: Last Duration",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "description": "OpenSearch backup - status of the most recently retained job.",
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [{ "type": "value", "options": { "0": { "color": "red", "text": "Failed" }, "1": { "color": "green", "text": "Success" } } }],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": 0 }, { "color": "green", "value": 1 }] },
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+          "id": 203,
+          "options": {
+            "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name", "wideLayout": true
+          },
+          "pluginVersion": "11.5.2",
+          "targets": [ { "expr": "max(kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})", "instant": true, "refId": "A" } ],
+          "title": "OpenSearch: Last Status",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" }, "unit": "dateTimeFromNow" }, "overrides": [] },
+          "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+          "id": 204,
+          "options": {
+            "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value", "wideLayout": true
+          },
+          "pluginVersion": "11.5.2",
+          "targets": [ { "expr": "max(kube_job_status_completion_time{namespace=\"default\", job_name=~\".*opensearch-backup.*\"}) * 1000", "instant": true, "refId": "A" } ],
+          "title": "OpenSearch: Last Backup",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "purple" }, "unit": "m", "decimals": 1 }, "overrides": [] },
+          "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+          "id": 205,
+          "options": {
+            "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value", "wideLayout": true
+          },
+          "pluginVersion": "11.5.2",
+          "targets": [ { "expr": "(max(kube_job_status_completion_time{namespace=\"default\", job_name=~\".*opensearch-backup.*\"}) - max(kube_job_status_start_time{namespace=\"default\", job_name=~\".*opensearch-backup.*\"})) / 60", "instant": true, "refId": "A" } ],
+          "title": "OpenSearch: Last Duration",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "description": "PostgreSQL backup success/failure over the last 7 days - one point per retained job run.",
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "points", "pointSize": 8 } },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "Successful" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
+              { "matcher": { "id": "byName", "options": "Failed" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+            ]
+          },
+          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 4 },
+          "id": 206,
+          "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+          "pluginVersion": "11.5.2",
+          "targets": [
+            { "expr": "kube_job_status_succeeded{namespace=\"default\", job_name=~\".*postgres-backup.*\"}", "legendFormat": "Successful", "refId": "A" },
+            { "expr": "kube_job_status_failed{namespace=\"default\", job_name=~\".*postgres-backup.*\"}", "legendFormat": "Failed", "refId": "B" }
+          ],
+          "title": "Postgres: 7-day run history",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${client_ds}" },
+          "description": "OpenSearch backup success/failure over the last 7 days - one point per retained job run.",
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "points", "pointSize": 8 } },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "Successful" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
+              { "matcher": { "id": "byName", "options": "Failed" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
+            ]
+          },
+          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 4 },
+          "id": 207,
+          "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+          "pluginVersion": "11.5.2",
+          "targets": [
+            { "expr": "kube_job_status_succeeded{namespace=\"default\", job_name=~\".*opensearch-backup.*\"}", "legendFormat": "Successful", "refId": "A" },
+            { "expr": "kube_job_status_failed{namespace=\"default\", job_name=~\".*opensearch-backup.*\"}", "legendFormat": "Failed", "refId": "B" }
+          ],
+          "title": "OpenSearch: 7-day run history",
+          "type": "timeseries"
+        }
+      ]
+    }
+  ],
+  "preload": false,
+  "refresh": "5m",
+  "schemaVersion": 40,
+  "tags": ["git-sync", "nx", "backups", "postgres", "opensearch", "database", "all-clients", "eks"],
+  "templating": {
+    "list": [
+      {
+        "name": "client_ds",
+        "label": "Clients",
+        "type": "datasource",
+        "query": "prometheus",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "text": ["Demo", "Demo2", "Integration", "IONIS", "KrispyKreme", "SSB", "UAT"],
+          "value": ["dfmklaiqtfif4c", "efl7hw5ukkwzkd", "efl6f47f8cj5sb", "efs7yusoeq680e", "efs2d1k3se39ca", "dfs2d5r9cp0qob", "efmkjlznz8ykgb"]
+        }
+      }
+    ]
+  },
+  "time": { "from": "now-7d", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "NVisionX — Backup Status Overview (ALL EKS CLIENTS)",
+  "uid": "nx-backups-all-clients",
+  "version": 1,
+  "weekStart": ""
+}
