@@ -116,13 +116,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod=~\"applications-.*\"}))",
+          "expr": "sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod!~\"grafana-dashboard.*\"}))",
           "legendFormat": "Good",
           "instant": true
         },
         {
           "refId": "B",
-          "expr": "count(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod=~\"applications-.*\"})) - sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod=~\"applications-.*\"}))",
+          "expr": "count(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod!~\"grafana-dashboard.*\"})) - sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod!~\"grafana-dashboard.*\"}))",
           "legendFormat": "Bad",
           "instant": true
         }
@@ -185,13 +185,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod=~\"applications-.*\"}))",
+          "expr": "sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod!~\"grafana-dashboard.*\"}))",
           "legendFormat": "OK",
           "instant": true
         },
         {
           "refId": "B",
-          "expr": "count(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod=~\"applications-.*\"})) - sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod=~\"applications-.*\"}))",
+          "expr": "count(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod!~\"grafana-dashboard.*\"})) - sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod!~\"grafana-dashboard.*\"}))",
           "legendFormat": "Bad",
           "instant": true
         }
@@ -2056,7 +2056,7 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "query": "label_values(kube_pod_container_status_ready{namespace=\"$namespace\", pod=~\"applications-.*\"}, pod)",
+        "query": "label_values(kube_pod_container_status_ready{namespace=\"$namespace\", pod!~\"grafana-dashboard.*\"}, pod)",
         "refresh": 2,
         "multi": true,
         "includeAll": true,
