@@ -116,13 +116,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\"}))",
+          "expr": "sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod!~\"grafana-dashboard.*\"}))",
           "legendFormat": "Good",
           "instant": true
         },
         {
           "refId": "B",
-          "expr": "count(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\"})) - sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\"}))",
+          "expr": "count(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod!~\"grafana-dashboard.*\"})) - sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod!~\"grafana-dashboard.*\"}))",
           "legendFormat": "Bad",
           "instant": true
         }
@@ -151,21 +151,20 @@
         "defaults": {
           "unit": "short",
           "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 50
-              }
-            ]
+          "color": {
+            "mode": "fixed"
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Good" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Bad" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
+        ]
       }
     },
     {
@@ -186,13 +185,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\"}))",
+          "expr": "sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod!~\"grafana-dashboard.*\"}))",
           "legendFormat": "OK",
           "instant": true
         },
         {
           "refId": "B",
-          "expr": "count(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\"})) - sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\"}))",
+          "expr": "count(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod!~\"grafana-dashboard.*\"})) - sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod!~\"grafana-dashboard.*\"}))",
           "legendFormat": "Bad",
           "instant": true
         }
@@ -205,9 +204,21 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "min": 0
+          "min": 0,
+          "color": {
+            "mode": "fixed"
+          }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "OK" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Bad" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
+        ]
       }
     },
     {
@@ -2045,7 +2056,7 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "query": "label_values(kube_pod_container_status_ready{namespace=\"$namespace\"}, pod)",
+        "query": "label_values(kube_pod_container_status_ready{namespace=\"$namespace\", pod!~\"grafana-dashboard.*\"}, pod)",
         "refresh": 2,
         "multi": true,
         "includeAll": true,
