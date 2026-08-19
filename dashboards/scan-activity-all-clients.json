@@ -688,42 +688,23 @@
         "type": "datasource",
         "uid": "-- Mixed --"
       },
+      "description": "Grouped and summed by scan type across all 7 clients - EXPERIMENTAL, verify against real data.",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "blue"
-          },
           "unit": "short",
-          "mappings": [],
-          "decimals": 1
+          "color": {
+            "mode": "palette-classic"
+          }
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
+        "h": 9,
+        "w": 24,
         "x": 0,
         "y": 8
       },
-      "id": 301,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
+      "id": 350,
       "pluginVersion": "11.5.2",
       "targets": [
         {
@@ -731,9 +712,9 @@
             "type": "prometheus",
             "uid": "dfmklaiqtfif4c"
           },
-          "expr": "sum(nx_scan_files_total{connector_type=\"S3\"})",
+          "expr": "sum by (connector_type) (nx_scan_files_total)",
+          "legendFormat": "{{connector_type}}",
           "instant": true,
-          "legendFormat": "value",
           "refId": "Demo"
         },
         {
@@ -741,9 +722,9 @@
             "type": "prometheus",
             "uid": "efl7hw5ukkwzkd"
           },
-          "expr": "sum(nx_scan_files_total{connector_type=\"S3\"})",
+          "expr": "sum by (connector_type) (nx_scan_files_total)",
+          "legendFormat": "{{connector_type}}",
           "instant": true,
-          "legendFormat": "value",
           "refId": "Demo2"
         },
         {
@@ -751,9 +732,9 @@
             "type": "prometheus",
             "uid": "efl6f47f8cj5sb"
           },
-          "expr": "sum(nx_scan_files_total{connector_type=\"S3\"})",
+          "expr": "sum by (connector_type) (nx_scan_files_total)",
+          "legendFormat": "{{connector_type}}",
           "instant": true,
-          "legendFormat": "value",
           "refId": "Integration"
         },
         {
@@ -761,9 +742,9 @@
             "type": "prometheus",
             "uid": "efs7yusoeq680e"
           },
-          "expr": "sum(nx_scan_files_total{connector_type=\"S3\"})",
+          "expr": "sum by (connector_type) (nx_scan_files_total)",
+          "legendFormat": "{{connector_type}}",
           "instant": true,
-          "legendFormat": "value",
           "refId": "IONIS"
         },
         {
@@ -771,9 +752,9 @@
             "type": "prometheus",
             "uid": "efs2d1k3se39ca"
           },
-          "expr": "sum(nx_scan_files_total{connector_type=\"S3\"})",
+          "expr": "sum by (connector_type) (nx_scan_files_total)",
+          "legendFormat": "{{connector_type}}",
           "instant": true,
-          "legendFormat": "value",
           "refId": "KrispyKreme"
         },
         {
@@ -781,9 +762,9 @@
             "type": "prometheus",
             "uid": "dfs2d5r9cp0qob"
           },
-          "expr": "sum(nx_scan_files_total{connector_type=\"S3\"})",
+          "expr": "sum by (connector_type) (nx_scan_files_total)",
+          "legendFormat": "{{connector_type}}",
           "instant": true,
-          "legendFormat": "value",
           "refId": "SSB"
         },
         {
@@ -791,13 +772,13 @@
             "type": "prometheus",
             "uid": "efmkjlznz8ykgb"
           },
-          "expr": "sum(nx_scan_files_total{connector_type=\"S3\"})",
+          "expr": "sum by (connector_type) (nx_scan_files_total)",
+          "legendFormat": "{{connector_type}}",
           "instant": true,
-          "legendFormat": "value",
           "refId": "UAT"
         }
       ],
-      "title": "S3",
+      "title": "Files scanned by type — all clients combined",
       "transformations": [
         {
           "id": "reduce",
@@ -805,891 +786,61 @@
             "reducers": [
               "sum"
             ],
-            "mode": "reduceFields"
+            "mode": "seriesToRows"
           }
         },
         {
-          "id": "merge",
-          "options": {}
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Field": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Total": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
         },
         {
-          "id": "calculateField",
+          "id": "organize",
           "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "replaceFields": true,
-            "alias": "Total"
+            "renameByName": {
+              "Field": "Type",
+              "Total": "Value"
+            }
           }
         }
       ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "purple"
-          },
-          "unit": "short",
-          "mappings": [],
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 8
-      },
-      "id": 302,
+      "type": "piechart",
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
         "reduceOptions": {
+          "values": true,
           "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
+            "lastNotNull"
+          ]
         },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"SHAREPOINT\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"SHAREPOINT\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"SHAREPOINT\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"SHAREPOINT\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"SHAREPOINT\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"SHAREPOINT\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"SHAREPOINT\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "UAT"
-        }
-      ],
-      "title": "SHAREPOINT",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "sum"
-            ],
-            "mode": "reduceFields"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "replaceFields": true,
-            "alias": "Total"
-          }
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "orange"
-          },
-          "unit": "short",
-          "mappings": [],
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 12,
-        "y": 8
-      },
-      "id": 303,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"CIFS\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"CIFS\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"CIFS\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"CIFS\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"CIFS\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"CIFS\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"CIFS\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "UAT"
-        }
-      ],
-      "title": "CIFS",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "sum"
-            ],
-            "mode": "reduceFields"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "replaceFields": true,
-            "alias": "Total"
-          }
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "green"
-          },
-          "unit": "short",
-          "mappings": [],
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 8
-      },
-      "id": 304,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"ONEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"ONEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"ONEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"ONEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"ONEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"ONEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"ONEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "UAT"
-        }
-      ],
-      "title": "ONEDRIVE",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "sum"
-            ],
-            "mode": "reduceFields"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "replaceFields": true,
-            "alias": "Total"
-          }
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "yellow"
-          },
-          "unit": "short",
-          "mappings": [],
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 0,
-        "y": 12
-      },
-      "id": 305,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"BOX\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"BOX\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"BOX\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"BOX\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"BOX\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"BOX\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"BOX\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "UAT"
-        }
-      ],
-      "title": "BOX",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "sum"
-            ],
-            "mode": "reduceFields"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "replaceFields": true,
-            "alias": "Total"
-          }
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "red"
-          },
-          "unit": "short",
-          "mappings": [],
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 8,
-        "y": 12
-      },
-      "id": 306,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"GOOGLEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"GOOGLEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"GOOGLEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"GOOGLEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"GOOGLEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"GOOGLEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"GOOGLEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "UAT"
-        }
-      ],
-      "title": "GOOGLEDRIVE",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "sum"
-            ],
-            "mode": "reduceFields"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "replaceFields": true,
-            "alias": "Total"
-          }
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "light-blue"
-          },
-          "unit": "short",
-          "mappings": [],
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 16,
-        "y": 12
-      },
-      "id": 307,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"SNOWFLAKE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"SNOWFLAKE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"SNOWFLAKE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"SNOWFLAKE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"SNOWFLAKE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"SNOWFLAKE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "sum(nx_scan_files_total{connector_type=\"SNOWFLAKE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "UAT"
-        }
-      ],
-      "title": "SNOWFLAKE",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "sum"
-            ],
-            "mode": "reduceFields"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "replaceFields": true,
-            "alias": "Total"
-          }
-        }
-      ],
-      "type": "stat"
+        "pieType": "pie"
+      }
     },
     {
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 17
       },
       "id": 310,
       "options": {
@@ -1711,41 +862,23 @@
         "type": "datasource",
         "uid": "-- Mixed --"
       },
+      "description": "Grouped and summed by scan type across all 7 clients - EXPERIMENTAL, verify against real data.",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "blue"
-          },
           "unit": "decbytes",
-          "mappings": []
+          "color": {
+            "mode": "palette-classic"
+          }
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
+        "h": 9,
+        "w": 24,
         "x": 0,
-        "y": 17
+        "y": 18
       },
-      "id": 311,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
+      "id": 351,
       "pluginVersion": "11.5.2",
       "targets": [
         {
@@ -1753,9 +886,9 @@
             "type": "prometheus",
             "uid": "dfmklaiqtfif4c"
           },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"S3\"})",
+          "expr": "sum by (connector_type) (nx_scan_bytes_total)",
+          "legendFormat": "{{connector_type}}",
           "instant": true,
-          "legendFormat": "value",
           "refId": "Demo"
         },
         {
@@ -1763,9 +896,9 @@
             "type": "prometheus",
             "uid": "efl7hw5ukkwzkd"
           },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"S3\"})",
+          "expr": "sum by (connector_type) (nx_scan_bytes_total)",
+          "legendFormat": "{{connector_type}}",
           "instant": true,
-          "legendFormat": "value",
           "refId": "Demo2"
         },
         {
@@ -1773,9 +906,9 @@
             "type": "prometheus",
             "uid": "efl6f47f8cj5sb"
           },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"S3\"})",
+          "expr": "sum by (connector_type) (nx_scan_bytes_total)",
+          "legendFormat": "{{connector_type}}",
           "instant": true,
-          "legendFormat": "value",
           "refId": "Integration"
         },
         {
@@ -1783,9 +916,9 @@
             "type": "prometheus",
             "uid": "efs7yusoeq680e"
           },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"S3\"})",
+          "expr": "sum by (connector_type) (nx_scan_bytes_total)",
+          "legendFormat": "{{connector_type}}",
           "instant": true,
-          "legendFormat": "value",
           "refId": "IONIS"
         },
         {
@@ -1793,9 +926,9 @@
             "type": "prometheus",
             "uid": "efs2d1k3se39ca"
           },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"S3\"})",
+          "expr": "sum by (connector_type) (nx_scan_bytes_total)",
+          "legendFormat": "{{connector_type}}",
           "instant": true,
-          "legendFormat": "value",
           "refId": "KrispyKreme"
         },
         {
@@ -1803,9 +936,9 @@
             "type": "prometheus",
             "uid": "dfs2d5r9cp0qob"
           },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"S3\"})",
+          "expr": "sum by (connector_type) (nx_scan_bytes_total)",
+          "legendFormat": "{{connector_type}}",
           "instant": true,
-          "legendFormat": "value",
           "refId": "SSB"
         },
         {
@@ -1813,13 +946,13 @@
             "type": "prometheus",
             "uid": "efmkjlznz8ykgb"
           },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"S3\"})",
+          "expr": "sum by (connector_type) (nx_scan_bytes_total)",
+          "legendFormat": "{{connector_type}}",
           "instant": true,
-          "legendFormat": "value",
           "refId": "UAT"
         }
       ],
-      "title": "S3",
+      "title": "Data scanned by type — all clients combined",
       "transformations": [
         {
           "id": "reduce",
@@ -1827,885 +960,58 @@
             "reducers": [
               "sum"
             ],
-            "mode": "reduceFields"
+            "mode": "seriesToRows"
           }
         },
         {
-          "id": "merge",
-          "options": {}
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Field": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Total": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
         },
         {
-          "id": "calculateField",
+          "id": "organize",
           "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "replaceFields": true,
-            "alias": "Total"
+            "renameByName": {
+              "Field": "Type",
+              "Total": "Value"
+            }
           }
         }
       ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "purple"
-          },
-          "unit": "decbytes",
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 17
-      },
-      "id": 312,
+      "type": "barchart",
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
+        "orientation": "horizontal",
         "reduceOptions": {
+          "values": true,
           "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
+            "lastNotNull"
+          ]
         },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"SHAREPOINT\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"SHAREPOINT\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"SHAREPOINT\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"SHAREPOINT\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"SHAREPOINT\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"SHAREPOINT\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"SHAREPOINT\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "UAT"
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         }
-      ],
-      "title": "SHAREPOINT",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "sum"
-            ],
-            "mode": "reduceFields"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "replaceFields": true,
-            "alias": "Total"
-          }
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "orange"
-          },
-          "unit": "decbytes",
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 12,
-        "y": 17
-      },
-      "id": 313,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"CIFS\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"CIFS\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"CIFS\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"CIFS\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"CIFS\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"CIFS\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"CIFS\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "UAT"
-        }
-      ],
-      "title": "CIFS",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "sum"
-            ],
-            "mode": "reduceFields"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "replaceFields": true,
-            "alias": "Total"
-          }
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "green"
-          },
-          "unit": "decbytes",
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 17
-      },
-      "id": 314,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"ONEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"ONEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"ONEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"ONEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"ONEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"ONEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"ONEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "UAT"
-        }
-      ],
-      "title": "ONEDRIVE",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "sum"
-            ],
-            "mode": "reduceFields"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "replaceFields": true,
-            "alias": "Total"
-          }
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "yellow"
-          },
-          "unit": "decbytes",
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 0,
-        "y": 21
-      },
-      "id": 315,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"BOX\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"BOX\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"BOX\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"BOX\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"BOX\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"BOX\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"BOX\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "UAT"
-        }
-      ],
-      "title": "BOX",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "sum"
-            ],
-            "mode": "reduceFields"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "replaceFields": true,
-            "alias": "Total"
-          }
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "red"
-          },
-          "unit": "decbytes",
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 8,
-        "y": 21
-      },
-      "id": 316,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"GOOGLEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"GOOGLEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"GOOGLEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"GOOGLEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"GOOGLEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"GOOGLEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"GOOGLEDRIVE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "UAT"
-        }
-      ],
-      "title": "GOOGLEDRIVE",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "sum"
-            ],
-            "mode": "reduceFields"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "replaceFields": true,
-            "alias": "Total"
-          }
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "light-blue"
-          },
-          "unit": "decbytes",
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 16,
-        "y": 21
-      },
-      "id": 317,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"SNOWFLAKE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"SNOWFLAKE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"SNOWFLAKE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"SNOWFLAKE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"SNOWFLAKE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"SNOWFLAKE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "sum(nx_scan_bytes_total{connector_type=\"SNOWFLAKE\"})",
-          "instant": true,
-          "legendFormat": "value",
-          "refId": "UAT"
-        }
-      ],
-      "title": "SNOWFLAKE",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "sum"
-            ],
-            "mode": "reduceFields"
-          }
-        },
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "replaceFields": true,
-            "alias": "Total"
-          }
-        }
-      ],
-      "type": "stat"
+      }
     },
     {
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 25
+        "y": 27
       },
       "id": 320,
       "options": {
@@ -2859,7 +1165,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 28
       },
       "id": 321,
       "options": {
@@ -3082,7 +1388,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 36
       },
       "id": 331,
       "options": {
@@ -3173,7 +1479,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 44
       },
       "id": 340,
       "options": {
@@ -3263,7 +1569,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 45
       },
       "id": 341,
       "options": {
@@ -3397,6 +1703,6 @@
   "timezone": "",
   "title": "NVisionX — Scan Activity & OpenSearch Overview (ALL EKS CLIENTS)",
   "uid": "nx-scan-activity-all-clients",
-  "version": 12,
+  "version": 13,
   "weekStart": ""
 }
