@@ -1,0 +1,883 @@
+{
+  "uid": "apps-v2-knowledge-service-pipeline",
+  "title": "Knowledge Service — Pipeline",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "service:knowledge-service",
+    "pipeline"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 4,
+  "refresh": "30s",
+  "folderUid": "apps-v2-knowledge-service-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "Knowledge Service — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-service-overview?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Knowledge Service — Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-service-runtime?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*knowledge-service-be-go.*\"}, namespace)",
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "description": "Applies only to the per-pod panels. Aggregate panels deliberately ignore it so pod churn does not gap the graphs.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}, pod)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Intake & Batch Completion",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Batches Received by Kind (rate)",
+      "description": "A batch is the unit of work and is processed in place — this service no longer fans out. multi and single are both upstream batches and differ only in size; empty is ACKed without work. Every received batch should be matched by a forwarded one, eventually.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (kind) (rate(knowledge_service_pipeline_batches_received_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{kind}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Batches Forwarded vs Received (rate)",
+      "description": "A batch is forwarded only once every document in it is terminal, so forwarded lagging received is the normal shape while batches are in flight — a persistent and widening gap is not, and means batches are being held. status=error is a PublishToNext failure, which fails the whole batch and returns it to JobEngine for redelivery.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_service_pipeline_batches_received_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", kind!=\"empty\"}[5m]))",
+          "legendFormat": "received (non-empty)"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (status) (rate(knowledge_service_pipeline_batches_forwarded_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "forwarded {{status}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Batch Duration — p50 / p95 / p99",
+      "description": "Receipt to forwarding. Gated by the slowest document in the batch, because nothing is forwarded until everything is terminal — so this tracks the tail of document latency, not its middle. Explicit exponential boundaries, 1s to ~2.3h.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(knowledge_service_pipeline_batch_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_service_pipeline_batch_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(knowledge_service_pipeline_batch_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Batches Abandoned on Shutdown (rate)",
+      "description": "A batch leaves the handler exactly three ways — forwarded, forward-failed, or abandoned — and this is the third. It increments when the pod was shutting down with documents still retryable, so the ItemBatch returns to JetStream for another pod. Nothing is lost: content-service serves the redone work from cache and the ingester dedupes on content_sha256. Expect a burst on every deploy. A steady non-zero rate OUTSIDE a deploy is the real signal — it means batches routinely outlive the pods running them, so either documents are slower than the pod lifetime or pods are being cycled too aggressively. This is also the term that makes the batch counts reconcile: received = forwarded(success) + forwarded(error) + abandoned + still in flight.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_service_pipeline_batches_abandoned_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "abandoned"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 150,
+      "title": "Retry Loop — Convergence",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Retry Queue Depth by Phase",
+      "description": "Documents currently waiting on a retry, summed across every batch in flight on every pod. THIS IS THE LIVENESS SIGNAL FOR AN UNBOUNDED LOOP: the retry loop has no attempt cap and no deadline by design, so depth returning to zero is the only evidence that batches converge. A floor that never reaches zero means at least one document is stuck and is holding its whole batch — check the phase to see which dependency.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 40
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (phase) (knowledge_service_pipeline_retry_queue_depth{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"})",
+          "legendFormat": "{{phase}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Retry Passes by Phase (rate)",
+      "description": "content means content-service said it has not finished with the document (or our own call timed out, which usually means the same thing). knowledge_processing means content resolved and the ingester has not finished — those retries resume at the ingester and do not re-resolve content. A high content rate with normal completions is ordinary cache-warming on slow extractions; a high rate with no completions is not.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (phase) (rate(knowledge_service_pipeline_document_retries_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{phase}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Convergence — Retries vs Completions",
+      "description": "The non-convergence detector, and the panel to look at first when a scan seems stalled. Retries rising while completions stay flat means the loop is spinning on documents it will never finish — no document is being dropped (that is the design), but nothing is progressing either, and every affected batch is held open along with its JetStream message and its worker.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_service_pipeline_document_retries_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "retries/s"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "completions/s"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(knowledge_service_pipeline_retry_queue_depth{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"})",
+          "legendFormat": "queued for retry"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Batch Iterations — p50 / p95",
+      "description": "Retry passes performed per batch. A batch whose documents all succeed first time records 0. Rising p95 with stable batch duration means many cheap passes; rising together means slow ones.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(knowledge_service_pipeline_batch_iterations_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_service_pipeline_batch_iterations_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Retry Reasons by Phase and Error Code (rate)",
+      "description": "Why the retry loop is turning. The phase alone does not say: the content phase retries on four codes that call for four different responses. CONTENT_TIMEOUT is content-service not answering inside our window — usually a slow extraction, and ordinary cache-warming. GET_CONTENT_FAILED is the NATS path itself, so a spike there is transport, not documents. CONTENT_ERROR_RETRYABLE and EXTRACTION_ERROR_RETRYABLE are content-service reporting on the document and not having given up on it. INGESTER_UPLOAD_FAILED and INGEST_UNSUCCESSFUL_RETRYABLE are the ingester, and those resume at the ingester without re-resolving content. An EMPTY error_code is not a dependency failure at all — it means the worker pool refused the submission, which only happens while the pod is draining, so expect it alongside batches_abandoned_total and nowhere else.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (phase, error_code) (rate(knowledge_service_pipeline_document_retries_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{phase}} / {{error_code}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Outcomes & Error Codes",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Documents by Outcome (rate)",
+      "description": "One sample per document, not per attempt: retries happen in-process and are counted on document_retries_total instead, so this is a true document rate. forwarded is ingested. forwarded_not_ingested is the ingester's own terminal verdict. failed_permanent is this service giving up — the document is still forwarded, carrying its failure in knowledge_hub, so none of these three is a loss.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 24
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 40
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Error Codes by Outcome (rate)",
+      "description": "The failure recorded on each document, which is also what downstream reads out of knowledge_hub.msg. The empty code is filtered out here; it is the normal case for a clean success. These are NOT ItemErrors — every code here rides downstream on the document instead.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 24
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome, error_code) (rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", error_code!=\"\"}[5m]))",
+          "legendFormat": "{{outcome}} / {{error_code}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Unrecorded Failures (rate)",
+      "description": "SHOULD SIT AT ZERO. These are documents whose verdict could not be written onto the document itself because the payload could not be unmarshalled or re-marshalled — the carrier is the thing that is broken — so they were published as ItemErrors instead. This is the only path in the service that still writes to the job's item-errors hash. Anything above zero means malformed payloads are arriving from upstream.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 24
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "fillOpacity": 40
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.0001
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (error_code) (rate(knowledge_service_pipeline_unrecorded_failures_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{error_code}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "Document Duration",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "heatmap",
+      "title": "Document Duration Heatmap",
+      "description": "Per document from first submission to terminal outcome, so it spans every retry pass the document took rather than only its last. Explicit exponential boundaries, 0.05s to 102.4s — a document needing many content retries will land in the top bucket.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 32
+      },
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "yAxis": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (le) (rate(knowledge_service_pipeline_documents_processed_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Document Duration — p50 / p95 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(knowledge_service_pipeline_documents_processed_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_service_pipeline_documents_processed_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(knowledge_service_pipeline_documents_processed_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Document p95 by Outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, outcome) (rate(knowledge_service_pipeline_documents_processed_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 400,
+      "title": "Dependency Calls — Content & Ingester",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Content GetContent — p50 / p95 / p99 (success)",
+      "description": "status is success only when the call returned a usable cache location. A transport failure, an application error, and a missing cache location are all error. Note this measures OUR call, not content-service's work: our per-call timeout is well below its extraction budget, so a slow document appears here as a timed-out error call and then as a fast success on a later retry once the result is cached.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 42
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(knowledge_service_pipeline_content_request_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", status=\"success\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_service_pipeline_content_request_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", status=\"success\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(knowledge_service_pipeline_content_request_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", status=\"success\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Ingester Upload — p50 / p95 / p99 (success)",
+      "description": "status here reflects only whether the streaming call completed. A terminal frame reporting success == false is still a success on this histogram — that result is carried by the forwarded_not_ingested outcome instead.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 42
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(knowledge_service_pipeline_ingester_request_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", status=\"success\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_service_pipeline_ingester_request_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", status=\"success\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(knowledge_service_pipeline_ingester_request_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", status=\"success\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Dependency Call Rate by Status",
+      "description": "Call volume from the histograms' _count series, split by dependency and status. Content calls exceed document count whenever documents are retrying; ingester calls exceed it for the same reason on the knowledge phase.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 42
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (rate(knowledge_service_pipeline_content_request_duration_seconds_count{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "content {{status}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (status) (rate(knowledge_service_pipeline_ingester_request_duration_seconds_count{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "ingester {{status}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 500,
+      "title": "Stall Detection",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 49
+      },
+      "panels": []
+    },
+    {
+      "id": 40,
+      "type": "timeseries",
+      "title": "Ingester Stream — Progress Frames vs In Flight",
+      "description": "The service's own stall signal, and the reason progress frames are counted at all: the frames are otherwise discarded. A flat frame rate together with a non-zero ingester in-flight count is a stalled upload stream. Either one alone is normal — no in-flight means idle, and frames without in-flight cannot happen.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_service_pipeline_ingester_progress_frames_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "progress frames/s"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(knowledge_service_pipeline_dependency_requests_in_flight{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", dependency=\"ingester\"})",
+          "legendFormat": "ingester in flight"
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Documents In Flight vs Completion Rate",
+      "description": "In flight counts documents inside a worker right now, so a document that retries is counted once per pass. In flight with no completions and no retries is genuinely stuck inside a dependency call; in flight with retries climbing is the loop working — that case belongs to the Convergence panel above. Both at zero is idle.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(knowledge_service_pipeline_documents_in_flight{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"})",
+          "legendFormat": "documents in flight"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "completions/s"
+        },
+        {
+          "refId": "C",
+          "expr": "sum by (dependency) (knowledge_service_pipeline_dependency_requests_in_flight{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"})",
+          "legendFormat": "{{dependency}} in flight"
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Worker Pool — Queued vs Executing",
+      "description": "The two halves of what used to be one gauge. in_flight is documents a worker is executing, capped at WORKER_POOL_SIZE; queued is documents submitted but not started, capped at WORKER_QUEUE_DEPTH. Sustained queueing means the POOL is the bottleneck and WORKER_POOL_SIZE is what to raise. in_flight pinned at the pool size with little queued means the DEPENDENCIES are slow and a bigger pool would only add pressure to them. A document is briefly counted in both during handoff, never in neither, so the sum is the honest submitted figure and should never dip through a handoff.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(knowledge_service_pipeline_documents_in_flight{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"})",
+          "legendFormat": "executing"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(knowledge_service_pipeline_documents_queued{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"})",
+          "legendFormat": "queued"
+        }
+      ]
+    }
+  ]
+}
