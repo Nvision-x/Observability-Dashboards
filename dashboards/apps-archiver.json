@@ -1,7 +1,12 @@
 {
   "uid": "archiver-metrics",
   "title": "Archiver Service Metrics",
-  "tags": ["archiver", "applications", "pulsar", "metrics"],
+  "tags": [
+    "archiver",
+    "applications",
+    "pulsar",
+    "metrics"
+  ],
   "timezone": "utc",
   "schemaVersion": 39,
   "version": 1,
@@ -13,11 +18,25 @@
   "templating": {
     "list": [
       {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
         "name": "namespace",
         "type": "query",
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "${datasource}"
         },
         "query": "label_values(up{job=\"archiver\"}, namespace)",
         "current": {
@@ -31,15 +50,14 @@
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
+        "sort": 0
       },
       {
         "name": "pod",
         "type": "query",
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "${datasource}"
         },
         "query": "label_values(up{job=\"archiver\", namespace=\"$namespace\"}, pod)",
         "current": {
@@ -53,8 +71,7 @@
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
+        "sort": 1
       }
     ]
   },
@@ -63,7 +80,7 @@
       {
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "${datasource}"
         },
         "enable": true,
         "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\"applications-archiverv2.*\"}[5m]) > 0",
@@ -107,7 +124,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "value",
@@ -163,7 +182,11 @@
           "unit": "none"
         }
       },
-      "transparent": false
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "title": "Pods Running",
@@ -187,7 +210,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "value"
@@ -214,6 +239,10 @@
           },
           "unit": "short"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -238,7 +267,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "value"
@@ -257,6 +288,10 @@
           },
           "unit": "short"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -281,7 +316,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "value"
@@ -308,6 +345,10 @@
           },
           "unit": "short"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -332,7 +373,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "value_and_name"
@@ -359,6 +402,10 @@
           },
           "unit": "errors/s"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -383,7 +430,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "value"
@@ -420,6 +469,10 @@
           },
           "unit": "none"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -444,7 +497,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "value"
@@ -481,6 +536,10 @@
           },
           "unit": "none"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -505,7 +564,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "value"
@@ -532,6 +593,10 @@
           },
           "unit": "short"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -556,7 +621,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "value"
@@ -579,6 +646,10 @@
           },
           "unit": "s"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -642,7 +713,10 @@
               {
                 "id": "custom.lineStyle",
                 "value": {
-                  "dash": [10, 10],
+                  "dash": [
+                    10,
+                    10
+                  ],
                   "fill": "dash"
                 }
               },
@@ -661,7 +735,10 @@
               {
                 "id": "custom.lineStyle",
                 "value": {
-                  "dash": [5, 5],
+                  "dash": [
+                    5,
+                    5
+                  ],
                   "fill": "dash"
                 }
               },
@@ -679,6 +756,10 @@
             ]
           }
         ]
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -731,7 +812,10 @@
               {
                 "id": "custom.lineStyle",
                 "value": {
-                  "dash": [10, 10],
+                  "dash": [
+                    10,
+                    10
+                  ],
                   "fill": "dash"
                 }
               },
@@ -750,7 +834,10 @@
               {
                 "id": "custom.lineStyle",
                 "value": {
-                  "dash": [5, 5],
+                  "dash": [
+                    5,
+                    5
+                  ],
                   "fill": "dash"
                 }
               },
@@ -768,6 +855,10 @@
             ]
           }
         ]
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -817,6 +908,10 @@
           "min": 0,
           "max": 100
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -866,6 +961,10 @@
           "min": 0,
           "max": 100
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -899,6 +998,10 @@
           },
           "unit": "Bps"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -941,6 +1044,10 @@
             "mode": "palette-classic"
           }
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -972,6 +1079,10 @@
             "mode": "palette-classic"
           }
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1020,6 +1131,10 @@
             ]
           }
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1044,7 +1159,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "value_and_name"
@@ -1063,6 +1180,10 @@
           },
           "unit": "short"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1087,7 +1208,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "value_and_name"
@@ -1106,6 +1229,10 @@
           },
           "unit": "short"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1130,7 +1257,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "value_and_name"
@@ -1157,6 +1286,10 @@
           },
           "unit": "msg/s"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1181,7 +1314,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "value_and_name"
@@ -1208,6 +1343,10 @@
           },
           "unit": "s"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1257,6 +1396,10 @@
           },
           "unit": "logs/s"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1290,6 +1433,10 @@
           },
           "unit": "reqps"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1318,6 +1465,10 @@
           },
           "unit": "ops"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1346,6 +1497,10 @@
           },
           "unit": "reqps"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1374,6 +1529,10 @@
           },
           "unit": "short"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1409,6 +1568,10 @@
             "displayMode": "auto"
           }
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1483,6 +1646,10 @@
             ]
           }
         ]
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1516,6 +1683,10 @@
           },
           "unit": "short"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1554,6 +1725,10 @@
           },
           "unit": "s"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1587,6 +1762,10 @@
           },
           "unit": "docs/s"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1622,7 +1801,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "auto"
@@ -1649,6 +1830,10 @@
           },
           "unit": "percent"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1662,7 +1847,6 @@
       },
       "targets": [
         {
-          "expr": "sum(container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\"}) / 1024 / 1024",
           "expr": "sum(container_memory_working_set_bytes{pod=~\"applications-archiverv2.*\", container=\"archiverv2\", namespace=\"default\"}) / 1024 / 1024",
           "refId": "A"
         }
@@ -1674,7 +1858,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "auto"
@@ -1701,6 +1887,10 @@
           },
           "unit": "decmbytes"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1725,7 +1915,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "textMode": "auto"
@@ -1744,6 +1936,10 @@
           },
           "unit": "reqps"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1783,6 +1979,10 @@
           },
           "unit": "reqps"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1811,6 +2011,10 @@
           },
           "unit": "s"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1850,6 +2054,10 @@
           },
           "unit": "msg/s"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1895,6 +2103,10 @@
             ]
           }
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1934,6 +2146,10 @@
           },
           "unit": "percent"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -1962,6 +2178,10 @@
           },
           "unit": "decmbytes"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -2006,6 +2226,10 @@
           },
           "unit": "decmbytes"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -2034,6 +2258,10 @@
           },
           "unit": "reqps"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -2078,6 +2306,10 @@
           },
           "unit": "short"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -2106,6 +2338,10 @@
           },
           "unit": "reqps"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -2134,6 +2370,10 @@
           },
           "unit": "ops"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -2178,6 +2418,10 @@
           },
           "unit": "short"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -2219,6 +2463,10 @@
             ]
           }
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     }
   ]

@@ -1,8 +1,15 @@
 {
+  "__comment": "Centralized for mimir-dashboards: added the $datasource picker so any client's Prometheus can be selected. The 'Application Logs (Errors)' panel was dropped rather than centralized - it queried a Loki datasource (loki-nx) which only exists per-client, not on the central/mimir Grafana, and a Loki-type variable here would resolve to zero datasources and break dashboard import (same failure mode documented in scan-activity-overview-central.json).",
   "id": null,
   "uid": "nx-error-tracking-01",
   "title": "NX Error Tracking Dashboard 01",
-  "tags": ["nx-applications", "errors", "debugging", "logs", "git-sync"],
+  "tags": [
+    "nx-applications",
+    "errors",
+    "debugging",
+    "logs",
+    "git-sync"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
@@ -34,12 +41,25 @@
           "unit": "percent",
           "thresholds": {
             "steps": [
-              {"color": "green", "value": null},
-              {"color": "yellow", "value": 1},
-              {"color": "red", "value": 5}
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
             ]
           }
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -59,27 +79,10 @@
           "instant": true,
           "refId": "A"
         }
-      ]
-    },
-    {
-      "id": 3,
-      "title": "Application Logs (Errors)",
-      "type": "logs",
-      "gridPos": {
-        "h": 12,
-        "w": 24,
-        "x": 0,
-        "y": 8
-      },
-      "targets": [
-        {
-          "expr": "{namespace=\"$namespace\"} |= \"ERROR\" or \"FATAL\" or \"Exception\"",
-          "refId": "A"
-        }
       ],
       "datasource": {
-        "type": "loki",
-        "uid": "loki-nx"
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -90,7 +93,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 8
       },
       "targets": [
         {
@@ -99,11 +102,29 @@
           "instant": true,
           "refId": "A"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     }
   ],
   "templating": {
     "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
       {
         "name": "namespace",
         "type": "query",
@@ -112,6 +133,10 @@
           "selected": false,
           "text": "default",
           "value": "default"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
         }
       }
     ]

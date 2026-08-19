@@ -2,7 +2,13 @@
   "id": null,
   "uid": "nx-business-metrics",
   "title": "NX Business Metrics Dashboard",
-  "tags": ["nx-applications", "business", "kpi", "metrics", "git-sync"],
+  "tags": [
+    "nx-applications",
+    "business",
+    "kpi",
+    "metrics",
+    "git-sync"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
@@ -33,7 +39,11 @@
           "legendFormat": "Actions/sec",
           "refId": "B"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "id": 2,
@@ -55,15 +65,30 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": {"mode": "value"},
+          "color": {
+            "mode": "value"
+          },
           "thresholds": {
             "steps": [
-              {"color": "red", "value": null},
-              {"color": "yellow", "value": 100},
-              {"color": "green", "value": 500}
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 100
+              },
+              {
+                "color": "green",
+                "value": 500
+              }
             ]
           }
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -87,6 +112,10 @@
         "defaults": {
           "unit": "currencyUSD"
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
     {
@@ -106,7 +135,11 @@
           "instant": true,
           "refId": "A"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "id": 5,
@@ -124,7 +157,11 @@
           "legendFormat": "{{feature}}",
           "refId": "A"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "id": 6,
@@ -148,17 +185,44 @@
           "unit": "percent",
           "thresholds": {
             "steps": [
-              {"color": "red", "value": null},
-              {"color": "yellow", "value": 10},
-              {"color": "green", "value": 25}
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "green",
+                "value": 25
+              }
             ]
           }
         }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     }
   ],
   "templating": {
     "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
       {
         "name": "namespace",
         "type": "query",
@@ -167,6 +231,10 @@
           "selected": false,
           "text": "default",
           "value": "default"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
         }
       }
     ]

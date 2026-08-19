@@ -2,7 +2,12 @@
   "id": null,
   "uid": "nx-applications-monitoring",
   "title": "NX Applications Monitoring",
-  "tags": ["nx-applications", "monitoring", "observability", "git-sync"],
+  "tags": [
+    "nx-applications",
+    "monitoring",
+    "observability",
+    "git-sync"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
@@ -10,9 +15,26 @@
   "templating": {
     "list": [
       {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
         "name": "namespace",
         "type": "query",
-        "datasource": "Prometheus",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
         "refresh": 1,
         "query": "label_values(kube_pod_info, namespace)",
         "current": {
@@ -24,42 +46,62 @@
   },
   "panels": [
     {
-  "type": "table",
-  "title": "ALERTS-API POD Status",
-  "gridPos": { "x": 0, "y": 0, "w": 6, "h": 8 },
-  "targets": [
-    {
-      "expr": "kube_pod_status_ready{namespace='$namespace', pod=~'.*alerts-api.*'}",
-      "legendFormat": "alerts-api",
-      "refId": "C"
-    }
-  ],
-  "options": {
-    "showHeader": true
-  },
-  "fieldConfig": {
-    "defaults": {
-      "unit": "none",
-      "thresholds": {
-        "mode": "absolute",
-        "steps": [
-          { "color": "red", "value": 0 },
-          { "color": "green", "value": 1 }
-        ]
+      "type": "table",
+      "title": "ALERTS-API POD Status",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 8
       },
-      "custom": {
-        "cellOptions": {
-          "type": "color-background"
+      "targets": [
+        {
+          "expr": "kube_pod_status_ready{namespace='$namespace', pod=~'.*alerts-api.*'}",
+          "legendFormat": "alerts-api",
+          "refId": "C"
         }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "custom": {
+            "cellOptions": {
+              "type": "color-background"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
-    "overrides": []
-  }
-},
     {
       "type": "table",
       "title": "ALERTS-API POD Restarts",
-      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "increase(kube_pod_container_status_restarts_total{namespace='$namespace', pod=~'.*alerts-api.*'}[15m])",
@@ -67,32 +109,47 @@
           "refId": "B"
         }
       ],
-  "options": {
-    "showHeader": true
-  },
-  "fieldConfig": {
-    "defaults": {
-      "unit": "none",
-      "thresholds": {
-        "mode": "absolute",
-        "steps": [
-          { "color": "red", "value": 0 },
-          { "color": "green", "value": 1 }
-        ]
+      "options": {
+        "showHeader": true
       },
-      "custom": {
-        "cellOptions": {
-          "type": "color-background"
-        }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "custom": {
+            "cellOptions": {
+              "type": "color-background"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
-    "overrides": []
-  }
-},
     {
       "type": "table",
       "title": "ALERTS-API Resource Requests",
-      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "kube_pod_container_resource_requests{namespace='default',pod=~'applications-alerts-api.*'}",
@@ -100,44 +157,68 @@
           "refId": "B"
         }
       ],
-  "options": {
-    "showHeader": true
-  },
-  "fieldConfig": {
-    "defaults": {
-      "unit": "none",
-      "thresholds": {
-        "mode": "absolute",
-        "steps": [
-          { "color": "red", "value": 0 },
-          { "color": "green", "value": 1 }
-        ]
+      "options": {
+        "showHeader": true
       },
-      "custom": {
-        "cellOptions": {
-          "type": "color-background"
-        }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "custom": {
+            "cellOptions": {
+              "type": "color-background"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
-    "overrides": []
-  }
-},
     {
       "type": "graph",
       "title": "ALERTS-API Memory Usage",
-      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*alerts-api.*'})",
           "legendFormat": "alerts-api",
           "refId": "B"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "table",
       "title": "API POD Status",
-      "gridPos": { "x": 0, "y": 8, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(kube_pod_status_ready{namespace='$namespace', pod=~'.*api.*'}[5m]))",
@@ -145,701 +226,1192 @@
           "refId": "G"
         }
       ],
-  "options": {
-    "showHeader": true
-  },
-  "fieldConfig": {
-    "defaults": {
-      "unit": "none",
-      "thresholds": {
-        "mode": "absolute",
-        "steps": [
-          { "color": "red", "value": 0 },
-          { "color": "green", "value": 1 }
-        ]
+      "options": {
+        "showHeader": true
       },
-      "custom": {
-        "cellOptions": {
-          "type": "color-background"
-        }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "custom": {
+            "cellOptions": {
+              "type": "color-background"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       }
     },
-    "overrides": []
-  }
-},
     {
       "type": "graph",
       "title": "api Memory Usage",
-      "gridPos": { "x": 6, "y": 8, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 8,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*api.*'})",
           "legendFormat": "api",
           "refId": "F"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "api CPU Usage",
-      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*api.*'}[5m]))",
           "legendFormat": "api",
           "refId": "E"
         }
-      ]
-    }
-    ,
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
     {
       "type": "graph",
       "title": "api Network Outbound",
-      "gridPos": { "x": 18, "y": 8, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 8,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*api.*'}[5m]))",
           "legendFormat": "api TX",
           "refId": "H"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
-
     {
       "type": "graph",
       "title": "archiver CPU Usage",
-      "gridPos": { "x": 0, "y": 16, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*archiver.*'}[5m]))",
           "legendFormat": "archiver",
           "refId": "I"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "archiver Memory Usage",
-      "gridPos": { "x": 6, "y": 16, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 16,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*archiver.*'})",
           "legendFormat": "archiver",
           "refId": "J"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "archiver Network Inbound",
-      "gridPos": { "x": 12, "y": 16, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*archiver.*'}[5m]))",
           "legendFormat": "archiver RX",
           "refId": "K"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "archiver Network Outbound",
-      "gridPos": { "x": 18, "y": 16, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 16,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*archiver.*'}[5m]))",
           "legendFormat": "archiver TX",
           "refId": "L"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
-
     {
       "type": "graph",
       "title": "classifier CPU Usage",
-      "gridPos": { "x": 0, "y": 24, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*classifier.*'}[5m]))",
           "legendFormat": "classifier",
           "refId": "M"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "classifier Memory Usage",
-      "gridPos": { "x": 6, "y": 24, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 24,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*classifier.*'})",
           "legendFormat": "classifier",
           "refId": "N"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "classifier Network Inbound",
-      "gridPos": { "x": 12, "y": 24, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*classifier.*'}[5m]))",
           "legendFormat": "classifier RX",
           "refId": "O"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "classifier Network Outbound",
-      "gridPos": { "x": 18, "y": 24, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 24,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*classifier.*'}[5m]))",
           "legendFormat": "classifier TX",
           "refId": "P"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
-
     {
       "type": "graph",
       "title": "cifs-connector CPU Usage",
-      "gridPos": { "x": 0, "y": 32, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*cifs-connector.*'}[5m]))",
           "legendFormat": "cifs-connector",
           "refId": "Q"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "cifs-connector Memory Usage",
-      "gridPos": { "x": 6, "y": 32, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 32,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*cifs-connector.*'})",
           "legendFormat": "cifs-connector",
           "refId": "R"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "cifs-connector Network Inbound",
-      "gridPos": { "x": 12, "y": 32, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*cifs-connector.*'}[5m]))",
           "legendFormat": "cifs-connector RX",
           "refId": "S"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "cifs-connector Network Outbound",
-      "gridPos": { "x": 18, "y": 32, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 32,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*cifs-connector.*'}[5m]))",
           "legendFormat": "cifs-connector TX",
           "refId": "T"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
-
     {
       "type": "graph",
       "title": "cron-run CPU Usage",
-      "gridPos": { "x": 0, "y": 40, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*cron-run.*'}[5m]))",
           "legendFormat": "cron-run",
           "refId": "U"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "cron-run Memory Usage",
-      "gridPos": { "x": 6, "y": 40, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 40,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*cron-run.*'})",
           "legendFormat": "cron-run",
           "refId": "V"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "cron-run Network Inbound",
-      "gridPos": { "x": 12, "y": 40, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 40,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*cron-run.*'}[5m]))",
           "legendFormat": "cron-run RX",
           "refId": "W"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "cron-run Network Outbound",
-      "gridPos": { "x": 18, "y": 40, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 40,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*cron-run.*'}[5m]))",
           "legendFormat": "cron-run TX",
           "refId": "X"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
-
     {
       "type": "graph",
       "title": "env-dumper CPU Usage",
-      "gridPos": { "x": 0, "y": 48, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*env-dumper.*'}[5m]))",
           "legendFormat": "env-dumper",
           "refId": "Y"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "env-dumper Memory Usage",
-      "gridPos": { "x": 6, "y": 48, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 48,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*env-dumper.*'})",
           "legendFormat": "env-dumper",
           "refId": "Z"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "env-dumper Network Inbound",
-      "gridPos": { "x": 12, "y": 48, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*env-dumper.*'}[5m]))",
           "legendFormat": "env-dumper RX",
           "refId": "AA"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "env-dumper Network Outbound",
-      "gridPos": { "x": 18, "y": 48, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 48,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*env-dumper.*'}[5m]))",
           "legendFormat": "env-dumper TX",
           "refId": "AB"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
-
     {
       "type": "graph",
       "title": "job-engine CPU Usage",
-      "gridPos": { "x": 0, "y": 56, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 56,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*job-engine.*'}[5m]))",
           "legendFormat": "job-engine",
           "refId": "AC"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "job-engine Memory Usage",
-      "gridPos": { "x": 6, "y": 56, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 56,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*job-engine.*'})",
           "legendFormat": "job-engine",
           "refId": "AD"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "job-engine Network Inbound",
-      "gridPos": { "x": 12, "y": 56, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 56,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*job-engine.*'}[5m]))",
           "legendFormat": "job-engine RX",
           "refId": "AE"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "job-engine Network Outbound",
-      "gridPos": { "x": 18, "y": 56, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 56,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*job-engine.*'}[5m]))",
           "legendFormat": "job-engine TX",
           "refId": "AF"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
-
     {
       "type": "graph",
       "title": "migration CPU Usage",
-      "gridPos": { "x": 0, "y": 64, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 64,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*migration.*'}[5m]))",
           "legendFormat": "migration",
           "refId": "AG"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "migration Memory Usage",
-      "gridPos": { "x": 6, "y": 64, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 64,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*migration.*'})",
           "legendFormat": "migration",
           "refId": "AH"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "migration Network Inbound",
-      "gridPos": { "x": 12, "y": 64, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 64,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*migration.*'}[5m]))",
           "legendFormat": "migration RX",
           "refId": "AI"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "migration Network Outbound",
-      "gridPos": { "x": 18, "y": 64, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 64,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*migration.*'}[5m]))",
           "legendFormat": "migration TX",
           "refId": "AJ"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
-
     {
       "type": "graph",
       "title": "nx-nginx CPU Usage",
-      "gridPos": { "x": 0, "y": 72, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 72,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*nx-nginx.*'}[5m]))",
           "legendFormat": "nx-nginx",
           "refId": "AK"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "nx-nginx Memory Usage",
-      "gridPos": { "x": 6, "y": 72, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 72,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*nx-nginx.*'})",
           "legendFormat": "nx-nginx",
           "refId": "AL"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "nx-nginx Network Inbound",
-      "gridPos": { "x": 12, "y": 72, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 72,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*nx-nginx.*'}[5m]))",
           "legendFormat": "nx-nginx RX",
           "refId": "AM"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "nx-nginx Network Outbound",
-      "gridPos": { "x": 18, "y": 72, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 72,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*nx-nginx.*'}[5m]))",
           "legendFormat": "nx-nginx TX",
           "refId": "AN"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
-
     {
       "type": "graph",
       "title": "s3-consumer CPU Usage",
-      "gridPos": { "x": 0, "y": 80, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 80,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*s3-consumer.*'}[5m]))",
           "legendFormat": "s3-consumer",
           "refId": "AO"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "s3-consumer Memory Usage",
-      "gridPos": { "x": 6, "y": 80, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 80,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*s3-consumer.*'})",
           "legendFormat": "s3-consumer",
           "refId": "AP"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "s3-consumer Network Inbound",
-      "gridPos": { "x": 12, "y": 80, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 80,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*s3-consumer.*'}[5m]))",
           "legendFormat": "s3-consumer RX",
           "refId": "AQ"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "s3-consumer Network Outbound",
-      "gridPos": { "x": 18, "y": 80, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 80,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*s3-consumer.*'}[5m]))",
           "legendFormat": "s3-consumer TX",
           "refId": "AR"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
-
     {
       "type": "graph",
       "title": "s3-inventory-connector CPU Usage",
-      "gridPos": { "x": 0, "y": 88, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 88,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*s3-inventory-connector.*'}[5m]))",
           "legendFormat": "s3-inventory-connector",
           "refId": "AS"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "s3-inventory-connector Memory Usage",
-      "gridPos": { "x": 6, "y": 88, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 88,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*s3-inventory-connector.*'})",
           "legendFormat": "s3-inventory-connector",
           "refId": "AT"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "s3-inventory-connector Network Inbound",
-      "gridPos": { "x": 12, "y": 88, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 88,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*s3-inventory-connector.*'}[5m]))",
           "legendFormat": "s3-inventory-connector RX",
           "refId": "AU"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "s3-inventory-connector Network Outbound",
-      "gridPos": { "x": 18, "y": 88, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 88,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*s3-inventory-connector.*'}[5m]))",
           "legendFormat": "s3-inventory-connector TX",
           "refId": "AV"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
-
     {
       "type": "graph",
       "title": "s3-producer CPU Usage",
-      "gridPos": { "x": 0, "y": 96, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 96,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*s3-producer.*'}[5m]))",
           "legendFormat": "s3-producer",
           "refId": "AW"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "s3-producer Memory Usage",
-      "gridPos": { "x": 6, "y": 96, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 96,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*s3-producer.*'})",
           "legendFormat": "s3-producer",
           "refId": "AX"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "s3-producer Network Inbound",
-      "gridPos": { "x": 12, "y": 96, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 96,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*s3-producer.*'}[5m]))",
           "legendFormat": "s3-producer RX",
           "refId": "AY"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "s3-producer Network Outbound",
-      "gridPos": { "x": 18, "y": 96, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 96,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*s3-producer.*'}[5m]))",
           "legendFormat": "s3-producer TX",
           "refId": "AZ"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
-
     {
       "type": "graph",
       "title": "sweeper CPU Usage",
-      "gridPos": { "x": 0, "y": 104, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 104,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*sweeper.*'}[5m]))",
           "legendFormat": "sweeper",
           "refId": "BA"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "sweeper Memory Usage",
-      "gridPos": { "x": 6, "y": 104, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 104,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*sweeper.*'})",
           "legendFormat": "sweeper",
           "refId": "BB"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "sweeper Network Inbound",
-      "gridPos": { "x": 12, "y": 104, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 104,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*sweeper.*'}[5m]))",
           "legendFormat": "sweeper RX",
           "refId": "BC"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "sweeper Network Outbound",
-      "gridPos": { "x": 18, "y": 104, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 104,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*sweeper.*'}[5m]))",
           "legendFormat": "sweeper TX",
           "refId": "BD"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
-
     {
       "type": "graph",
       "title": "test-connection CPU Usage",
-      "gridPos": { "x": 0, "y": 112, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 112,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*test-connection.*'}[5m]))",
           "legendFormat": "test-connection",
           "refId": "BE"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "test-connection Memory Usage",
-      "gridPos": { "x": 6, "y": 112, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 112,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'.*test-connection.*'})",
           "legendFormat": "test-connection",
           "refId": "BF"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "test-connection Network Inbound",
-      "gridPos": { "x": 12, "y": 112, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 112,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*test-connection.*'}[5m]))",
           "legendFormat": "test-connection RX",
           "refId": "BG"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "type": "graph",
       "title": "test-connection Network Outbound",
-      "gridPos": { "x": 18, "y": 112, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 18,
+        "y": 112,
+        "w": 6,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum(rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*test-connection.*'}[5m]))",
           "legendFormat": "test-connection TX",
           "refId": "BH"
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     }
   ]
 }
