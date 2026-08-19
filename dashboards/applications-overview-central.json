@@ -1,56 +1,384 @@
 {
-  "id": null,
-  "uid": "nx-applications-monitoring",
-  "title": "NVisionX — Applications: Per-Service Resource Monitor (All Clusters)",
-  "tags": [
-    "nx-applications",
-    "monitoring",
-    "observability",
-    "git-sync"
-  ],
-  "timezone": "browser",
-  "schemaVersion": 39,
-  "version": 1,
-  "refresh": "30s",
-  "templating": {
-    "list": [
-      {
-        "current": {},
-        "hide": 0,
-        "includeAll": false,
-        "label": "Datasource",
-        "multi": false,
-        "name": "datasource",
-        "options": [],
-        "query": "prometheus",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "type": "datasource"
-      },
-      {
-        "name": "namespace",
-        "type": "query",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "refresh": 1,
-        "query": "label_values(kube_pod_info, namespace)",
-        "current": {
-          "text": "default",
-          "value": "default"
-        }
-      }
-    ]
+  "__comment": "Combined per manager request: applications-monitor.json, nx-applications-dashboard.json, and nx-applications-monitoring.json all queried the same metric family (container_cpu/memory/network_*, kube_pod_container_status_ready/restarts) at three different granularities (fleet health / namespace-wide aggregate / per-service detail) - combined into one dashboard with those three as collapsible sections instead of three separate files, all sharing one $datasource + $namespace picker. BUGS FIXED while merging: (1) applications-monitor.json's Fleet Health panels queried an exact hardcoded snapshot of pod names including their ReplicaSet hash suffix (e.g. 'applications-archiver-789855dc6d-ngx9v') - those hashes change on every deploy, so this was already stale and would show 'Bad'/'No data' for current pods. Rebuilt as a dynamic label_values() query against $namespace, no hardcoded pod list. (2) nx-applications-dashboard.json's panels used gridPos w:30, exceeding Grafana's 24-column grid (always rendered clipped/overflowing), and its last two panels (Pod Count / Pod Restarts) overlapped by 2 grid units - re-tiled as a clean 2-column layout. (3) nx-applications-monitoring.json's 60 panels (15 services x 4 panels) had no row headers at all, just implicit grouping by title prefix - added one collapsible row divider per service for real navigability.",
+  "annotations": {
+    "list": []
   },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
   "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "panels": [],
+      "title": "▸ FLEET HEALTH SUMMARY",
+      "type": "row"
+    },
+    {
+      "type": "stat",
+      "title": "$pods",
+      "description": "Pod Ready status: 1 = Good, 0 = Bad",
+      "id": 100,
+      "repeat": "pods",
+      "repeatDirection": "h",
+      "maxPerRow": 6,
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\", pod=~\"$pods\"})",
+          "legendFormat": "{{pod}}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "mergeValues": false
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Bad"
+                },
+                "1": {
+                  "text": "Good"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "piechart",
+      "title": "Pods Good vs Bad (count)",
+      "description": "Percentage of pods in the selected namespace that are Good (Ready) vs Bad (Not Ready)",
+      "id": 101,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\"}))",
+          "legendFormat": "Good",
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "expr": "count(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\"})) - sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\"}))",
+          "legendFormat": "Bad",
+          "instant": true
+        }
+      ],
+      "options": {
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "list",
+          "placement": "right",
+          "values": true
+        },
+        "displayLabels": [
+          "percent",
+          "name"
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Pods OK and Bad (count)",
+      "description": "Counts of pods in the selected namespace that are Ready (OK) vs Not Ready (Bad)",
+      "id": 102,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\"}))",
+          "legendFormat": "OK",
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "expr": "count(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\"})) - sum(min by (pod) (kube_pod_container_status_ready{namespace=\"$namespace\"}))",
+          "legendFormat": "Bad",
+          "instant": true
+        }
+      ],
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 2,
+      "panels": [],
+      "title": "▸ ALL-PODS RESOURCE OVERVIEW",
+      "type": "row"
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU Usage (per Pod)",
+      "id": 200,
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'.*'}[5m]))",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory Usage (per Pod)",
+      "id": 201,
+      "gridPos": {
+        "x": 12,
+        "y": 17,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (pod) (container_memory_usage_bytes{namespace='$namespace', pod=~'.*'})",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Network Receive (per Pod)",
+      "id": 202,
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (pod) (rate(container_network_receive_bytes_total{namespace='$namespace', pod=~'.*'}[5m]))",
+          "legendFormat": "{{pod}} RX",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Network Transmit (per Pod)",
+      "id": 203,
+      "gridPos": {
+        "x": 12,
+        "y": 25,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (pod) (rate(container_network_transmit_bytes_total{namespace='$namespace', pod=~'.*'}[5m]))",
+          "legendFormat": "{{pod}} TX",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Pod Count (Ready)",
+      "id": 204,
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 12,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "count(kube_pod_status_ready{namespace='$namespace', condition='true'})",
+          "legendFormat": "Ready Pods",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Pod Restarts",
+      "id": 205,
+      "gridPos": {
+        "x": 12,
+        "y": 33,
+        "w": 12,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (pod) (kube_pod_container_status_restarts_total{namespace='$namespace'})",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "id": 3,
+      "panels": [],
+      "title": "▸ PER-SERVICE DETAIL",
+      "type": "row"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      },
+      "id": 1000,
+      "panels": [],
+      "title": "ALERTS-API",
+      "type": "row"
+    },
     {
       "type": "table",
       "title": "ALERTS-API POD Status",
       "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 42,
         "w": 6,
         "h": 8
       },
@@ -91,14 +419,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 300
     },
     {
       "type": "table",
       "title": "ALERTS-API POD Restarts",
       "gridPos": {
         "x": 6,
-        "y": 0,
+        "y": 42,
         "w": 6,
         "h": 8
       },
@@ -139,14 +468,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 301
     },
     {
       "type": "table",
       "title": "ALERTS-API Resource Requests",
       "gridPos": {
         "x": 12,
-        "y": 0,
+        "y": 42,
         "w": 6,
         "h": 8
       },
@@ -187,14 +517,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 302
     },
     {
       "type": "graph",
       "title": "ALERTS-API Memory Usage",
       "gridPos": {
         "x": 18,
-        "y": 0,
+        "y": 42,
         "w": 6,
         "h": 8
       },
@@ -208,14 +539,28 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 303
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 50
+      },
+      "id": 1001,
+      "panels": [],
+      "title": "API",
+      "type": "row"
     },
     {
       "type": "table",
       "title": "API POD Status",
       "gridPos": {
         "x": 0,
-        "y": 8,
+        "y": 51,
         "w": 6,
         "h": 8
       },
@@ -256,14 +601,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 304
     },
     {
       "type": "graph",
       "title": "api Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 8,
+        "y": 51,
         "w": 6,
         "h": 8
       },
@@ -277,14 +623,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 305
     },
     {
       "type": "graph",
       "title": "api CPU Usage",
       "gridPos": {
         "x": 12,
-        "y": 8,
+        "y": 51,
         "w": 6,
         "h": 8
       },
@@ -298,14 +645,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 306
     },
     {
       "type": "graph",
       "title": "api Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 8,
+        "y": 51,
         "w": 6,
         "h": 8
       },
@@ -319,14 +667,28 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 307
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 59
+      },
+      "id": 1002,
+      "panels": [],
+      "title": "archiver",
+      "type": "row"
     },
     {
       "type": "graph",
       "title": "archiver CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 16,
+        "y": 60,
         "w": 6,
         "h": 8
       },
@@ -340,14 +702,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 308
     },
     {
       "type": "graph",
       "title": "archiver Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 16,
+        "y": 60,
         "w": 6,
         "h": 8
       },
@@ -361,14 +724,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 309
     },
     {
       "type": "graph",
       "title": "archiver Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 16,
+        "y": 60,
         "w": 6,
         "h": 8
       },
@@ -382,14 +746,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 310
     },
     {
       "type": "graph",
       "title": "archiver Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 16,
+        "y": 60,
         "w": 6,
         "h": 8
       },
@@ -403,14 +768,28 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 311
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 68
+      },
+      "id": 1003,
+      "panels": [],
+      "title": "classifier",
+      "type": "row"
     },
     {
       "type": "graph",
       "title": "classifier CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 24,
+        "y": 69,
         "w": 6,
         "h": 8
       },
@@ -424,14 +803,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 312
     },
     {
       "type": "graph",
       "title": "classifier Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 24,
+        "y": 69,
         "w": 6,
         "h": 8
       },
@@ -445,14 +825,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 313
     },
     {
       "type": "graph",
       "title": "classifier Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 24,
+        "y": 69,
         "w": 6,
         "h": 8
       },
@@ -466,14 +847,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 314
     },
     {
       "type": "graph",
       "title": "classifier Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 24,
+        "y": 69,
         "w": 6,
         "h": 8
       },
@@ -487,14 +869,28 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 315
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 77
+      },
+      "id": 1004,
+      "panels": [],
+      "title": "cifs-connector",
+      "type": "row"
     },
     {
       "type": "graph",
       "title": "cifs-connector CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 32,
+        "y": 78,
         "w": 6,
         "h": 8
       },
@@ -508,14 +904,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 316
     },
     {
       "type": "graph",
       "title": "cifs-connector Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 32,
+        "y": 78,
         "w": 6,
         "h": 8
       },
@@ -529,14 +926,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 317
     },
     {
       "type": "graph",
       "title": "cifs-connector Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 32,
+        "y": 78,
         "w": 6,
         "h": 8
       },
@@ -550,14 +948,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 318
     },
     {
       "type": "graph",
       "title": "cifs-connector Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 32,
+        "y": 78,
         "w": 6,
         "h": 8
       },
@@ -571,14 +970,28 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 319
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 86
+      },
+      "id": 1005,
+      "panels": [],
+      "title": "cron-run",
+      "type": "row"
     },
     {
       "type": "graph",
       "title": "cron-run CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 40,
+        "y": 87,
         "w": 6,
         "h": 8
       },
@@ -592,14 +1005,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 320
     },
     {
       "type": "graph",
       "title": "cron-run Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 40,
+        "y": 87,
         "w": 6,
         "h": 8
       },
@@ -613,14 +1027,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 321
     },
     {
       "type": "graph",
       "title": "cron-run Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 40,
+        "y": 87,
         "w": 6,
         "h": 8
       },
@@ -634,14 +1049,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 322
     },
     {
       "type": "graph",
       "title": "cron-run Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 40,
+        "y": 87,
         "w": 6,
         "h": 8
       },
@@ -655,14 +1071,28 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 323
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 95
+      },
+      "id": 1006,
+      "panels": [],
+      "title": "env-dumper",
+      "type": "row"
     },
     {
       "type": "graph",
       "title": "env-dumper CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 48,
+        "y": 96,
         "w": 6,
         "h": 8
       },
@@ -676,14 +1106,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 324
     },
     {
       "type": "graph",
       "title": "env-dumper Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 48,
+        "y": 96,
         "w": 6,
         "h": 8
       },
@@ -697,14 +1128,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 325
     },
     {
       "type": "graph",
       "title": "env-dumper Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 48,
+        "y": 96,
         "w": 6,
         "h": 8
       },
@@ -718,14 +1150,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 326
     },
     {
       "type": "graph",
       "title": "env-dumper Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 48,
+        "y": 96,
         "w": 6,
         "h": 8
       },
@@ -739,14 +1172,28 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 327
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 104
+      },
+      "id": 1007,
+      "panels": [],
+      "title": "job-engine",
+      "type": "row"
     },
     {
       "type": "graph",
       "title": "job-engine CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 56,
+        "y": 105,
         "w": 6,
         "h": 8
       },
@@ -760,14 +1207,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 328
     },
     {
       "type": "graph",
       "title": "job-engine Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 56,
+        "y": 105,
         "w": 6,
         "h": 8
       },
@@ -781,14 +1229,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 329
     },
     {
       "type": "graph",
       "title": "job-engine Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 56,
+        "y": 105,
         "w": 6,
         "h": 8
       },
@@ -802,14 +1251,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 330
     },
     {
       "type": "graph",
       "title": "job-engine Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 56,
+        "y": 105,
         "w": 6,
         "h": 8
       },
@@ -823,14 +1273,28 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 331
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 113
+      },
+      "id": 1008,
+      "panels": [],
+      "title": "migration",
+      "type": "row"
     },
     {
       "type": "graph",
       "title": "migration CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 64,
+        "y": 114,
         "w": 6,
         "h": 8
       },
@@ -844,14 +1308,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 332
     },
     {
       "type": "graph",
       "title": "migration Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 64,
+        "y": 114,
         "w": 6,
         "h": 8
       },
@@ -865,14 +1330,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 333
     },
     {
       "type": "graph",
       "title": "migration Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 64,
+        "y": 114,
         "w": 6,
         "h": 8
       },
@@ -886,14 +1352,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 334
     },
     {
       "type": "graph",
       "title": "migration Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 64,
+        "y": 114,
         "w": 6,
         "h": 8
       },
@@ -907,14 +1374,28 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 335
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 122
+      },
+      "id": 1009,
+      "panels": [],
+      "title": "nx-nginx",
+      "type": "row"
     },
     {
       "type": "graph",
       "title": "nx-nginx CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 72,
+        "y": 123,
         "w": 6,
         "h": 8
       },
@@ -928,14 +1409,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 336
     },
     {
       "type": "graph",
       "title": "nx-nginx Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 72,
+        "y": 123,
         "w": 6,
         "h": 8
       },
@@ -949,14 +1431,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 337
     },
     {
       "type": "graph",
       "title": "nx-nginx Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 72,
+        "y": 123,
         "w": 6,
         "h": 8
       },
@@ -970,14 +1453,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 338
     },
     {
       "type": "graph",
       "title": "nx-nginx Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 72,
+        "y": 123,
         "w": 6,
         "h": 8
       },
@@ -991,14 +1475,28 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 339
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 131
+      },
+      "id": 1010,
+      "panels": [],
+      "title": "s3-consumer",
+      "type": "row"
     },
     {
       "type": "graph",
       "title": "s3-consumer CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 80,
+        "y": 132,
         "w": 6,
         "h": 8
       },
@@ -1012,14 +1510,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 340
     },
     {
       "type": "graph",
       "title": "s3-consumer Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 80,
+        "y": 132,
         "w": 6,
         "h": 8
       },
@@ -1033,14 +1532,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 341
     },
     {
       "type": "graph",
       "title": "s3-consumer Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 80,
+        "y": 132,
         "w": 6,
         "h": 8
       },
@@ -1054,14 +1554,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 342
     },
     {
       "type": "graph",
       "title": "s3-consumer Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 80,
+        "y": 132,
         "w": 6,
         "h": 8
       },
@@ -1075,14 +1576,28 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 343
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 140
+      },
+      "id": 1011,
+      "panels": [],
+      "title": "s3-inventory-connector",
+      "type": "row"
     },
     {
       "type": "graph",
       "title": "s3-inventory-connector CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 88,
+        "y": 141,
         "w": 6,
         "h": 8
       },
@@ -1096,14 +1611,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 344
     },
     {
       "type": "graph",
       "title": "s3-inventory-connector Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 88,
+        "y": 141,
         "w": 6,
         "h": 8
       },
@@ -1117,14 +1633,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 345
     },
     {
       "type": "graph",
       "title": "s3-inventory-connector Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 88,
+        "y": 141,
         "w": 6,
         "h": 8
       },
@@ -1138,14 +1655,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 346
     },
     {
       "type": "graph",
       "title": "s3-inventory-connector Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 88,
+        "y": 141,
         "w": 6,
         "h": 8
       },
@@ -1159,14 +1677,28 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 347
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 149
+      },
+      "id": 1012,
+      "panels": [],
+      "title": "s3-producer",
+      "type": "row"
     },
     {
       "type": "graph",
       "title": "s3-producer CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 96,
+        "y": 150,
         "w": 6,
         "h": 8
       },
@@ -1180,14 +1712,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 348
     },
     {
       "type": "graph",
       "title": "s3-producer Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 96,
+        "y": 150,
         "w": 6,
         "h": 8
       },
@@ -1201,14 +1734,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 349
     },
     {
       "type": "graph",
       "title": "s3-producer Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 96,
+        "y": 150,
         "w": 6,
         "h": 8
       },
@@ -1222,14 +1756,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 350
     },
     {
       "type": "graph",
       "title": "s3-producer Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 96,
+        "y": 150,
         "w": 6,
         "h": 8
       },
@@ -1243,14 +1778,28 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 351
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 158
+      },
+      "id": 1013,
+      "panels": [],
+      "title": "sweeper",
+      "type": "row"
     },
     {
       "type": "graph",
       "title": "sweeper CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 104,
+        "y": 159,
         "w": 6,
         "h": 8
       },
@@ -1264,14 +1813,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 352
     },
     {
       "type": "graph",
       "title": "sweeper Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 104,
+        "y": 159,
         "w": 6,
         "h": 8
       },
@@ -1285,14 +1835,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 353
     },
     {
       "type": "graph",
       "title": "sweeper Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 104,
+        "y": 159,
         "w": 6,
         "h": 8
       },
@@ -1306,14 +1857,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 354
     },
     {
       "type": "graph",
       "title": "sweeper Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 104,
+        "y": 159,
         "w": 6,
         "h": 8
       },
@@ -1327,14 +1879,28 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 355
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 167
+      },
+      "id": 1014,
+      "panels": [],
+      "title": "test-connection",
+      "type": "row"
     },
     {
       "type": "graph",
       "title": "test-connection CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 112,
+        "y": 168,
         "w": 6,
         "h": 8
       },
@@ -1348,14 +1914,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 356
     },
     {
       "type": "graph",
       "title": "test-connection Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 112,
+        "y": 168,
         "w": 6,
         "h": 8
       },
@@ -1369,14 +1936,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 357
     },
     {
       "type": "graph",
       "title": "test-connection Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 112,
+        "y": 168,
         "w": 6,
         "h": 8
       },
@@ -1390,14 +1958,15 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 358
     },
     {
       "type": "graph",
       "title": "test-connection Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 112,
+        "y": 168,
         "w": 6,
         "h": 8
       },
@@ -1411,7 +1980,81 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 359
     }
-  ]
+  ],
+  "preload": false,
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "all-clusters",
+    "api",
+    "applications",
+    "git-sync",
+    "microservices",
+    "monitoring",
+    "nx",
+    "nx-applications",
+    "observability",
+    "status"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "refresh": 1,
+        "query": "label_values(kube_pod_info, namespace)",
+        "current": {
+          "text": "default",
+          "value": "default"
+        }
+      },
+      {
+        "name": "pods",
+        "type": "query",
+        "label": "Pods",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(kube_pod_container_status_ready{namespace=\"$namespace\"}, pod)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "NVisionX — Applications Overview (All Clusters)",
+  "uid": "nx-applications-overview",
+  "version": 1,
+  "weekStart": ""
 }
