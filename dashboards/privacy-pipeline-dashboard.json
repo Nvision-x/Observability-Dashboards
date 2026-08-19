@@ -19,7 +19,7 @@
   "graphTooltip": 1,
   "schemaVersion": 39,
   "version": 2,
-  "title": "Privacy Pipeline \u2014 Scan Progress & Stall Detection",
+  "title": "NVisionX — Privacy Pipeline: Scan Progress & Stall Detection (All Clusters)",
   "uid": "nx-privacy-pipeline",
   "tags": [
     "nvision-x",
@@ -260,7 +260,7 @@
   "panels": [
     {
       "type": "row",
-      "title": "\u2b50 PIT LEASE MARGIN \u2014 the actual failure predictor",
+      "title": "⭐ PIT LEASE MARGIN — the actual failure predictor",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -274,7 +274,7 @@
     {
       "type": "stat",
       "title": "Estimated max search gap",
-      "description": "consumers x page_size / throughput, in seconds.\n\nCompare against $lease (ES_PIT_KEEP_ALIVE, default 1800s). Above the lease, the next search returns 404 search_context_missing_exception and the scan dies silently \u2014 privacy discards the reader error, so the job still reports SUCCESS.\n\nGreen below 900s (half the lease). Red at 1800s.",
+      "description": "consumers x page_size / throughput, in seconds.\n\nCompare against $lease (ES_PIT_KEEP_ALIVE, default 1800s). Above the lease, the next search returns 404 search_context_missing_exception and the scan dies silently — privacy discards the reader error, so the job still reports SUCCESS.\n\nGreen below 900s (half the lease). Red at 1800s.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -343,7 +343,7 @@
     {
       "type": "timeseries",
       "title": "Search gap vs PIT lease",
-      "description": "The flat reference line is the lease. Any time the gap crosses it, the PIT is already dead \u2014 the scan just has not found out yet, because it only discovers this on its NEXT search.",
+      "description": "The flat reference line is the lease. Any time the gap crosses it, the PIT is already dead — the scan just has not found out yet, because it only discovers this on its NEXT search.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -440,7 +440,7 @@
     {
       "type": "stat",
       "title": "Critical throughput",
-      "description": "The document rate below which the PIT cannot survive:\n\n    consumers x page_size / lease\n\nAt 32 consumers, 1000-doc pages and a 30m lease this is 17.8 docs/s. Anything slower is living on borrowed time.\n\nNote this is 32x higher than the naive 'one search per page' figure of 0.556 docs/s \u2014 that number is the AVERAGE search rate and it does not predict failure.",
+      "description": "The document rate below which the PIT cannot survive:\n\n    consumers x page_size / lease\n\nAt 32 consumers, 1000-doc pages and a 30m lease this is 17.8 docs/s. Anything slower is living on borrowed time.\n\nNote this is 32x higher than the naive 'one search per page' figure of 0.556 docs/s — that number is the AVERAGE search rate and it does not predict failure.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -578,7 +578,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "### Why this row exists\n\nA Point-In-Time lease dies on the **maximum gap between searches**, not the average.\n\n`startConsumers` spawns `PIPELINE_CONSUMERS` goroutines, each holding a **full page** of documents while feeding a shared `requests` channel drained by a shared fetcher pool. They start together and progress at identical rates, so they **finish together** \u2014 and between waves no slice unblocks and **no search is issued**.\n\n```\nMAX SEARCH GAP = PIPELINE_CONSUMERS x ES_SEARCH_BATCH_SIZE / throughput\n```\n\nOn 2026-07-27 the scan was at ~13 docs/s when it died: 32 x 1000 / 13 = **2462s = 41 min**, against a 30-minute lease.\n\n**Evidence for the synchronisation:** slices 1, 2 and 3 all 404'd within **209 ms** of each other. Staggered consumers fail minutes apart.\n\n### Set the variables before trusting the numbers\n`$consumers` \u2014 values.yaml says 16, the configmap renders 4, measured in-flight was 32. **Confirm it.**\n`$batch` \u2014 `ES_SEARCH_BATCH_SIZE`, default 1000.\n`$lease` \u2014 `ES_PIT_KEEP_ALIVE` in seconds, default 30m = 1800.\n\nDropping `$batch` to 250 buys 4x margin with no code change. The real fix is a keep-alive refresher, which decouples the lease from progress entirely \u2014 privacy's reader does not have one."
+        "content": "### Why this row exists\n\nA Point-In-Time lease dies on the **maximum gap between searches**, not the average.\n\n`startConsumers` spawns `PIPELINE_CONSUMERS` goroutines, each holding a **full page** of documents while feeding a shared `requests` channel drained by a shared fetcher pool. They start together and progress at identical rates, so they **finish together** — and between waves no slice unblocks and **no search is issued**.\n\n```\nMAX SEARCH GAP = PIPELINE_CONSUMERS x ES_SEARCH_BATCH_SIZE / throughput\n```\n\nOn 2026-07-27 the scan was at ~13 docs/s when it died: 32 x 1000 / 13 = **2462s = 41 min**, against a 30-minute lease.\n\n**Evidence for the synchronisation:** slices 1, 2 and 3 all 404'd within **209 ms** of each other. Staggered consumers fail minutes apart.\n\n### Set the variables before trusting the numbers\n`$consumers` — values.yaml says 16, the configmap renders 4, measured in-flight was 32. **Confirm it.**\n`$batch` — `ES_SEARCH_BATCH_SIZE`, default 1000.\n`$lease` — `ES_PIT_KEEP_ALIVE` in seconds, default 30m = 1800.\n\nDropping `$batch` to 250 buys 4x margin with no code change. The real fix is a keep-alive refresher, which decouples the lease from progress entirely — privacy's reader does not have one."
       },
       "gridPos": {
         "h": 8,
@@ -589,7 +589,7 @@
     },
     {
       "type": "row",
-      "title": "THE STALL DETECTOR \u2014 read this first",
+      "title": "THE STALL DETECTOR — read this first",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -673,8 +673,8 @@
     },
     {
       "type": "timeseries",
-      "title": "In-flight fetches over time \u2014 FLAT LINE = WEDGED",
-      "description": "Watch the SHAPE, not the value. A healthy scan is sawtoothed. A horizontal line at the fetch-worker count is the failure: workers blocked forever on replies that will never arrive.\n\nNOTE: the worker count is currently ambiguous \u2014 values.yaml sets PIPELINE_CONSUMERS=16 in the env block while the configmap renders pipelineConsumers=4. Resolve this before interpreting the plateau height.",
+      "title": "In-flight fetches over time — FLAT LINE = WEDGED",
+      "description": "Watch the SHAPE, not the value. A healthy scan is sawtoothed. A horizontal line at the fetch-worker count is the failure: workers blocked forever on replies that will never arrive.\n\nNOTE: the worker count is currently ambiguous — values.yaml sets PIPELINE_CONSUMERS=16 in the env block while the configmap renders pipelineConsumers=4. Resolve this before interpreting the plateau height.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -831,7 +831,7 @@
     },
     {
       "type": "row",
-      "title": "Pipeline funnel \u2014 where documents are lost",
+      "title": "Pipeline funnel — where documents are lost",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -1088,7 +1088,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Funnel rates \u2014 these four lines should track each other",
+      "title": "Funnel rates — these four lines should track each other",
       "description": "Divergence localises the bottleneck:\nsent >> received    -> content-service (the hypothesis)\nreceived >> analysed-> PII analysis CPU-bound\nanalysed >> persisted-> OpenSearch bulk writer is the constraint\n\nThat last case is the main ALTERNATIVE explanation for a stalled scan and is cheap to rule out here.",
       "datasource": {
         "type": "prometheus",
@@ -1291,7 +1291,7 @@
     {
       "type": "timeseries",
       "title": "Error rate by kind",
-      "description": "kind='get_content' is privacy's own view of content-service failing it.\n\nIMPORTANT: with CONTENT_GET_TIMEOUT unset this counter UNDERSTATES reality. A lost reply produces no error at all \u2014 the worker just waits forever. Setting CONTENT_GET_TIMEOUT=300s is what makes this metric start telling the truth.",
+      "description": "kind='get_content' is privacy's own view of content-service failing it.\n\nIMPORTANT: with CONTENT_GET_TIMEOUT unset this counter UNDERSTATES reality. A lost reply produces no error at all — the worker just waits forever. Setting CONTENT_GET_TIMEOUT=300s is what makes this metric start telling the truth.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1516,7 +1516,7 @@
     {
       "type": "timeseries",
       "title": "Detection outcomes",
-      "description": "The actual analytical product \u2014 what the customer is paying for.",
+      "description": "The actual analytical product — what the customer is paying for.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1710,7 +1710,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Per-document processing time (SEE DESCRIPTION \u2014 buckets are wrong)",
+      "title": "Per-document processing time (SEE DESCRIPTION — buckets are wrong)",
       "description": "CURRENTLY NEARLY USELESS. This histogram uses prometheus.DefBuckets, whose top bucket is 10 SECONDS, on a path where a 120s extraction is normal. Essentially everything interesting lands in +Inf and these quantiles are extrapolated fiction.\n\nFIX: explicit buckets {0.5,1,2.5,5,10,30,60,120,240,300} in internal/metrics/metrics.go. Until then use the >10s counter beside this.",
       "datasource": {
         "type": "prometheus",
@@ -1867,7 +1867,7 @@
     },
     {
       "type": "row",
-      "title": "Scrape & pod health \u2014 privacy scales to zero, so read this before trusting anything above",
+      "title": "Scrape & pod health — privacy scales to zero, so read this before trusting anything above",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -1880,7 +1880,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Scrape up/down \u2014 GAPS ARE EXPECTED",
+      "title": "Scrape up/down — GAPS ARE EXPECTED",
       "description": "privacyBeGo autoscaling.minReplicas defaults to 0 and the PodMonitor scrapes every 30s. Short scans may be scraped once or not at all, and every counter RESETS on a new pod.\n\nPractical consequences:\n- rate() over a resetting counter is unreliable\n- an empty panel means 'no pod', NOT 'no problem'\n- prefer the equivalent content-service panel where one exists (minReplicas:1, continuous series)\n- pin replicas during any investigation",
       "datasource": {
         "type": "prometheus",
@@ -2268,7 +2268,7 @@
       "transparent": false,
       "options": {
         "mode": "markdown",
-        "content": "\n**Missing instrumentation** (ordered by value)\n\n1. **No client-side `GetContent` latency histogram.** Privacy never times its own\ncalls. Server-side metrics cannot see requests that were never picked up or whose\nreply was lost \u2014 exactly the failure modes that matter. ~5 lines at\n`main.go:372`.\n2. **No timeout at all.** `CONTENT_GET_TIMEOUT` unset \u21d2 wait forever. Setting it\nto `300s` converts a silent wedge into a counted error.\n3. **`job_id` on every metric** = unbounded cardinality; a series per scan, forever.\n4. **`pii_doc_duration_seconds` buckets max at 10s** on a 120s path.\n5. **No PIT metrics at all** in privacy's reader \u2014 the extractor got\n`extractor_pit_renewals_total`; privacy's copy has nothing.\n6. **Channel saturation invisible** \u2014 the actual stall point (`hits` and\n`requests` channels) has no gauge.\n"
+        "content": "\n**Missing instrumentation** (ordered by value)\n\n1. **No client-side `GetContent` latency histogram.** Privacy never times its own\ncalls. Server-side metrics cannot see requests that were never picked up or whose\nreply was lost — exactly the failure modes that matter. ~5 lines at\n`main.go:372`.\n2. **No timeout at all.** `CONTENT_GET_TIMEOUT` unset ⇒ wait forever. Setting it\nto `300s` converts a silent wedge into a counted error.\n3. **`job_id` on every metric** = unbounded cardinality; a series per scan, forever.\n4. **`pii_doc_duration_seconds` buckets max at 10s** on a 120s path.\n5. **No PIT metrics at all** in privacy's reader — the extractor got\n`extractor_pit_renewals_total`; privacy's copy has nothing.\n6. **Channel saturation invisible** — the actual stall point (`hits` and\n`requests` channels) has no gauge.\n"
       },
       "gridPos": {
         "h": 8,
@@ -2297,7 +2297,7 @@
       "transparent": false,
       "options": {
         "mode": "markdown",
-        "content": "\n### What this dashboard is for\n\nDetecting a **silent stall** in a PII scan, and localising whether the cause is content-service,\nthe analysis stage, or the OpenSearch writer.\n\n### Why the top-left panel is the whole story\n\nPrivacy dispatches fetches to content-service and waits for replies. `sent - received` is therefore\nthe number of documents currently in flight. That difference is the only visible trace of a failure\nmode that is otherwise completely silent:\n\n- the fetch worker is **not** crashed \u2014 it is blocked on a channel receive\n- liveness probes pass, the pod is `Running 1/1`\n- **no log line is emitted**, because nothing has happened\n- **no counter moves**, because every privacy counter fires on an *event*, and a wait is not an event\n\nThe only observable is that a difference between two counters has stopped changing.\n\n### Two failure shapes\n\n**Some workers wedge** \u2014 throughput decays as workers are lost one by one. Pagination continues,\nslower, with longer gaps between OpenSearch searches. Eventually a gap exceeds the 30-minute PIT\nkeep-alive, the lease dies, and the next search returns 404 on every slice at once. *This is what the\nproduction ticket shows.*\n\n**All workers wedge** \u2014 total silence. No search is ever issued again, so nothing errors. The handler\nnever returns and the job sits in `running` forever. That maps to the long-standing \"jobs stuck\nrunning\" issue rather than to a 404.\n\nEither way the PIT expiry is not the disease \u2014 it is the moment the system finally notices it has\nbeen degrading for half an hour.\n\n### Reading order\n\n1. **Fetches in flight** \u2014 flat line at the worker count means wedged.\n2. **Funnel rates** \u2014 which of the four lines diverges tells you which stage is the constraint.\n3. **Errors by kind** \u2014 remember this understates reality until a timeout is configured.\n4. **Scrape up/down** \u2014 confirm you were actually collecting data before believing any panel above.\n5. Cross-check the **content-service dashboard's restart panel** over the same window.\n\n### Correlating with content-service\n\nThe two dashboards share a time range. The confirming pattern is:\n\n```\nprivacy: sent-minus-received goes flat\n   AND\ncontent-service: restart, OOM, or shutdown_pending_failed spike at the same moment\n```\n\nIf privacy stalls while content-service looks completely healthy, the loss is in NATS transport\nrather than content-service load \u2014 a different fix, and worth knowing early.\n"
+        "content": "\n### What this dashboard is for\n\nDetecting a **silent stall** in a PII scan, and localising whether the cause is content-service,\nthe analysis stage, or the OpenSearch writer.\n\n### Why the top-left panel is the whole story\n\nPrivacy dispatches fetches to content-service and waits for replies. `sent - received` is therefore\nthe number of documents currently in flight. That difference is the only visible trace of a failure\nmode that is otherwise completely silent:\n\n- the fetch worker is **not** crashed — it is blocked on a channel receive\n- liveness probes pass, the pod is `Running 1/1`\n- **no log line is emitted**, because nothing has happened\n- **no counter moves**, because every privacy counter fires on an *event*, and a wait is not an event\n\nThe only observable is that a difference between two counters has stopped changing.\n\n### Two failure shapes\n\n**Some workers wedge** — throughput decays as workers are lost one by one. Pagination continues,\nslower, with longer gaps between OpenSearch searches. Eventually a gap exceeds the 30-minute PIT\nkeep-alive, the lease dies, and the next search returns 404 on every slice at once. *This is what the\nproduction ticket shows.*\n\n**All workers wedge** — total silence. No search is ever issued again, so nothing errors. The handler\nnever returns and the job sits in `running` forever. That maps to the long-standing \"jobs stuck\nrunning\" issue rather than to a 404.\n\nEither way the PIT expiry is not the disease — it is the moment the system finally notices it has\nbeen degrading for half an hour.\n\n### Reading order\n\n1. **Fetches in flight** — flat line at the worker count means wedged.\n2. **Funnel rates** — which of the four lines diverges tells you which stage is the constraint.\n3. **Errors by kind** — remember this understates reality until a timeout is configured.\n4. **Scrape up/down** — confirm you were actually collecting data before believing any panel above.\n5. Cross-check the **content-service dashboard's restart panel** over the same window.\n\n### Correlating with content-service\n\nThe two dashboards share a time range. The confirming pattern is:\n\n```\nprivacy: sent-minus-received goes flat\n   AND\ncontent-service: restart, OOM, or shutdown_pending_failed spike at the same moment\n```\n\nIf privacy stalls while content-service looks completely healthy, the loss is in NATS transport\nrather than content-service load — a different fix, and worth knowing early.\n"
       },
       "gridPos": {
         "h": 13,
@@ -2310,76 +2310,235 @@
     {
       "id": 600,
       "type": "row",
-      "title": "\u2b50 EXTRACTOR \u2014 PIT expiry, the OBSERVED failure signal",
+      "title": "⭐ EXTRACTOR — PIT expiry, the OBSERVED failure signal",
       "collapsed": false,
       "panels": [],
-      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 98}
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 98
+      }
     },
     {
       "id": 601,
       "type": "stat",
       "title": "PIT expiries ($__range)",
-      "description": "extractor_pit_renewals_total is incremented ONLY when a search fails with search_context_missing_exception and the reader rebuilds the PIT to resume. ANY non-zero value means a slice stalled long enough to lose its lease \u2014 the NXE-2480 condition, observed rather than modelled.\n\nCompare with 'Estimated max search gap' at the top: that panel PREDICTS this one. If the estimate is under the lease and this is non-zero, the model's inputs (consumers/batch/lease) are wrong.\n\nNote maxPitRenewals = 3: after three consecutive renewals a slice gives up and the remaining documents are dropped. There is no metric for that yet.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "extractor_pit_renewals_total is incremented ONLY when a search fails with search_context_missing_exception and the reader rebuilds the PIT to resume. ANY non-zero value means a slice stalled long enough to lose its lease — the NXE-2480 condition, observed rather than modelled.\n\nCompare with 'Estimated max search gap' at the top: that panel PREDICTS this one. If the estimate is under the lease and this is non-zero, the model's inputs (consumers/batch/lease) are wrong.\n\nNote maxPitRenewals = 3: after three consecutive renewals a slice gives up and the remaining documents are dropped. There is no metric for that yet.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "targets": [
-        {"refId": "A", "datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum(increase(extractor_pit_renewals_total{job=\"$extractor_job\"}[$__range]))", "legendFormat": "", "instant": true, "editorMode": "code"}
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(increase(extractor_pit_renewals_total{job=\"$extractor_job\"}[$__range]))",
+          "legendFormat": "",
+          "instant": true,
+          "editorMode": "code"
+        }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
           "decimals": 0,
-          "color": {"mode": "thresholds"},
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
         },
         "overrides": []
       },
-      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none", "justifyMode": "auto"},
-      "gridPos": {"h": 8, "w": 6, "x": 0, "y": 99}
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 99
+      }
     },
     {
       "id": 602,
       "type": "timeseries",
       "title": "PIT expiries over time, by scan job",
-      "description": "When the lease was lost, and for which job. Correlate the timestamps against 'Search gap vs PIT lease' above \u2014 an expiry should land shortly after the modelled gap crosses the lease line. If it lands earlier, the consumer/batch assumptions need revisiting.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "When the lease was lost, and for which job. Correlate the timestamps against 'Search gap vs PIT lease' above — an expiry should land shortly after the modelled gap crosses the lease line. If it lands earlier, the consumer/batch assumptions need revisiting.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "targets": [
-        {"refId": "A", "datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (job_id) (rate(extractor_pit_renewals_total{job=\"$extractor_job\"}[5m]))", "legendFormat": "{{job_id}}", "range": true, "editorMode": "code"}
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (job_id) (rate(extractor_pit_renewals_total{job=\"$extractor_job\"}[5m]))",
+          "legendFormat": "{{job_id}}",
+          "range": true,
+          "editorMode": "code"
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "auto"}}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 6, "y": 99}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 6,
+        "y": 99
+      }
     },
     {
       "id": 603,
       "type": "stat",
       "title": "Publish failures ($__range)",
-      "description": "extractor_publish_failures_total counts ItemBatches that could not be handed to the next pipeline stage. Its own source comment notes these 'were previously discarded silently' \u2014 the same class of bug as the NXE-2480 truncation. Non-zero means documents were read from OpenSearch and then lost before privacy ever saw them.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "description": "extractor_publish_failures_total counts ItemBatches that could not be handed to the next pipeline stage. Its own source comment notes these 'were previously discarded silently' — the same class of bug as the NXE-2480 truncation. Non-zero means documents were read from OpenSearch and then lost before privacy ever saw them.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "targets": [
-        {"refId": "A", "datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum(increase(extractor_publish_failures_total{job=\"$extractor_job\"}[$__range]))", "legendFormat": "", "instant": true, "editorMode": "code"}
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(increase(extractor_publish_failures_total{job=\"$extractor_job\"}[$__range]))",
+          "legendFormat": "",
+          "instant": true,
+          "editorMode": "code"
+        }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
           "decimals": 0,
-          "color": {"mode": "thresholds"},
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
         },
         "overrides": []
       },
-      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none", "justifyMode": "auto"},
-      "gridPos": {"h": 8, "w": 6, "x": 18, "y": 99}
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 99
+      }
     },
     {
       "id": 604,
       "type": "timeseries",
       "title": "Item conversion errors by connector type",
       "description": "extractor_item_conversion_errors_total fires when a document in the index cannot be turned into a pipeline Item. Directly relevant to the V1.5 -> V2 reindex work: the CIFS and Box converters hard-fail an item with no source_url, so a migration that omitted it shows up here as a steady error rate for that connector_type.",
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "targets": [
-        {"refId": "A", "datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (connector_type) (rate(extractor_item_conversion_errors_total{job=\"$extractor_job\"}[5m]))", "legendFormat": "{{connector_type}}", "range": true, "editorMode": "code"}
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (connector_type) (rate(extractor_item_conversion_errors_total{job=\"$extractor_job\"}[5m]))",
+          "legendFormat": "{{connector_type}}",
+          "range": true,
+          "editorMode": "code"
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "auto"}}, "overrides": []},
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 107}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 107
+      }
     }
   ]
 }

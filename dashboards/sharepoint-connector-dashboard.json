@@ -1,7 +1,7 @@
 {
   "uid": "nx-sharepoint-connector",
-  "title": "SharePoint Connector \u2014 Graph Fetch, Throttling & Leak Detection",
-  "description": "Built 2026-07-30 for NXE-2480. Covers the sharepoint_* and graph_* metric families, which no earlier dashboard touched. Read the reference panel at the bottom first \u2014 there is no 429 counter and a flat 5xx graph is misleading.",
+  "title": "NVisionX — SharePoint Connector: Graph Fetch, Throttling & Leak Detection (All Clusters)",
+  "description": "Built 2026-07-30 for NXE-2480. Covers the sharepoint_* and graph_* metric families, which no earlier dashboard touched. Read the reference panel at the bottom first — there is no 429 counter and a flat 5xx graph is misleading.",
   "tags": [
     "nvision-x",
     "sharepoint",
@@ -135,7 +135,7 @@
   "panels": [
     {
       "type": "row",
-      "title": "THROTTLING \u2014 is Microsoft rate-limiting us?",
+      "title": "THROTTLING — is Microsoft rate-limiting us?",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -214,7 +214,7 @@
     {
       "type": "timeseries",
       "title": "Fetch errors by code",
-      "description": "FetchErrorCode as classified by classifyGraphError (internal/fetch/handler.go:339).\n\nRETRYABLE (these are the dangerous ones \u2014 content-service will retry each 15x): RATE_LIMITED, CONNECTION_FAILED, TIMEOUT, READ_ERROR, CACHE_WRITE_FAILED\nNON-RETRYABLE (cheap, fail once): NOT_FOUND, PERMISSION_DENIED, INVALID_URN, TOO_LARGE, INTERNAL(4xx)",
+      "description": "FetchErrorCode as classified by classifyGraphError (internal/fetch/handler.go:339).\n\nRETRYABLE (these are the dangerous ones — content-service will retry each 15x): RATE_LIMITED, CONNECTION_FAILED, TIMEOUT, READ_ERROR, CACHE_WRITE_FAILED\nNON-RETRYABLE (cheap, fail once): NOT_FOUND, PERMISSION_DENIED, INVALID_URN, TOO_LARGE, INTERNAL(4xx)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -283,7 +283,7 @@
     {
       "type": "stat",
       "title": "Fetch failure fraction",
-      "description": "errors / (errors + successes). A few percent is normal \u2014 deleted files and permission denials. What matters is whether those failures are RETRYABLE, which the panel to the left answers.",
+      "description": "errors / (errors + successes). A few percent is normal — deleted files and permission denials. What matters is whether those failures are RETRYABLE, which the panel to the left answers.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -467,7 +467,7 @@
     {
       "type": "timeseries",
       "title": "Fetch duration p50 / p95 / p99",
-      "description": "End-to-end duration of one ContentFetchRequest inside the connector. Compare against content-service's content_nats_worker_duration_seconds \u2014 they measure nearly the same span from opposite ends, and a divergence means time is being spent in the NATS hop.",
+      "description": "End-to-end duration of one ContentFetchRequest inside the connector. Compare against content-service's content_nats_worker_duration_seconds — they measure nearly the same span from opposite ends, and a divergence means time is being spent in the NATS hop.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -640,7 +640,7 @@
     {
       "type": "timeseries",
       "title": "Graph 5xx rate  (NOTE: EXCLUDES 429)",
-      "description": "Server errors only. THROTTLING IS 429 AND IS NOT COUNTED HERE. Do not read a flat line as 'Graph was healthy' \u2014 see the reference panel at the bottom of this dashboard.",
+      "description": "Server errors only. THROTTLING IS 429 AND IS NOT COUNTED HERE. Do not read a flat line as 'Graph was healthy' — see the reference panel at the bottom of this dashboard.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -790,7 +790,7 @@
     },
     {
       "type": "row",
-      "title": "IN-FLIGHT LEAK DETECTOR \u2014 the rival hypothesis",
+      "title": "IN-FLIGHT LEAK DETECTOR — the rival hypothesis",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -879,7 +879,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "## In-flight leak \u2014 the rival explanation\n\nThe connector picks a Graph **app registration** by fewest in-flight requests, counted in **Redis**: `Incr()` before each call, `Decr()` after (`graphhelper.go:122-137`). Any request that dies in between leaks a count **permanently** \u2014 the 15-minute `Expire` is refreshed on every `Incr`, so it never fires under sustained load.\n\nOnce every client exceeds `maxInflight`, `getClient()` **blocks on every fetch** (`graphhelper.go:326-358`) \u2014 and that code path has **no log statement at all**, so it leaves no trace.\n\n### Reading the panel to the left\n* **sawtooth returning to 0 between scans** -> healthy\n* **monotonic ratchet that never returns to 0** -> leaking\n\n### The decisive test (2 minutes, no history needed)\n```\n# with the connector IDLE:\nKEYS  inflight:*\nGET   inflight:<clientID>    # per Graph app registration\n```\nEvery value **must** be 0 on an idle connector. Any non-zero value is a leak. Stronger: restart the pod, wait for idle, re-read \u2014 the counters live in Redis, not the pod, so a restart does not clear them.\n\n### Telling the two apart\n**Throttling** -> `\"graph DownloadDriveItem failed\"` lines with `http_status` 429.\n**Leak** -> slow fetches with **no error lines at all**."
+        "content": "## In-flight leak — the rival explanation\n\nThe connector picks a Graph **app registration** by fewest in-flight requests, counted in **Redis**: `Incr()` before each call, `Decr()` after (`graphhelper.go:122-137`). Any request that dies in between leaks a count **permanently** — the 15-minute `Expire` is refreshed on every `Incr`, so it never fires under sustained load.\n\nOnce every client exceeds `maxInflight`, `getClient()` **blocks on every fetch** (`graphhelper.go:326-358`) — and that code path has **no log statement at all**, so it leaves no trace.\n\n### Reading the panel to the left\n* **sawtooth returning to 0 between scans** -> healthy\n* **monotonic ratchet that never returns to 0** -> leaking\n\n### The decisive test (2 minutes, no history needed)\n```\n# with the connector IDLE:\nKEYS  inflight:*\nGET   inflight:<clientID>    # per Graph app registration\n```\nEvery value **must** be 0 on an idle connector. Any non-zero value is a leak. Stronger: restart the pod, wait for idle, re-read — the counters live in Redis, not the pod, so a restart does not clear them.\n\n### Telling the two apart\n**Throttling** -> `\"graph DownloadDriveItem failed\"` lines with `http_status` 429.\n**Leak** -> slow fetches with **no error lines at all**."
       },
       "gridPos": {
         "h": 8,
@@ -890,7 +890,7 @@
     },
     {
       "type": "row",
-      "title": "Pod health \u2014 replicaCount is 1, this is a single point of failure",
+      "title": "Pod health — replicaCount is 1, this is a single point of failure",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -904,7 +904,7 @@
     {
       "type": "timeseries",
       "title": "Container restarts",
-      "description": "The SharePoint content connector runs at replicaCount: 1. A restart mid-scan drops every in-flight fetch, and \u2014 because the in-flight counters live in Redis rather than in the pod \u2014 leaks them.",
+      "description": "The SharePoint content connector runs at replicaCount: 1. A restart mid-scan drops every in-flight fetch, and — because the in-flight counters live in Redis rather than in the pod — leaks them.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1130,7 +1130,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "## Read this before trusting a flat graph\n\n### There is no 429 counter in the `graph_*` family\n`graph_requests_5xx` counts **only** 5xx. Microsoft Graph throttling arrives as **HTTP 429**, which is 4xx, and **nothing counts it**.\n\nA flat `graph_requests_5xx` does **not** mean Graph was healthy.\n\nThrottling is visible in exactly two places:\n1. `sharepoint_content_fetch_error_total{code=\"FETCH_ERROR_RATE_LIMITED\"}` \u2014 the panels above\n2. the connector logs \u2014 grep `\"graph DownloadDriveItem failed\"`, logged at WARN with an `http_status` field\n\n### The error body is thrown away\n`internal/graphhelper/download.go:101-106` drains and **discards** the Graph error body, and never reads `Retry-After`. So we can see *that* we were throttled but not the Graph error code (`activityLimitReached`) nor how long Microsoft asked us to wait.\n\n### Why one connector's problem kills a privacy scan\ncontent-service does not enumerate `FETCH_ERROR_RATE_LIMITED` in `mapFetchError`, so it falls to the `default` branch and is treated as **retryable** \u2014 5 in-process attempts with 1/2/4/8s backoff, then Nak'd for up to 3 JetStream deliveries. **15 calls to Graph per document**, with Graph's own `Retry-After` ignored. Retrying a throttle deepens it."
+        "content": "## Read this before trusting a flat graph\n\n### There is no 429 counter in the `graph_*` family\n`graph_requests_5xx` counts **only** 5xx. Microsoft Graph throttling arrives as **HTTP 429**, which is 4xx, and **nothing counts it**.\n\nA flat `graph_requests_5xx` does **not** mean Graph was healthy.\n\nThrottling is visible in exactly two places:\n1. `sharepoint_content_fetch_error_total{code=\"FETCH_ERROR_RATE_LIMITED\"}` — the panels above\n2. the connector logs — grep `\"graph DownloadDriveItem failed\"`, logged at WARN with an `http_status` field\n\n### The error body is thrown away\n`internal/graphhelper/download.go:101-106` drains and **discards** the Graph error body, and never reads `Retry-After`. So we can see *that* we were throttled but not the Graph error code (`activityLimitReached`) nor how long Microsoft asked us to wait.\n\n### Why one connector's problem kills a privacy scan\ncontent-service does not enumerate `FETCH_ERROR_RATE_LIMITED` in `mapFetchError`, so it falls to the `default` branch and is treated as **retryable** — 5 in-process attempts with 1/2/4/8s backoff, then Nak'd for up to 3 JetStream deliveries. **15 calls to Graph per document**, with Graph's own `Retry-After` ignored. Retrying a throttle deepens it."
       },
       "gridPos": {
         "h": 14,
