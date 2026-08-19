@@ -3601,6 +3601,1309 @@
         "x": 0,
         "y": 70
       },
+      "id": 3599,
+      "panels": [],
+      "title": "Scan growth by type over time — stacked, all clients combined",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Every client contributes one band per type, all clients for the same type share that type color and stack group - so same-colored bands stack together into one visual block per type. Legend hidden to avoid 49 duplicate rows (7 types x 7 clients); hover for per-client detail.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 90,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "gradientMode": "none",
+            "pointSize": 5,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "S3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "normal",
+                  "group": "S3"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SHAREPOINT"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "normal",
+                  "group": "SHAREPOINT"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CIFS"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "normal",
+                  "group": "CIFS"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ONEDRIVE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "normal",
+                  "group": "ONEDRIVE"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "BOX"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "normal",
+                  "group": "BOX"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "GOOGLEDRIVE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "normal",
+                  "group": "GOOGLEDRIVE"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SNOWFLAKE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "normal",
+                  "group": "SNOWFLAKE"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 71
+      },
+      "id": 3600,
+      "options": {
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^S3$\"})",
+          "legendFormat": "S3",
+          "refId": "S3_Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^S3$\"})",
+          "legendFormat": "S3",
+          "refId": "S3_Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^S3$\"})",
+          "legendFormat": "S3",
+          "refId": "S3_Integration"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs7yusoeq680e"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^S3$\"})",
+          "legendFormat": "S3",
+          "refId": "S3_IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs2d1k3se39ca"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^S3$\"})",
+          "legendFormat": "S3",
+          "refId": "S3_KrispyKreme"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfs2d5r9cp0qob"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^S3$\"})",
+          "legendFormat": "S3",
+          "refId": "S3_SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^S3$\"})",
+          "legendFormat": "S3",
+          "refId": "S3_UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^SHAREPOINT$\"})",
+          "legendFormat": "SHAREPOINT",
+          "refId": "SHAREPOINT_Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^SHAREPOINT$\"})",
+          "legendFormat": "SHAREPOINT",
+          "refId": "SHAREPOINT_Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^SHAREPOINT$\"})",
+          "legendFormat": "SHAREPOINT",
+          "refId": "SHAREPOINT_Integrati"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs7yusoeq680e"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^SHAREPOINT$\"})",
+          "legendFormat": "SHAREPOINT",
+          "refId": "SHAREPOINT_IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs2d1k3se39ca"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^SHAREPOINT$\"})",
+          "legendFormat": "SHAREPOINT",
+          "refId": "SHAREPOINT_KrispyKre"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfs2d5r9cp0qob"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^SHAREPOINT$\"})",
+          "legendFormat": "SHAREPOINT",
+          "refId": "SHAREPOINT_SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^SHAREPOINT$\"})",
+          "legendFormat": "SHAREPOINT",
+          "refId": "SHAREPOINT_UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^CIFS$\"})",
+          "legendFormat": "CIFS",
+          "refId": "CIFS_Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^CIFS$\"})",
+          "legendFormat": "CIFS",
+          "refId": "CIFS_Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^CIFS$\"})",
+          "legendFormat": "CIFS",
+          "refId": "CIFS_Integration"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs7yusoeq680e"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^CIFS$\"})",
+          "legendFormat": "CIFS",
+          "refId": "CIFS_IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs2d1k3se39ca"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^CIFS$\"})",
+          "legendFormat": "CIFS",
+          "refId": "CIFS_KrispyKreme"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfs2d5r9cp0qob"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^CIFS$\"})",
+          "legendFormat": "CIFS",
+          "refId": "CIFS_SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^CIFS$\"})",
+          "legendFormat": "CIFS",
+          "refId": "CIFS_UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^ONEDRIVE$\"})",
+          "legendFormat": "ONEDRIVE",
+          "refId": "ONEDRIVE_Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^ONEDRIVE$\"})",
+          "legendFormat": "ONEDRIVE",
+          "refId": "ONEDRIVE_Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^ONEDRIVE$\"})",
+          "legendFormat": "ONEDRIVE",
+          "refId": "ONEDRIVE_Integration"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs7yusoeq680e"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^ONEDRIVE$\"})",
+          "legendFormat": "ONEDRIVE",
+          "refId": "ONEDRIVE_IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs2d1k3se39ca"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^ONEDRIVE$\"})",
+          "legendFormat": "ONEDRIVE",
+          "refId": "ONEDRIVE_KrispyKreme"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfs2d5r9cp0qob"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^ONEDRIVE$\"})",
+          "legendFormat": "ONEDRIVE",
+          "refId": "ONEDRIVE_SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^ONEDRIVE$\"})",
+          "legendFormat": "ONEDRIVE",
+          "refId": "ONEDRIVE_UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^BOX$\"})",
+          "legendFormat": "BOX",
+          "refId": "BOX_Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^BOX$\"})",
+          "legendFormat": "BOX",
+          "refId": "BOX_Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^BOX$\"})",
+          "legendFormat": "BOX",
+          "refId": "BOX_Integration"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs7yusoeq680e"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^BOX$\"})",
+          "legendFormat": "BOX",
+          "refId": "BOX_IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs2d1k3se39ca"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^BOX$\"})",
+          "legendFormat": "BOX",
+          "refId": "BOX_KrispyKreme"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfs2d5r9cp0qob"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^BOX$\"})",
+          "legendFormat": "BOX",
+          "refId": "BOX_SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^BOX$\"})",
+          "legendFormat": "BOX",
+          "refId": "BOX_UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^GOOGLEDRIVE$\"})",
+          "legendFormat": "GOOGLEDRIVE",
+          "refId": "GOOGLEDRIVE_Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^GOOGLEDRIVE$\"})",
+          "legendFormat": "GOOGLEDRIVE",
+          "refId": "GOOGLEDRIVE_Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^GOOGLEDRIVE$\"})",
+          "legendFormat": "GOOGLEDRIVE",
+          "refId": "GOOGLEDRIVE_Integrat"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs7yusoeq680e"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^GOOGLEDRIVE$\"})",
+          "legendFormat": "GOOGLEDRIVE",
+          "refId": "GOOGLEDRIVE_IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs2d1k3se39ca"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^GOOGLEDRIVE$\"})",
+          "legendFormat": "GOOGLEDRIVE",
+          "refId": "GOOGLEDRIVE_KrispyKr"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfs2d5r9cp0qob"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^GOOGLEDRIVE$\"})",
+          "legendFormat": "GOOGLEDRIVE",
+          "refId": "GOOGLEDRIVE_SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^GOOGLEDRIVE$\"})",
+          "legendFormat": "GOOGLEDRIVE",
+          "refId": "GOOGLEDRIVE_UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^SNOWFLAKE$\"})",
+          "legendFormat": "SNOWFLAKE",
+          "refId": "SNOWFLAKE_Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^SNOWFLAKE$\"})",
+          "legendFormat": "SNOWFLAKE",
+          "refId": "SNOWFLAKE_Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^SNOWFLAKE$\"})",
+          "legendFormat": "SNOWFLAKE",
+          "refId": "SNOWFLAKE_Integratio"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs7yusoeq680e"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^SNOWFLAKE$\"})",
+          "legendFormat": "SNOWFLAKE",
+          "refId": "SNOWFLAKE_IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs2d1k3se39ca"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^SNOWFLAKE$\"})",
+          "legendFormat": "SNOWFLAKE",
+          "refId": "SNOWFLAKE_KrispyKrem"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfs2d5r9cp0qob"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^SNOWFLAKE$\"})",
+          "legendFormat": "SNOWFLAKE",
+          "refId": "SNOWFLAKE_SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "expr": "sum(nx_scan_files_total{connector_type=~\"(?i)^SNOWFLAKE$\"})",
+          "legendFormat": "SNOWFLAKE",
+          "refId": "SNOWFLAKE_UAT"
+        }
+      ],
+      "title": "Scan growth by type — files (all clients combined)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Every client contributes one band per type, all clients for the same type share that type color and stack group - so same-colored bands stack together into one visual block per type. Legend hidden to avoid 49 duplicate rows (7 types x 7 clients); hover for per-client detail.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "decbytes",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 90,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "gradientMode": "none",
+            "pointSize": 5,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "S3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "normal",
+                  "group": "S3"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SHAREPOINT"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "normal",
+                  "group": "SHAREPOINT"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CIFS"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "normal",
+                  "group": "CIFS"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ONEDRIVE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "normal",
+                  "group": "ONEDRIVE"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "BOX"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "normal",
+                  "group": "BOX"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "GOOGLEDRIVE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "normal",
+                  "group": "GOOGLEDRIVE"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SNOWFLAKE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "normal",
+                  "group": "SNOWFLAKE"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 71
+      },
+      "id": 3601,
+      "options": {
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^S3$\"})",
+          "legendFormat": "S3",
+          "refId": "S3_Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^S3$\"})",
+          "legendFormat": "S3",
+          "refId": "S3_Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^S3$\"})",
+          "legendFormat": "S3",
+          "refId": "S3_Integration"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs7yusoeq680e"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^S3$\"})",
+          "legendFormat": "S3",
+          "refId": "S3_IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs2d1k3se39ca"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^S3$\"})",
+          "legendFormat": "S3",
+          "refId": "S3_KrispyKreme"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfs2d5r9cp0qob"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^S3$\"})",
+          "legendFormat": "S3",
+          "refId": "S3_SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^S3$\"})",
+          "legendFormat": "S3",
+          "refId": "S3_UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^SHAREPOINT$\"})",
+          "legendFormat": "SHAREPOINT",
+          "refId": "SHAREPOINT_Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^SHAREPOINT$\"})",
+          "legendFormat": "SHAREPOINT",
+          "refId": "SHAREPOINT_Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^SHAREPOINT$\"})",
+          "legendFormat": "SHAREPOINT",
+          "refId": "SHAREPOINT_Integrati"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs7yusoeq680e"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^SHAREPOINT$\"})",
+          "legendFormat": "SHAREPOINT",
+          "refId": "SHAREPOINT_IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs2d1k3se39ca"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^SHAREPOINT$\"})",
+          "legendFormat": "SHAREPOINT",
+          "refId": "SHAREPOINT_KrispyKre"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfs2d5r9cp0qob"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^SHAREPOINT$\"})",
+          "legendFormat": "SHAREPOINT",
+          "refId": "SHAREPOINT_SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^SHAREPOINT$\"})",
+          "legendFormat": "SHAREPOINT",
+          "refId": "SHAREPOINT_UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^CIFS$\"})",
+          "legendFormat": "CIFS",
+          "refId": "CIFS_Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^CIFS$\"})",
+          "legendFormat": "CIFS",
+          "refId": "CIFS_Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^CIFS$\"})",
+          "legendFormat": "CIFS",
+          "refId": "CIFS_Integration"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs7yusoeq680e"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^CIFS$\"})",
+          "legendFormat": "CIFS",
+          "refId": "CIFS_IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs2d1k3se39ca"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^CIFS$\"})",
+          "legendFormat": "CIFS",
+          "refId": "CIFS_KrispyKreme"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfs2d5r9cp0qob"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^CIFS$\"})",
+          "legendFormat": "CIFS",
+          "refId": "CIFS_SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^CIFS$\"})",
+          "legendFormat": "CIFS",
+          "refId": "CIFS_UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^ONEDRIVE$\"})",
+          "legendFormat": "ONEDRIVE",
+          "refId": "ONEDRIVE_Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^ONEDRIVE$\"})",
+          "legendFormat": "ONEDRIVE",
+          "refId": "ONEDRIVE_Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^ONEDRIVE$\"})",
+          "legendFormat": "ONEDRIVE",
+          "refId": "ONEDRIVE_Integration"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs7yusoeq680e"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^ONEDRIVE$\"})",
+          "legendFormat": "ONEDRIVE",
+          "refId": "ONEDRIVE_IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs2d1k3se39ca"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^ONEDRIVE$\"})",
+          "legendFormat": "ONEDRIVE",
+          "refId": "ONEDRIVE_KrispyKreme"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfs2d5r9cp0qob"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^ONEDRIVE$\"})",
+          "legendFormat": "ONEDRIVE",
+          "refId": "ONEDRIVE_SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^ONEDRIVE$\"})",
+          "legendFormat": "ONEDRIVE",
+          "refId": "ONEDRIVE_UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^BOX$\"})",
+          "legendFormat": "BOX",
+          "refId": "BOX_Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^BOX$\"})",
+          "legendFormat": "BOX",
+          "refId": "BOX_Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^BOX$\"})",
+          "legendFormat": "BOX",
+          "refId": "BOX_Integration"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs7yusoeq680e"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^BOX$\"})",
+          "legendFormat": "BOX",
+          "refId": "BOX_IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs2d1k3se39ca"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^BOX$\"})",
+          "legendFormat": "BOX",
+          "refId": "BOX_KrispyKreme"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfs2d5r9cp0qob"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^BOX$\"})",
+          "legendFormat": "BOX",
+          "refId": "BOX_SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^BOX$\"})",
+          "legendFormat": "BOX",
+          "refId": "BOX_UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^GOOGLEDRIVE$\"})",
+          "legendFormat": "GOOGLEDRIVE",
+          "refId": "GOOGLEDRIVE_Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^GOOGLEDRIVE$\"})",
+          "legendFormat": "GOOGLEDRIVE",
+          "refId": "GOOGLEDRIVE_Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^GOOGLEDRIVE$\"})",
+          "legendFormat": "GOOGLEDRIVE",
+          "refId": "GOOGLEDRIVE_Integrat"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs7yusoeq680e"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^GOOGLEDRIVE$\"})",
+          "legendFormat": "GOOGLEDRIVE",
+          "refId": "GOOGLEDRIVE_IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs2d1k3se39ca"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^GOOGLEDRIVE$\"})",
+          "legendFormat": "GOOGLEDRIVE",
+          "refId": "GOOGLEDRIVE_KrispyKr"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfs2d5r9cp0qob"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^GOOGLEDRIVE$\"})",
+          "legendFormat": "GOOGLEDRIVE",
+          "refId": "GOOGLEDRIVE_SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^GOOGLEDRIVE$\"})",
+          "legendFormat": "GOOGLEDRIVE",
+          "refId": "GOOGLEDRIVE_UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^SNOWFLAKE$\"})",
+          "legendFormat": "SNOWFLAKE",
+          "refId": "SNOWFLAKE_Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^SNOWFLAKE$\"})",
+          "legendFormat": "SNOWFLAKE",
+          "refId": "SNOWFLAKE_Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^SNOWFLAKE$\"})",
+          "legendFormat": "SNOWFLAKE",
+          "refId": "SNOWFLAKE_Integratio"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs7yusoeq680e"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^SNOWFLAKE$\"})",
+          "legendFormat": "SNOWFLAKE",
+          "refId": "SNOWFLAKE_IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efs2d1k3se39ca"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^SNOWFLAKE$\"})",
+          "legendFormat": "SNOWFLAKE",
+          "refId": "SNOWFLAKE_KrispyKrem"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfs2d5r9cp0qob"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^SNOWFLAKE$\"})",
+          "legendFormat": "SNOWFLAKE",
+          "refId": "SNOWFLAKE_SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "expr": "sum(nx_scan_bytes_total{connector_type=~\"(?i)^SNOWFLAKE$\"})",
+          "legendFormat": "SNOWFLAKE",
+          "refId": "SNOWFLAKE_UAT"
+        }
+      ],
+      "title": "Scan growth by type — data (all clients combined)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 80
+      },
       "id": 340,
       "panels": [],
       "title": "Top active datasources — all clients",
@@ -3679,7 +4982,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 71
+        "y": 81
       },
       "id": 341,
       "options": {
@@ -3813,6 +5116,6 @@
   "timezone": "",
   "title": "NVisionX — Scan Activity & OpenSearch Overview (ALL EKS CLIENTS)",
   "uid": "nx-scan-activity-all-clients",
-  "version": 17,
+  "version": 19,
   "weekStart": ""
 }
