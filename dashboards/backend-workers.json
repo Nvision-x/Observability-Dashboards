@@ -1,80 +1,5 @@
 {
-  "uid": "archiver-metrics",
-  "title": "NVisionX — Archiver Service Metrics (All Clusters)",
-  "tags": [
-    "archiver",
-    "applications",
-    "pulsar",
-    "metrics"
-  ],
-  "timezone": "utc",
-  "schemaVersion": 39,
-  "version": 1,
-  "refresh": "30s",
-  "time": {
-    "from": "now-1h",
-    "to": "now"
-  },
-  "templating": {
-    "list": [
-      {
-        "current": {},
-        "hide": 0,
-        "includeAll": false,
-        "label": "Datasource",
-        "multi": false,
-        "name": "datasource",
-        "options": [],
-        "query": "prometheus",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "type": "datasource"
-      },
-      {
-        "name": "namespace",
-        "type": "query",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "query": "label_values(up{job=\"archiver\"}, namespace)",
-        "current": {
-          "selected": false,
-          "text": "default",
-          "value": "default"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0
-      },
-      {
-        "name": "pod",
-        "type": "query",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "query": "label_values(up{job=\"archiver\", namespace=\"$namespace\"}, pod)",
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
-        },
-        "hide": 0,
-        "includeAll": true,
-        "multi": true,
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1
-      }
-    ]
-  },
+  "__comment": "Combined per manager request: Archiver, Archiver v2, and Enricher are three distinct backend worker services (different metric prefixes: archiver_*, connector_ingestion_times_seconds_* + kube_* for v2, enricher_ingestion_times_seconds_* for enricher) - not duplicates, so panels were not deduplicated, just laid out under one $datasource client picker. A single dropdown that swaps between the three panel sets isn't supported by this Grafana version's dashboard JSON schema without a plugin (it only works when all options share one query shape with a variable inside it, which isn't the case here since each service uses entirely different metric names) - so each service is its own section instead, click a row title to collapse/expand it. Archiver's own 5 sub-rows and Archiver v2's own 2 sub-rows are preserved as-is (Grafana does not support nesting a 'row' panel inside another collapsed row's panel list, so they're laid out as siblings under a plain section-title divider rather than force-wrapped in an outer collapsed row). $namespace/$pod were renamed per-service (archiver_namespace/archiver_pod, archiverv2_namespace/archiverv2_pod) to avoid the three dashboards' variables colliding now that they share one JSON file. PRE-EXISTING BUG FIXED: apps-archiver.json's 59 panels were actually two overlapping drafts of the same dashboard concatenated without adjusting coordinates (e.g. its 'Overview' row's CPU Usage stat at x=6,y=1 sat directly on top of the 'Health Status' row's Pods Running stat at the same x=6,y=1 - visually broken in Grafana). Kept only the richer draft (Health Status / Resource Consumption / Pulsar Messaging / What's Not Working / Custom Application Metrics - 38 panels); dropped the other draft's 21 panels (Overview / gRPC Metrics / Pulsar Integration / Resource Usage / Application Metrics / Database Connections / Logs & Errors) as stale/superseded. NOTE: apps-archiver.json and apps-archiverv2.json both defined their namespace/pod variables against job=\"archiver\" (identical job name for both v1 and v2) - preserved as-is since the real job label wasn't ours to guess, but worth a second look.",
   "annotations": {
     "list": [
       {
@@ -90,7 +15,25 @@
       }
     ]
   },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
   "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "panels": [],
+      "title": "▸ ARCHIVER (v1)",
+      "type": "row"
+    },
     {
       "type": "row",
       "title": "🏥 Health Status - Am I Healthy, Sick, or Dead?",
@@ -99,8 +42,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 0
-      }
+        "y": 1
+      },
+      "id": 10000
     },
     {
       "title": "Overall Health Status",
@@ -109,7 +53,7 @@
         "h": 6,
         "w": 6,
         "x": 0,
-        "y": 1
+        "y": 2
       },
       "targets": [
         {
@@ -186,7 +130,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10001
     },
     {
       "title": "Pods Running",
@@ -195,11 +140,11 @@
         "h": 3,
         "w": 4,
         "x": 6,
-        "y": 1
+        "y": 2
       },
       "targets": [
         {
-          "expr": "count(up{job=\"default/applications-archiver\", namespace=\"$namespace\"} == 1)",
+          "expr": "count(up{job=\"default/applications-archiver\", namespace=\"$archiver_namespace\"} == 1)",
           "refId": "A"
         }
       ],
@@ -243,7 +188,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10002
     },
     {
       "title": "Desired Replicas",
@@ -252,11 +198,11 @@
         "h": 3,
         "w": 4,
         "x": 10,
-        "y": 1
+        "y": 2
       },
       "targets": [
         {
-          "expr": "max(kube_deployment_spec_replicas{namespace=\"$namespace\", deployment=~\".*archiver.*\"})",
+          "expr": "max(kube_deployment_spec_replicas{namespace=\"$archiver_namespace\", deployment=~\".*archiver.*\"})",
           "refId": "A"
         }
       ],
@@ -292,7 +238,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10003
     },
     {
       "title": "Pod Restarts (5m)",
@@ -301,11 +248,11 @@
         "h": 3,
         "w": 4,
         "x": 14,
-        "y": 1
+        "y": 2
       },
       "targets": [
         {
-          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\"applications-archiverv2.*\"}[5m]))",
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$archiver_namespace\", pod=~\"applications-archiverv2.*\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -349,7 +296,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10004
     },
     {
       "title": "Error Rate (5m)",
@@ -358,11 +306,11 @@
         "h": 3,
         "w": 6,
         "x": 18,
-        "y": 1
+        "y": 2
       },
       "targets": [
         {
-          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\", level=\"error\"}[5m]))",
+          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", level=\"error\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -406,7 +354,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10005
     },
     {
       "title": "Liveness Probe Status",
@@ -415,7 +364,7 @@
         "h": 3,
         "w": 4,
         "x": 6,
-        "y": 4
+        "y": 5
       },
       "targets": [
         {
@@ -473,7 +422,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10006
     },
     {
       "title": "Readiness Probe Status",
@@ -482,11 +432,11 @@
         "h": 3,
         "w": 4,
         "x": 10,
-        "y": 4
+        "y": 5
       },
       "targets": [
         {
-          "expr": "min(prober_probe_success{job=\"archiver\", namespace=\"$namespace\", probe_type=\"readiness\"})",
+          "expr": "min(prober_probe_success{job=\"archiver\", namespace=\"$archiver_namespace\", probe_type=\"readiness\"})",
           "refId": "A"
         }
       ],
@@ -540,7 +490,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10007
     },
     {
       "title": "Pod Ready Status",
@@ -549,11 +500,11 @@
         "h": 3,
         "w": 4,
         "x": 14,
-        "y": 4
+        "y": 5
       },
       "targets": [
         {
-          "expr": "sum(kube_pod_status_ready{namespace=\"$namespace\", pod=~\"applications-archiverv2.*\", condition=\"true\"})",
+          "expr": "sum(kube_pod_status_ready{namespace=\"$archiver_namespace\", pod=~\"applications-archiverv2.*\", condition=\"true\"})",
           "refId": "A"
         }
       ],
@@ -597,7 +548,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10008
     },
     {
       "title": "Uptime",
@@ -606,7 +558,7 @@
         "h": 3,
         "w": 6,
         "x": 18,
-        "y": 4
+        "y": 5
       },
       "targets": [
         {
@@ -650,7 +602,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10009
     },
     {
       "type": "row",
@@ -660,8 +613,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 7
-      }
+        "y": 8
+      },
+      "id": 10010
     },
     {
       "title": "CPU Usage vs Limits (Per Pod)",
@@ -670,21 +624,21 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 9
       },
       "targets": [
         {
-          "expr": "rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\"}[5m])",
+          "expr": "rate(container_cpu_usage_seconds_total{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\"}[5m])",
           "legendFormat": "{{pod}} - Current Usage",
           "refId": "A"
         },
         {
-          "expr": "kube_pod_container_resource_requests{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\", resource=\"cpu\"}",
+          "expr": "kube_pod_container_resource_requests{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"cpu\"}",
           "legendFormat": "{{pod}} - Request",
           "refId": "B"
         },
         {
-          "expr": "kube_pod_container_resource_limits{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\", resource=\"cpu\"}",
+          "expr": "kube_pod_container_resource_limits{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"cpu\"}",
           "legendFormat": "{{pod}} - Limit",
           "refId": "C"
         }
@@ -760,7 +714,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10011
     },
     {
       "title": "Memory Usage vs Limits (Per Pod)",
@@ -769,21 +724,21 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 9
       },
       "targets": [
         {
-          "expr": "container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\"}",
+          "expr": "container_memory_working_set_bytes{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\"}",
           "legendFormat": "{{pod}} - Current Usage",
           "refId": "A"
         },
         {
-          "expr": "kube_pod_container_resource_requests{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\", resource=\"memory\"}",
+          "expr": "kube_pod_container_resource_requests{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"memory\"}",
           "legendFormat": "{{pod}} - Request",
           "refId": "B"
         },
         {
-          "expr": "kube_pod_container_resource_limits{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\", resource=\"memory\"}",
+          "expr": "kube_pod_container_resource_limits{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"memory\"}",
           "legendFormat": "{{pod}} - Limit",
           "refId": "C"
         }
@@ -859,7 +814,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10012
     },
     {
       "title": "CPU Utilization % (Current/Limit)",
@@ -868,11 +824,11 @@
         "h": 6,
         "w": 6,
         "x": 0,
-        "y": 16
+        "y": 17
       },
       "targets": [
         {
-          "expr": "(sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\"}[5m])) / sum(kube_pod_container_resource_limits{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\", resource=\"cpu\"})) * 100",
+          "expr": "(sum(rate(container_cpu_usage_seconds_total{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\"}[5m])) / sum(kube_pod_container_resource_limits{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"cpu\"})) * 100",
           "refId": "A"
         }
       ],
@@ -912,7 +868,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10013
     },
     {
       "title": "Memory Utilization % (Current/Limit)",
@@ -921,11 +878,11 @@
         "h": 6,
         "w": 6,
         "x": 6,
-        "y": 16
+        "y": 17
       },
       "targets": [
         {
-          "expr": "(sum(container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\"}) / sum(kube_pod_container_resource_limits{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\", resource=\"memory\"})) * 100",
+          "expr": "(sum(container_memory_working_set_bytes{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\"}) / sum(kube_pod_container_resource_limits{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"memory\"})) * 100",
           "refId": "A"
         }
       ],
@@ -965,7 +922,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10014
     },
     {
       "title": "Network I/O",
@@ -974,16 +932,16 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 16
+        "y": 17
       },
       "targets": [
         {
-          "expr": "rate(container_network_receive_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])",
+          "expr": "rate(container_network_receive_bytes_total{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])",
           "legendFormat": "{{pod}} - RX",
           "refId": "A"
         },
         {
-          "expr": "rate(container_network_transmit_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])",
+          "expr": "rate(container_network_transmit_bytes_total{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])",
           "legendFormat": "{{pod}} - TX",
           "refId": "B"
         }
@@ -1002,7 +960,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10015
     },
     {
       "type": "row",
@@ -1012,8 +971,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 22
-      }
+        "y": 23
+      },
+      "id": 10016
     },
     {
       "title": "Pulsar Messages Received Rate",
@@ -1022,11 +982,11 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 23
+        "y": 24
       },
       "targets": [
         {
-          "expr": "sum(rate(pulsar_consumer_messages_received_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])) by (pod, topic)",
+          "expr": "sum(rate(pulsar_consumer_messages_received_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])) by (pod, topic)",
           "legendFormat": "{{pod}} - {{topic}}",
           "refId": "A"
         }
@@ -1048,7 +1008,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10017
     },
     {
       "title": "Pulsar Messages Processed Rate",
@@ -1057,11 +1018,11 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 23
+        "y": 24
       },
       "targets": [
         {
-          "expr": "sum(rate(pulsar_consumer_messages_processed_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])) by (pod, topic)",
+          "expr": "sum(rate(pulsar_consumer_messages_processed_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])) by (pod, topic)",
           "legendFormat": "{{pod}} - {{topic}}",
           "refId": "A"
         }
@@ -1083,7 +1044,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10018
     },
     {
       "title": "Pulsar Consumer Lag",
@@ -1092,11 +1054,11 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 23
+        "y": 24
       },
       "targets": [
         {
-          "expr": "pulsar_consumer_msg_backlog{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "expr": "pulsar_consumer_msg_backlog{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}",
           "legendFormat": "{{pod}} - {{topic}} - {{subscription}}",
           "refId": "A"
         }
@@ -1135,7 +1097,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10019
     },
     {
       "title": "Total Messages Received",
@@ -1144,11 +1107,11 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 31
+        "y": 32
       },
       "targets": [
         {
-          "expr": "sum(pulsar_consumer_messages_received_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"})",
+          "expr": "sum(pulsar_consumer_messages_received_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"})",
           "refId": "A"
         }
       ],
@@ -1184,7 +1147,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10020
     },
     {
       "title": "Total Messages Processed",
@@ -1193,11 +1157,11 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 31
+        "y": 32
       },
       "targets": [
         {
-          "expr": "sum(pulsar_consumer_messages_processed_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"})",
+          "expr": "sum(pulsar_consumer_messages_processed_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"})",
           "refId": "A"
         }
       ],
@@ -1233,7 +1197,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10021
     },
     {
       "title": "Message Processing Errors",
@@ -1242,11 +1207,11 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 31
+        "y": 32
       },
       "targets": [
         {
-          "expr": "sum(rate(pulsar_consumer_messages_failed_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "expr": "sum(rate(pulsar_consumer_messages_failed_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -1290,7 +1255,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10022
     },
     {
       "title": "Average Processing Time",
@@ -1299,11 +1265,11 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 31
+        "y": 32
       },
       "targets": [
         {
-          "expr": "avg(rate(pulsar_consumer_processing_duration_seconds_sum{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]) / rate(pulsar_consumer_processing_duration_seconds_count{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "expr": "avg(rate(pulsar_consumer_processing_duration_seconds_sum{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m]) / rate(pulsar_consumer_processing_duration_seconds_count{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -1347,7 +1313,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10023
     },
     {
       "type": "row",
@@ -1357,8 +1324,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
-      }
+        "y": 36
+      },
+      "id": 10024
     },
     {
       "title": "Error Log Rate by Level",
@@ -1367,21 +1335,21 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 36
+        "y": 37
       },
       "targets": [
         {
-          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\", level=\"error\"}[5m])) by (pod)",
+          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", level=\"error\"}[5m])) by (pod)",
           "legendFormat": "{{pod}} - ERROR",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\", level=\"warning\"}[5m])) by (pod)",
+          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", level=\"warning\"}[5m])) by (pod)",
           "legendFormat": "{{pod}} - WARNING",
           "refId": "B"
         },
         {
-          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\", level=\"critical\"}[5m])) by (pod)",
+          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", level=\"critical\"}[5m])) by (pod)",
           "legendFormat": "{{pod}} - CRITICAL",
           "refId": "C"
         }
@@ -1400,7 +1368,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10025
     },
     {
       "title": "HTTP Error Rates by Status Code",
@@ -1409,16 +1378,16 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 36
+        "y": 37
       },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\", status_code=~\"5..\"}[5m])) by (status_code, method)",
+          "expr": "sum(rate(http_requests_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", status_code=~\"5..\"}[5m])) by (status_code, method)",
           "legendFormat": "5xx - {{method}} {{status_code}}",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(http_requests_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\", status_code=~\"4..\"}[5m])) by (status_code, method)",
+          "expr": "sum(rate(http_requests_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", status_code=~\"4..\"}[5m])) by (status_code, method)",
           "legendFormat": "4xx - {{method}} {{status_code}}",
           "refId": "B"
         }
@@ -1437,7 +1406,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10026
     },
     {
       "title": "Failed Database Operations",
@@ -1446,11 +1416,11 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 44
+        "y": 45
       },
       "targets": [
         {
-          "expr": "sum(rate(db_operation_errors_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])) by (database, operation)",
+          "expr": "sum(rate(db_operation_errors_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])) by (database, operation)",
           "legendFormat": "{{database}} - {{operation}}",
           "refId": "A"
         }
@@ -1469,7 +1439,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10027
     },
     {
       "title": "gRPC Error Rate",
@@ -1478,11 +1449,11 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 44
+        "y": 45
       },
       "targets": [
         {
-          "expr": "sum(rate(grpc_server_handled_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\", grpc_code!=\"OK\"}[5m])) by (grpc_code, grpc_method)",
+          "expr": "sum(rate(grpc_server_handled_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", grpc_code!=\"OK\"}[5m])) by (grpc_code, grpc_method)",
           "legendFormat": "{{grpc_method}} - {{grpc_code}}",
           "refId": "A"
         }
@@ -1501,7 +1472,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10028
     },
     {
       "title": "Container Restarts Over Time",
@@ -1510,11 +1482,11 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 44
+        "y": 45
       },
       "targets": [
         {
-          "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\"applications-archiverv2.*\"}) by (pod)",
+          "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"$archiver_namespace\", pod=~\"applications-archiverv2.*\"}) by (pod)",
           "legendFormat": "{{pod}}",
           "refId": "A"
         }
@@ -1533,7 +1505,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10029
     },
     {
       "title": "Top Error Messages (Last 5m)",
@@ -1542,11 +1515,11 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 53
       },
       "targets": [
         {
-          "expr": "topk(10, sum by (message) (increase(log_messages_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\", level=\"error\"}[5m])))",
+          "expr": "topk(10, sum by (message) (increase(log_messages_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", level=\"error\"}[5m])))",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -1572,7 +1545,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10030
     },
     {
       "type": "row",
@@ -1582,8 +1556,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 60
-      }
+        "y": 61
+      },
+      "id": 10031
     },
     {
       "title": "Archiver-Specific Metrics",
@@ -1592,16 +1567,16 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 61
+        "y": 62
       },
       "targets": [
         {
-          "expr": "rate(archiver_files_archived_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])",
+          "expr": "rate(archiver_files_archived_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])",
           "legendFormat": "{{pod}} - Files Archived",
           "refId": "A"
         },
         {
-          "expr": "rate(archiver_bytes_archived_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])",
+          "expr": "rate(archiver_bytes_archived_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])",
           "legendFormat": "{{pod}} - Bytes Archived",
           "refId": "B"
         }
@@ -1650,7 +1625,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10032
     },
     {
       "title": "Archive Queue Depth",
@@ -1659,16 +1635,16 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 61
+        "y": 62
       },
       "targets": [
         {
-          "expr": "archiver_queue_depth{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "expr": "archiver_queue_depth{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}",
           "legendFormat": "{{pod}} - Queue Depth",
           "refId": "A"
         },
         {
-          "expr": "archiver_pending_operations{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "expr": "archiver_pending_operations{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}",
           "legendFormat": "{{pod}} - Pending Operations",
           "refId": "B"
         }
@@ -1687,7 +1663,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10033
     },
     {
       "title": "Archive Operation Latency (p50, p95, p99)",
@@ -1696,21 +1673,21 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 69
+        "y": 70
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(archiver_operation_duration_seconds_bucket{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])) by (le, pod, operation))",
+          "expr": "histogram_quantile(0.50, sum(rate(archiver_operation_duration_seconds_bucket{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])) by (le, pod, operation))",
           "legendFormat": "{{pod}} {{operation}} - p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(archiver_operation_duration_seconds_bucket{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])) by (le, pod, operation))",
+          "expr": "histogram_quantile(0.95, sum(rate(archiver_operation_duration_seconds_bucket{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])) by (le, pod, operation))",
           "legendFormat": "{{pod}} {{operation}} - p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(archiver_operation_duration_seconds_bucket{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])) by (le, pod, operation))",
+          "expr": "histogram_quantile(0.99, sum(rate(archiver_operation_duration_seconds_bucket{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])) by (le, pod, operation))",
           "legendFormat": "{{pod}} {{operation}} - p99",
           "refId": "C"
         }
@@ -1729,7 +1706,8 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10034
     },
     {
       "title": "Custom Business Metrics",
@@ -1738,16 +1716,16 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 69
+        "y": 70
       },
       "targets": [
         {
-          "expr": "rate(archiver_documents_processed_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])",
+          "expr": "rate(archiver_documents_processed_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])",
           "legendFormat": "{{pod}} - Documents Processed",
           "refId": "A"
         },
         {
-          "expr": "rate(archiver_documents_failed_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])",
+          "expr": "rate(archiver_documents_failed_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])",
           "legendFormat": "{{pod}} - Documents Failed",
           "refId": "B"
         }
@@ -1766,48 +1744,263 @@
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
+      },
+      "id": 10035
     },
     {
-      "type": "row",
-      "title": "Overview",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 77
-      }
+        "y": 79
+      },
+      "id": 2,
+      "panels": [],
+      "title": "▸ ARCHIVER V2",
+      "type": "row"
     },
     {
-      "title": "CPU Usage",
-      "type": "stat",
+      "collapsed": false,
       "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 1
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 80
       },
-      "targets": [
-        {
-          "expr": "sum( rate(container_cpu_usage_seconds_total{pod=~\"applications-archiverv2.*\", container!=\"POD\"}[5m]) )",
-          "refId": "A"
-        }
-      ],
+      "id": 20000,
+      "panels": [],
+      "title": "🏥 Health Status - Am I Healthy, Sick, or Dead?",
+      "type": "row"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "dark-red",
+                  "text": "DEAD"
+                },
+                "1": {
+                  "color": "dark-green",
+                  "text": "HEALTHY"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "color": "dark-red",
+                  "text": "DEAD"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 0.5
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 10,
+        "x": 0,
+        "y": 81
+      },
+      "id": 20001,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "values": false,
           "calcs": [
             "lastNotNull"
           ],
-          "fields": ""
+          "fields": "",
+          "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "text": {
+          "titleSize": 14,
+          "valueSize": 80
+        },
+        "textMode": "value",
+        "wideLayout": true
       },
+      "pluginVersion": "12.1.0",
+      "targets": [
+        {
+          "expr": "sum(kube_pod_status_ready{pod=~\"applications-archiverv2.*\", condition=\"true\"})",
+          "refId": "A"
+        }
+      ],
+      "title": "Overall Health Status",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "green",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 10,
+        "y": 81
+      },
+      "id": 20002,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.1.0",
+      "targets": [
+        {
+          "expr": "count(up{job=\"default/applications-archiver\", namespace=\"$archiverv2_namespace\"} == 1)",
+          "refId": "A"
+        }
+      ],
+      "title": "Pods Running",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "dark-red",
+                  "text": "FAILING"
+                },
+                "1": {
+                  "color": "dark-green",
+                  "text": "PASSING"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 14,
+        "y": 81
+      },
+      "id": 20003,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.1.0",
+      "targets": [
+        {
+          "expr": "sum(kube_pod_status_ready{pod=~\"applications-archiverv2.*\", condition=\"true\"})",
+          "refId": "A"
+        }
+      ],
+      "title": "Liveness Probe Status",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -1816,7 +2009,241 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
+              }
+            ]
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 81
+      },
+      "id": 20004,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.1.0",
+      "targets": [
+        {
+          "expr": "prometheus_sd_kubernetes_http_request_total{job=\"observability-kube-prometh-prometheus\", service=\"observability-kube-prometh-prometheus\"}",
+          "refId": "A"
+        }
+      ],
+      "title": "Request Rate",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 10,
+        "y": 84
+      },
+      "id": 20005,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.1.0",
+      "targets": [
+        {
+          "expr": "max(kube_deployment_spec_replicas{namespace=\"$archiverv2_namespace\", deployment=~\".*archiver.*\"})",
+          "refId": "A"
+        }
+      ],
+      "title": "Desired Replicas",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 14,
+        "y": 84
+      },
+      "id": 20006,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.1.0",
+      "targets": [
+        {
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$archiverv2_namespace\", pod=~\"applications-archiverv2.*\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Pod Restarts (5m)",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "yellow",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 300
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 18,
+        "y": 85
+      },
+      "id": 20007,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.1.0",
+      "targets": [
+        {
+          "expr": "avg(time() - process_start_time_seconds{namespace=\"default\", job=\"default/applications-archiverv2\"})",
+          "refId": "A"
+        }
+      ],
+      "title": "Uptime",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -1829,42 +2256,48 @@
             ]
           },
           "unit": "percent"
-        }
+        },
+        "overrides": []
       },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 87
+      },
+      "id": 20008,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.1.0",
+      "targets": [
+        {
+          "expr": "sum( rate(container_cpu_usage_seconds_total{pod=~\"applications-archiverv2.*\", container!=\"POD\"}[5m]) )",
+          "refId": "A"
+        }
+      ],
+      "title": "CPU Usage",
+      "type": "stat",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       }
     },
     {
-      "title": "Memory Usage",
-      "type": "stat",
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 12,
-        "y": 1
-      },
-      "targets": [
-        {
-          "expr": "sum(container_memory_working_set_bytes{pod=~\"applications-archiverv2.*\", container=\"archiverv2\", namespace=\"default\"}) / 1024 / 1024",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": ""
-        },
-        "textMode": "auto"
-      },
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -1873,7 +2306,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -1886,42 +2319,48 @@
             ]
           },
           "unit": "decmbytes"
-        }
+        },
+        "overrides": []
       },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 87
+      },
+      "id": 20009,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.1.0",
+      "targets": [
+        {
+          "expr": "sum(container_memory_working_set_bytes{pod=~\"applications-archiverv2.*\", container=\"archiverv2\", namespace=\"default\"}) / 1024 / 1024",
+          "refId": "A"
+        }
+      ],
+      "title": "Memory Usage",
+      "type": "stat",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       }
     },
     {
-      "title": "Request Rate",
-      "type": "stat",
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 1
-      },
-      "targets": [
-        {
-          "expr": "prometheus_sd_kubernetes_http_request_total{job=\"observability-kube-prometh-prometheus\", service=\"observability-kube-prometh-prometheus\"}",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": ""
-        },
-        "textMode": "auto"
-      },
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -1929,545 +2368,736 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "reqps"
-        }
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "type": "row",
-      "title": "gRPC Metrics (Port 50051)",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 5
-      }
-    },
-    {
-      "title": "gRPC Request Rate",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 6
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(grpc_server_handled_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])) by (grpc_method, grpc_code)",
-          "legendFormat": "{{grpc_method}} - {{grpc_code}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "fillOpacity": 10,
-            "showPoints": "never"
-          },
-          "unit": "reqps"
-        }
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "title": "gRPC Request Duration (p95)",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 6
-      },
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum(rate(grpc_server_handling_seconds_bucket{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])) by (grpc_method, le))",
-          "legendFormat": "{{grpc_method}} (p95)",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "fillOpacity": 10,
-            "showPoints": "never"
-          },
-          "unit": "s"
-        }
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "type": "row",
-      "title": "Pulsar Integration",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 14
-      }
-    },
-    {
-      "title": "Pulsar Messages Consumed",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 15
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(pulsar_consumer_msg_rate_out{namespace=\"$namespace\", subscription=~\".*archiver.*\"}[5m])) by (topic)",
-          "legendFormat": "{{topic}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "fillOpacity": 10,
-            "showPoints": "never"
-          },
-          "unit": "msg/s"
-        }
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "title": "Pulsar Consumer Lag",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 15
-      },
-      "targets": [
-        {
-          "expr": "sum(pulsar_subscription_back_log{namespace=\"$namespace\", subscription=~\".*archiver.*\"}) by (topic)",
-          "legendFormat": "{{topic}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "fillOpacity": 10,
-            "showPoints": "never"
-          },
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
+                "color": "red",
+                "value": 0
               },
               {
                 "color": "yellow",
-                "value": 1000
+                "value": 1
               },
-              {
-                "color": "red",
-                "value": 10000
-              }
-            ]
-          }
-        }
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "type": "row",
-      "title": "Resource Usage",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 23
-      }
-    },
-    {
-      "title": "CPU Usage Over Time",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 24
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\"}[5m])) by (pod) * 100",
-          "legendFormat": "{{pod}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "fillOpacity": 10,
-            "showPoints": "never"
-          },
-          "unit": "percent"
-        }
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "title": "Memory Usage Over Time",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 24
-      },
-      "targets": [
-        {
-          "expr": "sum(container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\"$pod\", container=\"archiver\"}) by (pod) / 1024 / 1024",
-          "legendFormat": "{{pod}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "fillOpacity": 10,
-            "showPoints": "never"
-          },
-          "unit": "decmbytes"
-        }
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "type": "row",
-      "title": "Application Metrics",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 32
-      }
-    },
-    {
-      "title": "Python Process Info",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 33
-      },
-      "targets": [
-        {
-          "expr": "process_resident_memory_bytes{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"} / 1024 / 1024",
-          "legendFormat": "{{pod}} - RSS Memory",
-          "refId": "A"
-        },
-        {
-          "expr": "process_virtual_memory_bytes{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"} / 1024 / 1024",
-          "legendFormat": "{{pod}} - Virtual Memory",
-          "refId": "B"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "fillOpacity": 10,
-            "showPoints": "never"
-          },
-          "unit": "decmbytes"
-        }
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "title": "HTTP Endpoint Metrics (Port 8001)",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 33
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(http_requests_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])) by (method, status_code)",
-          "legendFormat": "{{method}} - {{status_code}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "fillOpacity": 10,
-            "showPoints": "never"
-          },
-          "unit": "reqps"
-        }
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "type": "row",
-      "title": "Database Connections",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 41
-      }
-    },
-    {
-      "title": "PostgreSQL Connection Pool",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 42
-      },
-      "targets": [
-        {
-          "expr": "db_connection_pool_size{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\", database=\"postgresql\"}",
-          "legendFormat": "{{pod}} - Pool Size",
-          "refId": "A"
-        },
-        {
-          "expr": "db_connection_pool_active{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\", database=\"postgresql\"}",
-          "legendFormat": "{{pod}} - Active",
-          "refId": "B"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "fillOpacity": 10,
-            "showPoints": "never"
-          },
-          "unit": "short"
-        }
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "title": "OpenSearch Requests",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 42
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(opensearch_requests_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])) by (operation)",
-          "legendFormat": "{{operation}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "fillOpacity": 10,
-            "showPoints": "never"
-          },
-          "unit": "reqps"
-        }
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "title": "Valkey (Redis) Operations",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 42
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(redis_commands_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])) by (command)",
-          "legendFormat": "{{command}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "fillOpacity": 10,
-            "showPoints": "never"
-          },
-          "unit": "ops"
-        }
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "type": "row",
-      "title": "Logs & Errors",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 50
-      }
-    },
-    {
-      "title": "Error Rate",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 51
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\", level=\"error\"}[5m])) by (pod)",
-          "legendFormat": "{{pod}} - Errors",
-          "refId": "A"
-        },
-        {
-          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"$namespace\", pod=~\"$pod\", level=\"warning\"}[5m])) by (pod)",
-          "legendFormat": "{{pod}} - Warnings",
-          "refId": "B"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "fillOpacity": 10,
-            "showPoints": "never"
-          },
-          "unit": "short"
-        }
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "title": "Pod Restarts",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 51
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\".*archiverv2.*\"}[5m])) by (pod)",
-          "legendFormat": "{{pod}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "bars",
-            "lineInterpolation": "linear",
-            "fillOpacity": 50,
-            "showPoints": "never"
-          },
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
               {
                 "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
+                "value": 2
               }
             ]
-          }
-        }
+          },
+          "unit": "short"
+        },
+        "overrides": []
       },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 12,
+        "y": 87
+      },
+      "id": 20010,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.1.0",
+      "targets": [
+        {
+          "expr": "sum(kube_pod_status_ready{namespace=\"$archiverv2_namespace\", pod=~\"applications-archiverv2.*\", condition=\"true\"})",
+          "refId": "A"
+        }
+      ],
+      "title": "Pod Ready Status",
+      "type": "stat",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 91
+      },
+      "id": 20011,
+      "panels": [],
+      "title": "📊 Resource Consumption",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 92
+      },
+      "id": 20012,
+      "targets": [
+        {
+          "expr": "app_cpu_usage_percent{container='archiver',job='default/applications-archiver',namespace='default',pod=~'applications-archiver-.*'}",
+          "legendFormat": "CPU Usage",
+          "refId": "A"
+        }
+      ],
+      "title": "App CPU Usage (%)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 92
+      },
+      "id": 20013,
+      "targets": [
+        {
+          "expr": "app_ram_usage_bytes{container='archiver',job='default/applications-archiver',namespace='default',pod=~'applications-archiver-.*'}",
+          "legendFormat": "App RAM",
+          "refId": "A"
+        }
+      ],
+      "title": "App RAM Usage (bytes)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 92
+      },
+      "id": 20014,
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes{container='archiver',job='default/applications-archiver',namespace='default',pod=~'applications-archiver-.*'}",
+          "legendFormat": "Resident",
+          "refId": "A"
+        },
+        {
+          "expr": "process_virtual_memory_bytes{container='archiver',job='default/applications-archiver',namespace='default',pod=~'applications-archiver-.*'}",
+          "legendFormat": "Virtual",
+          "refId": "B"
+        }
+      ],
+      "title": "Process Memory Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 98
+      },
+      "id": 20015,
+      "targets": [
+        {
+          "expr": "rate(process_cpu_seconds_total{container='archiver',job='default/applications-archiver',namespace='default',pod=~'applications-archiver-.*'}[5m])",
+          "legendFormat": "CPU sec rate",
+          "refId": "A"
+        }
+      ],
+      "title": "Process CPU Usage (rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 98
+      },
+      "id": 20016,
+      "targets": [
+        {
+          "expr": "python_gc_objects_collected_total{container='archiver',job='default/applications-archiver',namespace='default',pod=~'applications-archiver-.*'}",
+          "legendFormat": "Gen {{generation}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Python GC Objects Collected",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 98
+      },
+      "id": 20017,
+      "targets": [
+        {
+          "expr": "rate(python_gc_collections_total{container='archiver',job='default/applications-archiver',namespace='default',pod=~'applications-archiver-.*'}[5m])",
+          "legendFormat": "Gen {{generation}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Python GC Collections (rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 104
+      },
+      "id": 20018,
+      "targets": [
+        {
+          "expr": "process_open_fds{container='archiver',job='default/applications-archiver',namespace='default',pod=~'applications-archiver-.*'}",
+          "legendFormat": "Open FDs",
+          "refId": "A"
+        },
+        {
+          "expr": "process_max_fds{container='archiver',job='default/applications-archiver',namespace='default',pod=~'applications-archiver-.*'}",
+          "legendFormat": "Max FDs",
+          "refId": "B"
+        }
+      ],
+      "title": "File Descriptors",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 104
+      },
+      "id": 20019,
+      "targets": [
+        {
+          "expr": "rate(app_items_processed_total{container='archiver',job='default/applications-archiver',namespace='default',pod=~'applications-archiver-.*'}[5m])",
+          "legendFormat": "Items processed",
+          "refId": "A"
+        }
+      ],
+      "title": "Items Processed per Second",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 104
+      },
+      "id": 20020,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(connector_ingestion_times_seconds_bucket{container='archiver',job='default/applications-archiver',namespace='default',pod=~'applications-archiver-.*'}[5m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(connector_ingestion_times_seconds_sum[5m]) / rate(connector_ingestion_times_seconds_count{container='archiver',job='default/applications-archiver',namespace='default',pod=~'applications-archiver-.*'}[5m])",
+          "legendFormat": "avg",
+          "refId": "B"
+        }
+      ],
+      "title": "Connector Ingestion Time (avg / p95)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 111
+      },
+      "id": 3,
+      "panels": [],
+      "title": "▸ ENRICHER",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 112
+      },
+      "id": 30000,
+      "targets": [
+        {
+          "expr": "app_cpu_usage_percent{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}",
+          "legendFormat": "CPU Usage",
+          "refId": "A"
+        }
+      ],
+      "title": "App CPU Usage (%)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 112
+      },
+      "id": 30001,
+      "targets": [
+        {
+          "expr": "app_ram_usage_bytes{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}",
+          "legendFormat": "App RAM",
+          "refId": "A"
+        }
+      ],
+      "title": "App RAM Usage (bytes)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 112
+      },
+      "id": 30002,
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}",
+          "legendFormat": "Resident",
+          "refId": "A"
+        },
+        {
+          "expr": "process_virtual_memory_bytes{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}",
+          "legendFormat": "Virtual",
+          "refId": "B"
+        }
+      ],
+      "title": "Process Memory Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 118
+      },
+      "id": 30003,
+      "targets": [
+        {
+          "expr": "rate(process_cpu_seconds_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])",
+          "legendFormat": "CPU sec rate",
+          "refId": "A"
+        }
+      ],
+      "title": "Process CPU Usage (rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 118
+      },
+      "id": 30004,
+      "targets": [
+        {
+          "expr": "python_gc_objects_collected_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}",
+          "legendFormat": "Gen {{generation}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Python GC Objects Collected",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 118
+      },
+      "id": 30005,
+      "targets": [
+        {
+          "expr": "rate(python_gc_collections_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])",
+          "legendFormat": "Gen {{generation}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Python GC Collections (rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 124
+      },
+      "id": 30006,
+      "targets": [
+        {
+          "expr": "process_open_fds{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}",
+          "legendFormat": "Open FDs",
+          "refId": "A"
+        },
+        {
+          "expr": "process_max_fds{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}",
+          "legendFormat": "Max FDs",
+          "refId": "B"
+        }
+      ],
+      "title": "File Descriptors",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 124
+      },
+      "id": 30007,
+      "targets": [
+        {
+          "expr": "rate(app_items_processed_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])",
+          "legendFormat": "Items processed",
+          "refId": "A"
+        }
+      ],
+      "title": "Items Processed per Second",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 124
+      },
+      "id": 30008,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(enricher_ingestion_times_seconds_bucket{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(enricher_ingestion_times_seconds_sum[5m]) / rate(enricher_ingestion_times_seconds_count{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])",
+          "legendFormat": "avg",
+          "refId": "B"
+        }
+      ],
+      "title": "enricher Ingestion Time (avg / p95)",
+      "type": "timeseries"
     }
-  ]
+  ],
+  "preload": false,
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": [
+    "all-clusters",
+    "applications",
+    "archiver",
+    "backend-workers",
+    "git-sync",
+    "metrics",
+    "nx-applications",
+    "performance",
+    "pulsar",
+    "sla"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "name": "archiver_namespace",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(up{job=\"archiver\"}, namespace)",
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0
+      },
+      {
+        "name": "archiver_pod",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(up{job=\"archiver\", namespace=\"$archiver_namespace\"}, pod)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1
+      },
+      {
+        "current": {
+          "text": "default",
+          "value": "default"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "includeAll": false,
+        "name": "archiverv2_namespace",
+        "options": [],
+        "query": "label_values(up{job=\"archiver\"}, namespace)",
+        "refresh": 1,
+        "regex": "",
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "includeAll": true,
+        "multi": true,
+        "name": "archiverv2_pod",
+        "options": [],
+        "query": "label_values(up{job=\"archiver\", namespace=\"$archiverv2_namespace\"}, pod)",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timezone": "utc",
+  "title": "NVisionX — Backend Workers: Archiver / Archiver v2 / Enricher (All Clusters)",
+  "uid": "nx-backend-workers",
+  "version": 1,
+  "weekStart": ""
 }
