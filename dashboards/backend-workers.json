@@ -1,5 +1,5 @@
 {
-  "__comment": "Combined per manager request: Archiver, Archiver v2, and Enricher are three distinct backend worker services (different metric prefixes: archiver_*, connector_ingestion_times_seconds_* + kube_* for v2, enricher_ingestion_times_seconds_* for enricher) - not duplicates, so panels were not deduplicated, just laid out under one $datasource client picker. A single dropdown that swaps between the three panel sets isn't supported by this Grafana version's dashboard JSON schema without a plugin (it only works when all options share one query shape with a variable inside it, which isn't the case here since each service uses entirely different metric names) - so each service is its own section instead, click a row title to collapse/expand it. Archiver's own 5 sub-rows and Archiver v2's own 2 sub-rows are preserved as-is (Grafana does not support nesting a 'row' panel inside another collapsed row's panel list, so they're laid out as siblings under a plain section-title divider rather than force-wrapped in an outer collapsed row). $namespace/$pod were renamed per-service (archiver_namespace/archiver_pod, archiverv2_namespace/archiverv2_pod) to avoid the three dashboards' variables colliding now that they share one JSON file. PRE-EXISTING BUG FIXED: apps-archiver.json's 59 panels were actually two overlapping drafts of the same dashboard concatenated without adjusting coordinates (e.g. its 'Overview' row's CPU Usage stat at x=6,y=1 sat directly on top of the 'Health Status' row's Pods Running stat at the same x=6,y=1 - visually broken in Grafana). Kept only the richer draft (Health Status / Resource Consumption / Pulsar Messaging / What's Not Working / Custom Application Metrics - 38 panels); dropped the other draft's 21 panels (Overview / gRPC Metrics / Pulsar Integration / Resource Usage / Application Metrics / Database Connections / Logs & Errors) as stale/superseded. NOTE: apps-archiver.json and apps-archiverv2.json both defined their namespace/pod variables against job=\"archiver\" (identical job name for both v1 and v2) - preserved as-is since the real job label wasn't ours to guess, but worth a second look.",
+  "__comment": "Combined per manager request: Archiver, Archiver v2, and Enricher are three distinct backend worker services (different metric prefixes: archiver_*, connector_ingestion_times_seconds_* + kube_* for v2, enricher_ingestion_times_seconds_* for enricher) - not duplicates, so panels were not deduplicated, just laid out under one $datasource client picker. A single dropdown that swaps between the three panel sets isn't supported by this Grafana version's dashboard JSON schema without a plugin (it only works when all options share one query shape with a variable inside it, which isn't the case here since each service uses entirely different metric names) - so each service is its own section instead, click a row title to collapse/expand it. Archiver's own 5 sub-rows and Archiver v2's own 2 sub-rows are preserved as-is (Grafana does not support nesting a 'row' panel inside another collapsed row's panel list, so they're laid out as siblings under a plain section-title divider rather than force-wrapped in an outer collapsed row). $namespace/$pod were renamed per-service (archiver_namespace/archiver_pod, archiverv2_namespace/archiverv2_pod) to avoid the three dashboards' variables colliding now that they share one JSON file. PRE-EXISTING BUG FIXED: apps-archiver.json's 59 panels were actually two overlapping drafts of the same dashboard concatenated without adjusting coordinates (e.g. its 'Overview' row's CPU Usage stat at x=6,y=1 sat directly on top of the 'Health Status' row's Pods Running stat at the same x=6,y=1 - visually broken in Grafana). Kept only the richer draft (Health Status / Resource Consumption / Pulsar Messaging / What's Not Working / Custom Application Metrics - 38 panels); dropped the other draft's 21 panels (Overview / gRPC Metrics / Pulsar Integration / Resource Usage / Application Metrics / Database Connections / Logs & Errors) as stale/superseded. NOTE: apps-archiver.json and apps-archiverv2.json both defined their namespace/pod variables against job=\"archiver\" (identical job name for both v1 and v2) - preserved as-is since the real job label wasn't ours to guess, but worth a second look. UPDATE: namespace is always \"default\" here, so archiver_namespace/archiverv2_namespace were removed and inlined as the literal string \"default\" everywhere they were used (44 + 7 occurrences); the three pod pickers were relabeled to plain service names (Archiver / Archiver v2 / Enricher) and a new enricher_pod picker was added (Enricher never had one - its panels were hardcoded to pod=~\"applications-enricher-.*\", now wired to $enricher_pod).",
   "annotations": {
     "list": [
       {
@@ -58,7 +58,7 @@
       },
       "targets": [
         {
-          "expr": "sum(kube_pod_status_ready{namespace=\"default\", pod=~\"applications-enricher-.*\", condition=\"true\"})",
+          "expr": "sum(kube_pod_status_ready{namespace=\"default\", pod=~\"$enricher_pod\", condition=\"true\"})",
           "refId": "A"
         }
       ],
@@ -249,7 +249,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"default\", pod=~\"applications-enricher-.*\"}[5m]))",
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"default\", pod=~\"$enricher_pod\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -307,7 +307,7 @@
       },
       "targets": [
         {
-          "expr": "sum(kube_pod_status_ready{namespace=\"default\", pod=~\"applications-enricher-.*\", condition=\"true\"})",
+          "expr": "sum(kube_pod_status_ready{namespace=\"default\", pod=~\"$enricher_pod\", condition=\"true\"})",
           "refId": "A"
         }
       ],
@@ -375,7 +375,7 @@
       },
       "targets": [
         {
-          "expr": "sum(kube_pod_status_ready{namespace=\"default\", pod=~\"applications-enricher-.*\", condition=\"true\"})",
+          "expr": "sum(kube_pod_status_ready{namespace=\"default\", pod=~\"$enricher_pod\", condition=\"true\"})",
           "refId": "A"
         }
       ],
@@ -496,7 +496,7 @@
       "id": 30000,
       "targets": [
         {
-          "expr": "app_cpu_usage_percent{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}",
+          "expr": "app_cpu_usage_percent{container='enricher',job='default/applications-enricher',namespace='default',pod=~'$enricher_pod'}",
           "legendFormat": "CPU Usage",
           "refId": "A"
         }
@@ -525,7 +525,7 @@
       "id": 30001,
       "targets": [
         {
-          "expr": "app_ram_usage_bytes{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}",
+          "expr": "app_ram_usage_bytes{container='enricher',job='default/applications-enricher',namespace='default',pod=~'$enricher_pod'}",
           "legendFormat": "App RAM",
           "refId": "A"
         }
@@ -553,12 +553,12 @@
       "id": 30002,
       "targets": [
         {
-          "expr": "process_resident_memory_bytes{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}",
+          "expr": "process_resident_memory_bytes{container='enricher',job='default/applications-enricher',namespace='default',pod=~'$enricher_pod'}",
           "legendFormat": "Resident",
           "refId": "A"
         },
         {
-          "expr": "process_virtual_memory_bytes{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}",
+          "expr": "process_virtual_memory_bytes{container='enricher',job='default/applications-enricher',namespace='default',pod=~'$enricher_pod'}",
           "legendFormat": "Virtual",
           "refId": "B"
         }
@@ -586,7 +586,7 @@
       "id": 30003,
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])",
+          "expr": "rate(process_cpu_seconds_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'$enricher_pod'}[5m])",
           "legendFormat": "CPU sec rate",
           "refId": "A"
         }
@@ -612,7 +612,7 @@
       "id": 30004,
       "targets": [
         {
-          "expr": "python_gc_objects_collected_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}",
+          "expr": "python_gc_objects_collected_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'$enricher_pod'}",
           "legendFormat": "Gen {{generation}}",
           "refId": "A"
         }
@@ -638,7 +638,7 @@
       "id": 30005,
       "targets": [
         {
-          "expr": "rate(python_gc_collections_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])",
+          "expr": "rate(python_gc_collections_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'$enricher_pod'}[5m])",
           "legendFormat": "Gen {{generation}}",
           "refId": "A"
         }
@@ -666,12 +666,12 @@
       "id": 30006,
       "targets": [
         {
-          "expr": "process_open_fds{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}",
+          "expr": "process_open_fds{container='enricher',job='default/applications-enricher',namespace='default',pod=~'$enricher_pod'}",
           "legendFormat": "Open FDs",
           "refId": "A"
         },
         {
-          "expr": "process_max_fds{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}",
+          "expr": "process_max_fds{container='enricher',job='default/applications-enricher',namespace='default',pod=~'$enricher_pod'}",
           "legendFormat": "Max FDs",
           "refId": "B"
         }
@@ -699,7 +699,7 @@
       "id": 30007,
       "targets": [
         {
-          "expr": "rate(app_items_processed_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])",
+          "expr": "rate(app_items_processed_total{container='enricher',job='default/applications-enricher',namespace='default',pod=~'$enricher_pod'}[5m])",
           "legendFormat": "Items processed",
           "refId": "A"
         }
@@ -727,12 +727,12 @@
       "id": 30008,
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(enricher_ingestion_times_seconds_bucket{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(enricher_ingestion_times_seconds_bucket{container='enricher',job='default/applications-enricher',namespace='default',pod=~'$enricher_pod'}[5m])) by (le))",
           "legendFormat": "p95",
           "refId": "A"
         },
         {
-          "expr": "rate(enricher_ingestion_times_seconds_sum[5m]) / rate(enricher_ingestion_times_seconds_count{container='enricher',job='default/applications-enricher',namespace='default',pod=~'applications-enricher-.*'}[5m])",
+          "expr": "rate(enricher_ingestion_times_seconds_sum[5m]) / rate(enricher_ingestion_times_seconds_count{container='enricher',job='default/applications-enricher',namespace='default',pod=~'$enricher_pod'}[5m])",
           "legendFormat": "avg",
           "refId": "B"
         }
@@ -863,7 +863,7 @@
       },
       "targets": [
         {
-          "expr": "count(up{job=\"default/applications-archiver\", namespace=\"$archiver_namespace\"} == 1)",
+          "expr": "count(up{job=\"default/applications-archiver\", namespace=\"default\"} == 1)",
           "refId": "A"
         }
       ],
@@ -921,7 +921,7 @@
       },
       "targets": [
         {
-          "expr": "max(kube_deployment_spec_replicas{namespace=\"$archiver_namespace\", deployment=~\".*archiver.*\"})",
+          "expr": "max(kube_deployment_spec_replicas{namespace=\"default\", deployment=~\".*archiver.*\"})",
           "refId": "A"
         }
       ],
@@ -971,7 +971,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$archiver_namespace\", pod=~\"applications-archiver-.*\"}[5m]))",
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"default\", pod=~\"applications-archiver-.*\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -1029,7 +1029,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", level=\"error\"}[5m]))",
+          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\", level=\"error\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -1155,7 +1155,7 @@
       },
       "targets": [
         {
-          "expr": "min(prober_probe_success{job=\"archiver\", namespace=\"$archiver_namespace\", probe_type=\"readiness\"})",
+          "expr": "min(prober_probe_success{job=\"archiver\", namespace=\"default\", probe_type=\"readiness\"})",
           "refId": "A"
         }
       ],
@@ -1223,7 +1223,7 @@
       },
       "targets": [
         {
-          "expr": "sum(kube_pod_status_ready{namespace=\"$archiver_namespace\", pod=~\"applications-archiver-.*\", condition=\"true\"})",
+          "expr": "sum(kube_pod_status_ready{namespace=\"default\", pod=~\"applications-archiver-.*\", condition=\"true\"})",
           "refId": "A"
         }
       ],
@@ -1347,17 +1347,17 @@
       },
       "targets": [
         {
-          "expr": "rate(container_cpu_usage_seconds_total{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\"}[5m])",
+          "expr": "rate(container_cpu_usage_seconds_total{namespace=\"default\", pod=~\"$archiver_pod\", container=\"archiver\"}[5m])",
           "legendFormat": "{{pod}} - Current Usage",
           "refId": "A"
         },
         {
-          "expr": "kube_pod_container_resource_requests{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"cpu\"}",
+          "expr": "kube_pod_container_resource_requests{namespace=\"default\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"cpu\"}",
           "legendFormat": "{{pod}} - Request",
           "refId": "B"
         },
         {
-          "expr": "kube_pod_container_resource_limits{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"cpu\"}",
+          "expr": "kube_pod_container_resource_limits{namespace=\"default\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"cpu\"}",
           "legendFormat": "{{pod}} - Limit",
           "refId": "C"
         }
@@ -1447,17 +1447,17 @@
       },
       "targets": [
         {
-          "expr": "container_memory_working_set_bytes{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\"}",
+          "expr": "container_memory_working_set_bytes{namespace=\"default\", pod=~\"$archiver_pod\", container=\"archiver\"}",
           "legendFormat": "{{pod}} - Current Usage",
           "refId": "A"
         },
         {
-          "expr": "kube_pod_container_resource_requests{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"memory\"}",
+          "expr": "kube_pod_container_resource_requests{namespace=\"default\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"memory\"}",
           "legendFormat": "{{pod}} - Request",
           "refId": "B"
         },
         {
-          "expr": "kube_pod_container_resource_limits{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"memory\"}",
+          "expr": "kube_pod_container_resource_limits{namespace=\"default\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"memory\"}",
           "legendFormat": "{{pod}} - Limit",
           "refId": "C"
         }
@@ -1547,7 +1547,7 @@
       },
       "targets": [
         {
-          "expr": "(sum(rate(container_cpu_usage_seconds_total{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\"}[5m])) / sum(kube_pod_container_resource_limits{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"cpu\"})) * 100",
+          "expr": "(sum(rate(container_cpu_usage_seconds_total{namespace=\"default\", pod=~\"$archiver_pod\", container=\"archiver\"}[5m])) / sum(kube_pod_container_resource_limits{namespace=\"default\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"cpu\"})) * 100",
           "refId": "A"
         }
       ],
@@ -1601,7 +1601,7 @@
       },
       "targets": [
         {
-          "expr": "(sum(container_memory_working_set_bytes{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\"}) / sum(kube_pod_container_resource_limits{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"memory\"})) * 100",
+          "expr": "(sum(container_memory_working_set_bytes{namespace=\"default\", pod=~\"$archiver_pod\", container=\"archiver\"}) / sum(kube_pod_container_resource_limits{namespace=\"default\", pod=~\"$archiver_pod\", container=\"archiver\", resource=\"memory\"})) * 100",
           "refId": "A"
         }
       ],
@@ -1655,12 +1655,12 @@
       },
       "targets": [
         {
-          "expr": "rate(container_network_receive_bytes_total{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])",
+          "expr": "rate(container_network_receive_bytes_total{namespace=\"default\", pod=~\"$archiver_pod\"}[5m])",
           "legendFormat": "{{pod}} - RX",
           "refId": "A"
         },
         {
-          "expr": "rate(container_network_transmit_bytes_total{namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])",
+          "expr": "rate(container_network_transmit_bytes_total{namespace=\"default\", pod=~\"$archiver_pod\"}[5m])",
           "legendFormat": "{{pod}} - TX",
           "refId": "B"
         }
@@ -1705,7 +1705,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(pulsar_consumer_messages_received_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])) by (pod, topic)",
+          "expr": "sum(rate(pulsar_consumer_messages_received_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}[5m])) by (pod, topic)",
           "legendFormat": "{{pod}} - {{topic}}",
           "refId": "A"
         }
@@ -1741,7 +1741,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(pulsar_consumer_messages_processed_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])) by (pod, topic)",
+          "expr": "sum(rate(pulsar_consumer_messages_processed_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}[5m])) by (pod, topic)",
           "legendFormat": "{{pod}} - {{topic}}",
           "refId": "A"
         }
@@ -1777,7 +1777,7 @@
       },
       "targets": [
         {
-          "expr": "pulsar_consumer_msg_backlog{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}",
+          "expr": "pulsar_consumer_msg_backlog{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}",
           "legendFormat": "{{pod}} - {{topic}} - {{subscription}}",
           "refId": "A"
         }
@@ -1830,7 +1830,7 @@
       },
       "targets": [
         {
-          "expr": "sum(pulsar_consumer_messages_received_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"})",
+          "expr": "sum(pulsar_consumer_messages_received_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"})",
           "refId": "A"
         }
       ],
@@ -1880,7 +1880,7 @@
       },
       "targets": [
         {
-          "expr": "sum(pulsar_consumer_messages_processed_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"})",
+          "expr": "sum(pulsar_consumer_messages_processed_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"})",
           "refId": "A"
         }
       ],
@@ -1930,7 +1930,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(pulsar_consumer_messages_failed_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m]))",
+          "expr": "sum(rate(pulsar_consumer_messages_failed_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -1988,7 +1988,7 @@
       },
       "targets": [
         {
-          "expr": "avg(rate(pulsar_consumer_processing_duration_seconds_sum{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m]) / rate(pulsar_consumer_processing_duration_seconds_count{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m]))",
+          "expr": "avg(rate(pulsar_consumer_processing_duration_seconds_sum{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}[5m]) / rate(pulsar_consumer_processing_duration_seconds_count{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -2058,17 +2058,17 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", level=\"error\"}[5m])) by (pod)",
+          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\", level=\"error\"}[5m])) by (pod)",
           "legendFormat": "{{pod}} - ERROR",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", level=\"warning\"}[5m])) by (pod)",
+          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\", level=\"warning\"}[5m])) by (pod)",
           "legendFormat": "{{pod}} - WARNING",
           "refId": "B"
         },
         {
-          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", level=\"critical\"}[5m])) by (pod)",
+          "expr": "sum(rate(log_messages_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\", level=\"critical\"}[5m])) by (pod)",
           "legendFormat": "{{pod}} - CRITICAL",
           "refId": "C"
         }
@@ -2101,12 +2101,12 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", status_code=~\"5..\"}[5m])) by (status_code, method)",
+          "expr": "sum(rate(http_requests_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\", status_code=~\"5..\"}[5m])) by (status_code, method)",
           "legendFormat": "5xx - {{method}} {{status_code}}",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(http_requests_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", status_code=~\"4..\"}[5m])) by (status_code, method)",
+          "expr": "sum(rate(http_requests_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\", status_code=~\"4..\"}[5m])) by (status_code, method)",
           "legendFormat": "4xx - {{method}} {{status_code}}",
           "refId": "B"
         }
@@ -2139,7 +2139,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(db_operation_errors_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])) by (database, operation)",
+          "expr": "sum(rate(db_operation_errors_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}[5m])) by (database, operation)",
           "legendFormat": "{{database}} - {{operation}}",
           "refId": "A"
         }
@@ -2172,7 +2172,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(grpc_server_handled_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", grpc_code!=\"OK\"}[5m])) by (grpc_code, grpc_method)",
+          "expr": "sum(rate(grpc_server_handled_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\", grpc_code!=\"OK\"}[5m])) by (grpc_code, grpc_method)",
           "legendFormat": "{{grpc_method}} - {{grpc_code}}",
           "refId": "A"
         }
@@ -2205,7 +2205,7 @@
       },
       "targets": [
         {
-          "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"$archiver_namespace\", pod=~\"applications-archiver-.*\"}) by (pod)",
+          "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"default\", pod=~\"applications-archiver-.*\"}) by (pod)",
           "legendFormat": "{{pod}}",
           "refId": "A"
         }
@@ -2238,7 +2238,7 @@
       },
       "targets": [
         {
-          "expr": "topk(10, sum by (message) (increase(log_messages_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\", level=\"error\"}[5m])))",
+          "expr": "topk(10, sum by (message) (increase(log_messages_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\", level=\"error\"}[5m])))",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -2290,12 +2290,12 @@
       },
       "targets": [
         {
-          "expr": "rate(archiver_files_archived_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])",
+          "expr": "rate(archiver_files_archived_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}[5m])",
           "legendFormat": "{{pod}} - Files Archived",
           "refId": "A"
         },
         {
-          "expr": "rate(archiver_bytes_archived_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])",
+          "expr": "rate(archiver_bytes_archived_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}[5m])",
           "legendFormat": "{{pod}} - Bytes Archived",
           "refId": "B"
         }
@@ -2358,12 +2358,12 @@
       },
       "targets": [
         {
-          "expr": "archiver_queue_depth{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}",
+          "expr": "archiver_queue_depth{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}",
           "legendFormat": "{{pod}} - Queue Depth",
           "refId": "A"
         },
         {
-          "expr": "archiver_pending_operations{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}",
+          "expr": "archiver_pending_operations{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}",
           "legendFormat": "{{pod}} - Pending Operations",
           "refId": "B"
         }
@@ -2396,17 +2396,17 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(archiver_operation_duration_seconds_bucket{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])) by (le, pod, operation))",
+          "expr": "histogram_quantile(0.50, sum(rate(archiver_operation_duration_seconds_bucket{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}[5m])) by (le, pod, operation))",
           "legendFormat": "{{pod}} {{operation}} - p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(archiver_operation_duration_seconds_bucket{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])) by (le, pod, operation))",
+          "expr": "histogram_quantile(0.95, sum(rate(archiver_operation_duration_seconds_bucket{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}[5m])) by (le, pod, operation))",
           "legendFormat": "{{pod}} {{operation}} - p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(archiver_operation_duration_seconds_bucket{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])) by (le, pod, operation))",
+          "expr": "histogram_quantile(0.99, sum(rate(archiver_operation_duration_seconds_bucket{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}[5m])) by (le, pod, operation))",
           "legendFormat": "{{pod}} {{operation}} - p99",
           "refId": "C"
         }
@@ -2439,12 +2439,12 @@
       },
       "targets": [
         {
-          "expr": "rate(archiver_documents_processed_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])",
+          "expr": "rate(archiver_documents_processed_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}[5m])",
           "legendFormat": "{{pod}} - Documents Processed",
           "refId": "A"
         },
         {
-          "expr": "rate(archiver_documents_failed_total{job=\"archiver\", namespace=\"$archiver_namespace\", pod=~\"$archiver_pod\"}[5m])",
+          "expr": "rate(archiver_documents_failed_total{job=\"archiver\", namespace=\"default\", pod=~\"$archiver_pod\"}[5m])",
           "legendFormat": "{{pod}} - Documents Failed",
           "refId": "B"
         }
@@ -2635,7 +2635,7 @@
       "pluginVersion": "12.1.0",
       "targets": [
         {
-          "expr": "count(up{job=\"default/applications-archiverv2\", namespace=\"$archiverv2_namespace\"} == 1)",
+          "expr": "count(up{job=\"default/applications-archiverv2\", namespace=\"default\"} == 1)",
           "refId": "A"
         }
       ],
@@ -2818,7 +2818,7 @@
       "pluginVersion": "12.1.0",
       "targets": [
         {
-          "expr": "max(kube_deployment_spec_replicas{namespace=\"$archiverv2_namespace\", deployment=~\".*archiver.*\"})",
+          "expr": "max(kube_deployment_spec_replicas{namespace=\"default\", deployment=~\".*archiver.*\"})",
           "refId": "A"
         }
       ],
@@ -2881,7 +2881,7 @@
       "pluginVersion": "12.1.0",
       "targets": [
         {
-          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$archiverv2_namespace\", pod=~\"applications-archiverv2.*\"}[5m]))",
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"default\", pod=~\"applications-archiverv2.*\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -3131,7 +3131,7 @@
       "pluginVersion": "12.1.0",
       "targets": [
         {
-          "expr": "sum(kube_pod_status_ready{namespace=\"$archiverv2_namespace\", pod=~\"applications-archiverv2.*\", condition=\"true\"})",
+          "expr": "sum(kube_pod_status_ready{namespace=\"default\", pod=~\"applications-archiverv2.*\", condition=\"true\"})",
           "refId": "A"
         }
       ],
@@ -3453,34 +3453,13 @@
         "type": "datasource"
       },
       {
-        "name": "archiver_namespace",
-        "type": "query",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "query": "label_values(up{job=\"default/applications-archiver\"}, namespace)",
-        "current": {
-          "selected": false,
-          "text": "default",
-          "value": "default"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0
-      },
-      {
         "name": "archiver_pod",
         "type": "query",
         "datasource": {
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "query": "label_values(up{job=\"default/applications-archiver\", namespace=\"$archiver_namespace\"}, pod)",
+        "query": "label_values(up{job=\"default/applications-archiver\", namespace=\"default\"}, pod)",
         "current": {
           "selected": true,
           "text": "All",
@@ -3492,24 +3471,8 @@
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 1
-      },
-      {
-        "current": {
-          "text": "default",
-          "value": "default"
-        },
-        "includeAll": false,
-        "name": "archiverv2_namespace",
-        "options": [
-          {
-            "text": "default",
-            "value": "default",
-            "selected": true
-          }
-        ],
-        "query": "default",
-        "type": "custom"
+        "sort": 1,
+        "label": "Archiver"
       },
       {
         "current": {
@@ -3524,11 +3487,33 @@
         "multi": true,
         "name": "archiverv2_pod",
         "options": [],
-        "query": "label_values(up{job=\"default/applications-archiverv2\", namespace=\"$archiverv2_namespace\"}, pod)",
+        "query": "label_values(up{job=\"default/applications-archiverv2\", namespace=\"default\"}, pod)",
         "refresh": 1,
         "regex": "",
         "sort": 1,
-        "type": "query"
+        "type": "query",
+        "label": "Archiver v2"
+      },
+      {
+        "name": "enricher_pod",
+        "label": "Enricher",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(up{job=\"default/applications-enricher\", namespace=\"default\"}, pod)",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1
       }
     ]
   },
