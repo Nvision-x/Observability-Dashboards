@@ -564,26 +564,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 24,
         "x": 0,
-        "y": 9
-      }
-    },
-    {
-      "type": "text",
-      "title": "The model, and how to read it",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "### Why this row exists\n\nA Point-In-Time lease dies on the **maximum gap between searches**, not the average.\n\n`startConsumers` spawns `PIPELINE_CONSUMERS` goroutines, each holding a **full page** of documents while feeding a shared `requests` channel drained by a shared fetcher pool. They start together and progress at identical rates, so they **finish together** — and between waves no slice unblocks and **no search is issued**.\n\n```\nMAX SEARCH GAP = PIPELINE_CONSUMERS x ES_SEARCH_BATCH_SIZE / throughput\n```\n\nOn 2026-07-27 the scan was at ~13 docs/s when it died: 32 x 1000 / 13 = **2462s = 41 min**, against a 30-minute lease.\n\n**Evidence for the synchronisation:** slices 1, 2 and 3 all 404'd within **209 ms** of each other. Staggered consumers fail minutes apart.\n\n### Set the variables before trusting the numbers\n`$consumers` — values.yaml says 16, the configmap renders 4, measured in-flight was 32. **Confirm it.**\n`$batch` — `ES_SEARCH_BATCH_SIZE`, default 1000.\n`$lease` — `ES_PIT_KEEP_ALIVE` in seconds, default 30m = 1800.\n\nDropping `$batch` to 250 buys 4x margin with no code change. The real fix is a keep-alive refresher, which decouples the lease from progress entirely — privacy's reader does not have one."
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
         "y": 9
       }
     },
@@ -2256,56 +2238,11 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 16,
         "x": 8,
         "y": 76
       },
       "id": 27
-    },
-    {
-      "type": "text",
-      "title": "Instrumentation gaps",
-      "transparent": false,
-      "options": {
-        "mode": "markdown",
-        "content": "\n**Missing instrumentation** (ordered by value)\n\n1. **No client-side `GetContent` latency histogram.** Privacy never times its own\ncalls. Server-side metrics cannot see requests that were never picked up or whose\nreply was lost — exactly the failure modes that matter. ~5 lines at\n`main.go:372`.\n2. **No timeout at all.** `CONTENT_GET_TIMEOUT` unset ⇒ wait forever. Setting it\nto `300s` converts a silent wedge into a counted error.\n3. **`job_id` on every metric** = unbounded cardinality; a series per scan, forever.\n4. **`pii_doc_duration_seconds` buckets max at 10s** on a 120s path.\n5. **No PIT metrics at all** in privacy's reader — the extractor got\n`extractor_pit_renewals_total`; privacy's copy has nothing.\n6. **Channel saturation invisible** — the actual stall point (`hits` and\n`requests` channels) has no gauge.\n"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 76
-      },
-      "id": 28
-    },
-    {
-      "type": "row",
-      "title": "Reference",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 84
-      },
-      "panels": [],
-      "id": 29
-    },
-    {
-      "type": "text",
-      "title": "How to read this dashboard",
-      "transparent": false,
-      "options": {
-        "mode": "markdown",
-        "content": "\n### What this dashboard is for\n\nDetecting a **silent stall** in a PII scan, and localising whether the cause is content-service,\nthe analysis stage, or the OpenSearch writer.\n\n### Why the top-left panel is the whole story\n\nPrivacy dispatches fetches to content-service and waits for replies. `sent - received` is therefore\nthe number of documents currently in flight. That difference is the only visible trace of a failure\nmode that is otherwise completely silent:\n\n- the fetch worker is **not** crashed — it is blocked on a channel receive\n- liveness probes pass, the pod is `Running 1/1`\n- **no log line is emitted**, because nothing has happened\n- **no counter moves**, because every privacy counter fires on an *event*, and a wait is not an event\n\nThe only observable is that a difference between two counters has stopped changing.\n\n### Two failure shapes\n\n**Some workers wedge** — throughput decays as workers are lost one by one. Pagination continues,\nslower, with longer gaps between OpenSearch searches. Eventually a gap exceeds the 30-minute PIT\nkeep-alive, the lease dies, and the next search returns 404 on every slice at once. *This is what the\nproduction ticket shows.*\n\n**All workers wedge** — total silence. No search is ever issued again, so nothing errors. The handler\nnever returns and the job sits in `running` forever. That maps to the long-standing \"jobs stuck\nrunning\" issue rather than to a 404.\n\nEither way the PIT expiry is not the disease — it is the moment the system finally notices it has\nbeen degrading for half an hour.\n\n### Reading order\n\n1. **Fetches in flight** — flat line at the worker count means wedged.\n2. **Funnel rates** — which of the four lines diverges tells you which stage is the constraint.\n3. **Errors by kind** — remember this understates reality until a timeout is configured.\n4. **Scrape up/down** — confirm you were actually collecting data before believing any panel above.\n5. Cross-check the **content-service dashboard's restart panel** over the same window.\n\n### Correlating with content-service\n\nThe two dashboards share a time range. The confirming pattern is:\n\n```\nprivacy: sent-minus-received goes flat\n   AND\ncontent-service: restart, OOM, or shutdown_pending_failed spike at the same moment\n```\n\nIf privacy stalls while content-service looks completely healthy, the loss is in NATS transport\nrather than content-service load — a different fix, and worth knowing early.\n"
-      },
-      "gridPos": {
-        "h": 13,
-        "w": 24,
-        "x": 0,
-        "y": 85
-      },
-      "id": 30
     },
     {
       "id": 600,
@@ -2317,7 +2254,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 98
+        "y": 84
       }
     },
     {
@@ -2383,7 +2320,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 99
+        "y": 85
       }
     },
     {
@@ -2427,7 +2364,7 @@
         "h": 8,
         "w": 12,
         "x": 6,
-        "y": 99
+        "y": 85
       }
     },
     {
@@ -2493,7 +2430,7 @@
         "h": 8,
         "w": 6,
         "x": 18,
-        "y": 99
+        "y": 85
       }
     },
     {
@@ -2537,7 +2474,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 107
+        "y": 93
       }
     }
   ]
