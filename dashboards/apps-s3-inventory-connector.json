@@ -19,6 +19,86 @@
   },
   "panels": [
     {
+      "id": 100,
+      "type": "row",
+      "title": "🟢 Live Data — HTTP Self-Telemetry (confirmed working via kubectl exec .../metrics)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": 101,
+      "type": "timeseries",
+      "title": "HTTP Request Rate by Route",
+      "description": "Real data from this pod today. Only /health and /metrics routes exist right now - this is the connector being scraped/probed, not business traffic.",
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "sum by (route) (rate(http_requests_total[5m]))",
+          "legendFormat": "{{route}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
+      "id": 102,
+      "type": "timeseries",
+      "title": "HTTP Request Duration p95 by Route",
+      "description": "Real data from this pod today.",
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{route}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
+      "id": 103,
+      "type": "row",
+      "title": "🔴 Business Metrics (s3_parquet_* — NOT currently emitted by this build of the connector; see dashboard note)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      }
+    },
+    {
       "id": 1,
       "title": "Files Processed Total",
       "type": "stat",
@@ -26,7 +106,7 @@
         "h": 6,
         "w": 6,
         "x": 0,
-        "y": 0
+        "y": 8
       },
       "targets": [
         {
@@ -54,7 +134,7 @@
         "h": 6,
         "w": 6,
         "x": 6,
-        "y": 0
+        "y": 8
       },
       "targets": [
         {
@@ -82,7 +162,7 @@
         "h": 6,
         "w": 6,
         "x": 12,
-        "y": 0
+        "y": 8
       },
       "targets": [
         {
@@ -110,7 +190,7 @@
         "h": 6,
         "w": 6,
         "x": 18,
-        "y": 0
+        "y": 8
       },
       "targets": [
         {
@@ -138,7 +218,7 @@
         "h": 6,
         "w": 6,
         "x": 0,
-        "y": 6
+        "y": 14
       },
       "targets": [
         {
@@ -166,7 +246,7 @@
         "h": 6,
         "w": 6,
         "x": 6,
-        "y": 6
+        "y": 14
       },
       "targets": [
         {
@@ -194,7 +274,7 @@
         "h": 6,
         "w": 6,
         "x": 12,
-        "y": 6
+        "y": 14
       },
       "targets": [
         {
@@ -222,7 +302,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 12
+        "y": 20
       },
       "targets": [
         {
@@ -249,7 +329,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 12
+        "y": 20
       },
       "targets": [
         {
@@ -276,7 +356,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 26
       },
       "targets": [
         {
@@ -303,7 +383,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 18
+        "y": 26
       },
       "targets": [
         {
@@ -330,7 +410,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 24
+        "y": 32
       },
       "targets": [
         {
@@ -362,7 +442,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 24
+        "y": 32
       },
       "targets": [
         {
@@ -409,5 +489,6 @@
         "type": "datasource"
       }
     ]
-  }
+  },
+  "__comment": "CONFIRMED via kubectl exec into applications-s3-connector-go-content-* (image alpine-main-2026.07.22-92) and curling its own /metrics on port 8080: this connector currently emits ZERO s3_parquet_* business metrics - only generic OpenTelemetry HTTP-server telemetry for its own /health and /metrics routes (http_requests_total, http_request_duration_seconds, http_response_size_bytes). target_info confirms this is the right pod (service_name=\"unknown_service:s3-inventory-connector\"), so this is not a wrong-pod or wrong-job issue - the business metrics this dashboard queries were never instrumented into the current build. Kept all 13 original s3_parquet_* panels as-is (query fixes here wouldn't help - the metrics don't exist under any name) and added a Live Data section at the top showing what the pod actually exposes today, so the dashboard isn't 100% \"No data\". Whoever owns s3-connector-go-content needs to add business-metric instrumentation before the panels below the red divider will ever show anything."
 }
