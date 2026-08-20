@@ -2453,6 +2453,125 @@
       ],
       "title": "Cache path outcome — TEXT (extract) vs RAW (fetch)",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 155
+      },
+      "id": 900,
+      "panels": [],
+      "title": "Document types & processing warnings (xberg)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Successfully extracted documents per second, split by the extractor's detected mime_type (normalized — charset and other parameters stripped; \"unknown\" means the extractor reported no type at all, or reported one that couldn't be parsed). Counted once per successful parse, so with EXTRACTION_COMPARISON_ENABLED on, a sampled document contributes to both a kreuzberg and a tika series — this panel does not split by parser_kind; see the Tika comparison dashboard for that breakdown. A shift in mix (e.g. \"unknown\" growing) usually means upstream content-type detection regressed, not that the corpus changed. Pair with Extraction outcomes: this panel only counts successes, so a mime_type dropping out here while overall extraction volume holds steady points at that type failing outright, not disappearing from the corpus.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 156
+      },
+      "id": 901,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (mime_type) (rate(content_extraction_files_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "{{mime_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Documents processed by mime type",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "kreuzberg's processing_warnings count, summed per document and split by detected mime_type. A clean document contributes nothing to this series by design — zero warnings is not recorded as a zero-value point (see content-service's RecordExtractionDocument) — so any nonzero rate here means some fraction of documents of that type are hitting a non-fatal issue during extraction (e.g. an OCR fallback), not merely that documents are being processed. tika has no equivalent field and always contributes 0, so during a comparison-sampled window this series under-represents total document volume relative to Documents processed by mime type for tika's share — that gap is expected, not missing data. Rising warnings against a flat Documents processed count for the same mime_type is a quality signal on documents you're already handling at the same rate, worth checking against kreuzberg's own logs before assuming a code regression.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 156
+      },
+      "id": 902,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (mime_type) (rate(content_extraction_warnings_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "{{mime_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Processing warnings by mime type",
+      "type": "timeseries"
     }
   ],
   "refresh": "30s",
@@ -2585,6 +2704,6 @@
   "timezone": "browser",
   "title": "Content Service",
   "uid": "content-service",
-  "version": 6,
+  "version": 7,
   "weekStart": ""
 }
