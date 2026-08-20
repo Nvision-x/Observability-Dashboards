@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Content Service operational dashboard — saturation, latency breakdown, failure modes. Drives load-test reads.",
+  "description": "Content Service operational dashboard \u2014 saturation, latency breakdown, failure modes. Drives load-test reads.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -33,7 +33,7 @@
       },
       "id": 100,
       "panels": [],
-      "title": "Saturation — load-test row",
+      "title": "Saturation \u2014 load-test row",
       "type": "row"
     },
     {
@@ -41,7 +41,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Concurrent in-flight Fetch calls. Compare against GLOBAL_MAX_INFLIGHT (default 200) — when this gauge plateaus there, requests start queueing in the semaphore and queue time shows up as request latency. Previously every pod's \"global\" line (and every pod's \"stream\" line) rendered under the same identical legend text with no sum() — now split into a true aggregate per scope plus one line per pod (filterable via the Pod variable). GLOBAL_MAX_INFLIGHT (200) is a per-pod cap enforced independently by each pod's own semaphore, so compare the red line against the per-pod lines, not the total-across-pods line.",
+      "description": "- Concurrent in-flight Fetch calls, per pod.\n- GLOBAL_MAX_INFLIGHT (default 200) is a per-pod cap \u2014 compare the red line to the per-pod lines, not the total-across-pods line.\n- Plateaued at the cap \u2192 requests are queueing in the semaphore; queue time shows up as request latency.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -93,7 +93,7 @@
             "uid": "${datasource}"
           },
           "expr": "sum(content_inflight_global{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"})",
-          "legendFormat": "global — total (all pods)",
+          "legendFormat": "global \u2014 total (all pods)",
           "refId": "A"
         },
         {
@@ -102,7 +102,7 @@
             "uid": "${datasource}"
           },
           "expr": "content_inflight_global{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}",
-          "legendFormat": "global — {{pod}}",
+          "legendFormat": "global \u2014 {{pod}}",
           "refId": "B"
         },
         {
@@ -111,7 +111,7 @@
             "uid": "${datasource}"
           },
           "expr": "sum(content_inflight_stream{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"})",
-          "legendFormat": "stream — total (all pods)",
+          "legendFormat": "stream \u2014 total (all pods)",
           "refId": "C"
         },
         {
@@ -120,7 +120,7 @@
             "uid": "${datasource}"
           },
           "expr": "content_inflight_stream{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}",
-          "legendFormat": "stream — {{pod}}",
+          "legendFormat": "stream \u2014 {{pod}}",
           "refId": "D"
         }
       ],
@@ -132,7 +132,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Request rate split by status. Sustained 'failed' is the load-test failure signal.\n\nRead this as per-DELIVERY outcomes, not per-document outcomes: a message that is Nak'd and redelivered counts once as a failure AND once as a completion if the retry succeeds (service.go, RecordRequest call site — documented in-code as intentional, true for every Nak path). This is why status lines often move together rather than partitioning total traffic cleanly: a burst of redeliveries raises delivery volume across every status at once, including `completed`, because each redelivery is counted as its own event. For the failure-reason breakdown of just the NATS lane, see 'NATS retry outcomes' below.",
+      "description": "- Request rate by status. Sustained `failed` is the load-test failure signal.\n- Counted per DELIVERY, not per document \u2014 a Nak'd + redelivered message counts as a failure AND (if the retry succeeds) a completion.\n- A burst of redeliveries raises every status line at once, including `completed` \u2014 don't read that as broad recovery.\n- For NATS-only failure reasons, see \"NATS retry outcomes\" below.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -185,7 +185,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "End-to-end Fetch latency p50/p95/p99 across all api+content_type combinations.",
+      "description": "- End-to-end Fetch latency p50/p95/p99, across all api + content_type combinations.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -253,7 +253,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Rejections by reason. Non-zero = you've hit a concurrency ceiling. reason ∈ {global_full, stream_full, shutdown}.",
+      "description": "- Rejections by reason. Non-zero \u2192 hit a concurrency ceiling.\n- reason \u2208 {global_full, stream_full, shutdown}.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -316,7 +316,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Cache S3 op latency p99 split by op. Separates S3 latency from CS code paths. NOTE: since 2026-08 the read path serves hits HEAD-only (bodies are delivered via CacheLocation), so expect `get` volume to be a small fraction of `head` — a rising get rate means the extraction path or sha safety-net is doing the reading.",
+      "description": "- Cache S3 op latency p99, by bucket/op \u2014 isolates S3 latency from content-service code paths.\n- Since 2026-08, hits are served HEAD-only (bodies delivered via CacheLocation) \u2014 `get` volume should be a small fraction of `head`.\n- Rising `get` rate \u2192 the extraction path or the sha256 safety-net is doing real reads.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -366,7 +366,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "NATS fetch outcomes per second by connector. outcome ∈ {completed, pickup_timeout, worker_timeout, canceled, error}. The *_timeout series are the load-test failure signals — non-zero pickup_timeout means connectors aren't keeping up; worker_timeout means they're stuck mid-fetch.",
+      "description": "- NATS fetch outcomes/sec by connector. outcome \u2208 {completed, pickup_timeout, worker_timeout, canceled, error}.\n- Non-zero `pickup_timeout` \u2192 connectors aren't keeping up.\n- Non-zero `worker_timeout` \u2192 connectors are stuck mid-fetch.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -419,7 +419,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Three separate ratios, not one \"cache hit rate\" — each answers a different question about a different code path, and they don't move together:\n\n'Direct RAW request — served from cache' is the plain RAW-request path (phase=fetch): a drop here means RAW callers ('See Content', etc.) are increasingly hitting documents the cache doesn't have yet.\n\n'TEXT request — raw already cached' is the raw-bucket check a TEXT request makes BEFORE it can extract (phase=extract): low/red here means TEXT requests are frequently paying for a connector round-trip before extraction can even start — the expensive path. This used to be silently merged into the RAW-request number above; it is now split out (NXS-2586 follow-up).\n\n'TEXT request — text already cached' is whether the FINAL extracted output was already sitting in the text bucket — the cheapest possible outcome, no raw check or extraction needed at all.\n\nA tile showing no data means that path has had zero traffic in the selected window, not a ratio of zero — e.g. an environment with no TEXT requests will never show either TEXT tile. A tile pinned red on a workload that fetches unique documents once (a first-pass bulk scan) is expected — there is nothing to hit yet, not a caching problem; a red tile on a workload that re-requests the same documents IS worth investigating.",
+      "description": "- Three independent ratios \u2014 they answer different questions and don't move together.\n- \"Direct RAW request \u2014 served from cache\": plain RAW-request hits (phase=fetch). Drop \u2192 RAW callers increasingly missing.\n- \"TEXT request \u2014 raw already cached\": the raw-bucket check before extraction (phase=extract). Low/red \u2192 TEXT requests are paying for a connector round-trip before extraction even starts.\n- \"TEXT request \u2014 text already cached\": final extracted output already cached \u2014 the cheapest possible outcome.\n- No data on a tile = zero traffic on that path, not a ratio of zero.\n- Red tile on unique-document traffic (first-pass scan) is expected. Red tile on repeat-document traffic is worth investigating.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -476,7 +476,7 @@
             "uid": "${datasource}"
           },
           "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"fetch\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"fetch\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"fetch\"}[5m])))",
-          "legendFormat": "Direct RAW request — served from cache",
+          "legendFormat": "Direct RAW request \u2014 served from cache",
           "refId": "A"
         },
         {
@@ -485,7 +485,7 @@
             "uid": "${datasource}"
           },
           "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"extract\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"extract\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"extract\"}[5m])))",
-          "legendFormat": "TEXT request — raw already cached",
+          "legendFormat": "TEXT request \u2014 raw already cached",
           "refId": "B"
         },
         {
@@ -494,11 +494,11 @@
             "uid": "${datasource}"
           },
           "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"text\", phase=\"extract\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"text\", phase=\"extract\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"text\", phase=\"extract\"}[5m])))",
-          "legendFormat": "TEXT request — text already cached",
+          "legendFormat": "TEXT request \u2014 text already cached",
           "refId": "C"
         }
       ],
-      "title": "Cache hit ratio — by request type",
+      "title": "Cache hit ratio \u2014 by request type",
       "type": "stat"
     },
     {
@@ -506,7 +506,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Text extraction p99 latency split by outcome. Only `success`/`failed` populate the histogram (skipped/breaker_open record duration=0 by design).",
+      "description": "- Text extraction p99 latency by outcome.\n- Only `success`/`failed` populate the histogram \u2014 `skipped`/`breaker_open` record duration=0 by design.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -544,7 +544,7 @@
             "uid": "${datasource}"
           },
           "expr": "histogram_quantile(0.99, sum by (le, status) (rate(content_extraction_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m])))",
-          "legendFormat": "p99 — {{status}}",
+          "legendFormat": "p99 \u2014 {{status}}",
           "refId": "A"
         }
       ],
@@ -556,7 +556,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "NATS two-phase reply latency p99 by connector. pickup = publish → PROCESSING signal; worker = PROCESSING → COMPLETED reply. PICKUP_TIMEOUT and WORKER_TIMEOUT both default to 30s — sustained p99 climbing toward those thresholds means timeouts are imminent. Pairs with the NATS-outcomes panel.",
+      "description": "- NATS two-phase reply latency p99 by connector. pickup = publish\u2192PROCESSING; worker = PROCESSING\u2192COMPLETED.\n- Both timeouts default to 30s \u2014 p99 climbing toward 30s means timeouts are imminent.\n- Pair with \"NATS fetch outcomes\" for the actual timeout counts.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -594,7 +594,7 @@
             "uid": "${datasource}"
           },
           "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_pickup_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m])))",
-          "legendFormat": "pickup p99 — {{connector}}",
+          "legendFormat": "pickup p99 \u2014 {{connector}}",
           "refId": "A"
         },
         {
@@ -603,7 +603,7 @@
             "uid": "${datasource}"
           },
           "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_worker_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m])))",
-          "legendFormat": "worker p99 — {{connector}}",
+          "legendFormat": "worker p99 \u2014 {{connector}}",
           "refId": "B"
         }
       ],
@@ -615,7 +615,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Cache write latency p50/p95/p99, SUCCESS ONLY — canceled/timeout are definitionally long-running (they measure how long a transfer ran before being abandoned) and poison the percentiles when mixed in; they have their own panel. Duration covers stream ingest + S3 upload but EXCLUDES the sha256 stamp copy (own panel). Buckets are explicit since 2026-08 — percentiles before that deploy were interpolation artifacts of the SDK's millisecond-scale defaults and read ~10-1000x too high.",
+      "description": "- Cache write latency p50/p95/p99, success only \u2014 canceled/timeout are long-running by definition and would poison the percentiles (see their own panel).\n- Covers stream ingest + S3 upload; excludes the sha256 stamp copy (own panel).\n- Buckets explicit since 2026-08 \u2014 earlier data read 10\u20131000x too high (SDK's ms-scale default buckets).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -675,7 +675,7 @@
           "refId": "C"
         }
       ],
-      "title": "Cache write latency — success only (p50/p95/p99)",
+      "title": "Cache write latency \u2014 success only (p50/p95/p99)",
       "type": "timeseries"
     },
     {
@@ -696,7 +696,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "DISABLED — pending future work. content-service does not emit `content_extraction_circuit_state`, so this panel shows No data; there is no extractor circuit breaker in the service today. It is a placeholder for the breaker described in the xberg backpressure work, and will start working unchanged if that lands (the breaker is specified to report 0=closed / 1=half-open / 2=open, which the value mappings below already expect).\n\nUntil then, use `Retry attempts by error code` for extractor-saturation signal: a rising SERVICE_UNAVAILABLE line is xberg answering 503, which is what a breaker would trip on.",
+      "description": "- Placeholder \u2014 content-service emits no `content_extraction_circuit_state` today; shows No data by design.\n- Will start working unchanged once the extractor circuit breaker (xberg backpressure work) ships (0=closed / 1=half-open / 2=open).\n- Until then, use \"Retry attempts by error code\": a rising SERVICE_UNAVAILABLE line is what a breaker would trip on.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -774,7 +774,7 @@
           "refId": "A"
         }
       ],
-      "title": "Extractor circuit (DISABLED — pending breaker)",
+      "title": "Extractor circuit (DISABLED \u2014 pending breaker)",
       "type": "stat"
     },
     {
@@ -782,7 +782,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "S3 cache operation errors per second. error_type ∈ {read_failed, write_failed, other}.",
+      "description": "- S3 cache operation errors/sec. error_type \u2208 {read_failed, write_failed, other}.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -832,7 +832,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Cache write outcomes from S3Store. result ∈ {success, read_error, size_mismatch, s3_error, canceled, timeout}. `timeout` = the CACHE_WRITE_TIMEOUT_SECONDS bound fired (was folded into `canceled` before 2026-08); `size_mismatch` now also deletes the truncated object.",
+      "description": "- Cache write outcomes from S3Store. result \u2208 {success, read_error, size_mismatch, s3_error, canceled, timeout}.\n- `timeout` \u2192 CACHE_WRITE_TIMEOUT_SECONDS fired.\n- `size_mismatch` also deletes the truncated object.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -885,7 +885,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Requests FAILED during graceful shutdown drain. Should be zero except during deploy/restart.",
+      "description": "- Requests FAILED during graceful shutdown drain. Should be ~0 except during deploy/restart.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -935,7 +935,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "sha256 safety-net activations — fires when the raw object carries no sha256 user-metadata (the stamp is written synchronously at cache-write time, so this should be ~zero outside legacy objects aging out of the 7d raw TTL). Steady non-zero `computed_in_process` = stamping regression; `raw_head_miss_text_hit` = text served after its raw was evicted AND the text object predates the sha stamp.",
+      "description": "- Fires when a raw object has no sha256 metadata (normally stamped synchronously at write time) \u2014 should be ~0 outside legacy objects aging out of the 7d raw TTL.\n- Steady `computed_in_process` \u2192 stamping regression.\n- `raw_head_miss_text_hit` \u2192 text served after its raw was evicted, and the text object predates the sha stamp.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -998,7 +998,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Text extraction outcomes per second, status ∈ {success, failed, skipped, breaker_open}. If you see: `skipped` tracking near `success` — a large share of TEXT requests exceed EXTRACTION_MAX_SIZE (deployed: 50 MiB) and are served as raw bytes with no extraction attempted; check whether that's the expected corpus mix before assuming it's a problem. Sustained `breaker_open` — kreuzberg is sick and content-service has stopped sending it work; expect EXTRACTION_ERROR_SERVICE_UNAVAILABLE to climb on the retry-attempts panel at the same time. Rising `failed` with flat `success` — documents are failing extraction outright (corrupt/unsupported content), not a capacity problem — compare against Retry attempts by error code to see which error is driving it. `success` alone tells you nothing about cost — pair with Extraction p99 latency to see if successes are getting slower.",
+      "description": "- Text extraction outcomes/sec. status \u2208 {success, failed, skipped, breaker_open}.\n- `skipped` tracking near `success` \u2192 large share of TEXT requests exceed EXTRACTION_MAX_SIZE (deployed 50 MiB) and are served raw with no extraction \u2014 confirm this matches the expected corpus mix.\n- Sustained `breaker_open` \u2192 kreuzberg is unhealthy and content-service stopped sending it work; expect SERVICE_UNAVAILABLE to climb on \"Retry attempts by error code\" too.\n- Rising `failed` with flat `success` \u2192 documents failing extraction outright (corrupt/unsupported), not a capacity problem.\n- `success` alone doesn't show cost \u2014 pair with \"Extraction p99 latency\".",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1051,7 +1051,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Distribution of bytes written per S3 cache Put — p50/p95/p99. Bodies above the transfer manager's 16 MiB multipart threshold take the multipart path. Useful for sizing payload-mix in load tests. 5m window deliberately wider than other panels — write events are infrequent and benefit from smoothing. Buckets are explicit (4KiB–5GiB) since 2026-08; earlier data used millisecond-scale defaults and is unreadable.",
+      "description": "- Distribution of bytes written per S3 cache Put \u2014 p50/p95/p99.\n- Bodies over the 16 MiB multipart threshold take the multipart upload path.\n- 5m window (wider than other panels) \u2014 write events are infrequent and benefit from smoothing.\n- Buckets explicit (4KiB\u20135GiB) since 2026-08; earlier data used ms-scale defaults and is unreadable.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1089,7 +1089,7 @@
             "uid": "${datasource}"
           },
           "expr": "histogram_quantile(0.50, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m])))",
-          "legendFormat": "p50 — {{result}}",
+          "legendFormat": "p50 \u2014 {{result}}",
           "refId": "A"
         },
         {
@@ -1098,7 +1098,7 @@
             "uid": "${datasource}"
           },
           "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m])))",
-          "legendFormat": "p95 — {{result}}",
+          "legendFormat": "p95 \u2014 {{result}}",
           "refId": "B"
         },
         {
@@ -1107,7 +1107,7 @@
             "uid": "${datasource}"
           },
           "expr": "histogram_quantile(0.99, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m])))",
-          "legendFormat": "p99 — {{result}}",
+          "legendFormat": "p99 \u2014 {{result}}",
           "refId": "C"
         }
       ],
@@ -1119,7 +1119,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Splits successful raw-cache write latency into two views: `total p95` is the whole write (reading the connector's upload stream + the S3 PutObject), `stream-wait p95` is just the portion spent blocked reading bytes from the connector. total − stream-wait ≈ S3-side time. If `stream-wait` tracks close to `total`, the connector (its source system, e.g. Box/SharePoint) is the slow part, not the cache — do not chase S3 latency for that case. If `stream-wait` is small but `total` is high, S3 itself is slow.",
+      "description": "- Splits successful raw-write latency: `total p95` = whole write (connector stream read + S3 PutObject); `stream-wait p95` = time blocked reading the connector.\n- total \u2212 stream-wait \u2248 S3-side time.\n- `stream-wait` \u2248 `total` \u2192 the connector/source system is slow, not the cache.\n- `stream-wait` small, `total` high \u2192 S3 itself is slow.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1170,7 +1170,7 @@
           "refId": "B"
         }
       ],
-      "title": "Raw cache write p95 — time waiting on connector vs. total",
+      "title": "Raw cache write p95 \u2014 time waiting on connector vs. total",
       "type": "timeseries"
     },
     {
@@ -1178,7 +1178,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "How long abandoned transfers ran before dying. `canceled` = the peer went away (connector crash, pod eviction, client deadline); `timeout` = the CACHE_WRITE_TIMEOUT_SECONDS bound fired. These are definitionally the long tail — kept OUT of the main latency panel so they can be read as what they are: client-abandonment behavior, not cache performance.",
+      "description": "- How long abandoned writes ran before dying. `canceled` = peer went away (connector crash, pod eviction, client deadline). `timeout` = CACHE_WRITE_TIMEOUT_SECONDS fired.\n- Kept separate from the main latency panel \u2014 this is client-abandonment behavior, not cache performance.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1216,11 +1216,11 @@
             "uid": "${datasource}"
           },
           "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", result=~\"canceled|timeout\"}[5m])))",
-          "legendFormat": "p95 — {{result}}",
+          "legendFormat": "p95 \u2014 {{result}}",
           "refId": "A"
         }
       ],
-      "title": "Cache write — abandoned transfers (canceled/timeout)",
+      "title": "Cache write \u2014 abandoned transfers (canceled/timeout)",
       "type": "timeseries"
     },
     {
@@ -1228,7 +1228,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "The post-upload sha256 metadata stamp (a server-side CopyObject self-copy, synchronous within Put but excluded from write-duration). Cost scales with object size — the copy rewrites the whole object, up to the 5GB CopyObject ceiling. Sustained `error` = objects left unstamped → sha safety-net activations downstream.",
+      "description": "- Post-upload sha256 stamp (server-side CopyObject self-copy), synchronous within Put but excluded from write-duration.\n- Cost scales with object size \u2014 up to the 5GB CopyObject ceiling.\n- Sustained `error` \u2192 objects left unstamped \u2192 sha safety-net activations rise downstream.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1266,7 +1266,7 @@
             "uid": "${datasource}"
           },
           "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_sha_stamp_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m])))",
-          "legendFormat": "p95 — {{result}}",
+          "legendFormat": "p95 \u2014 {{result}}",
           "refId": "A"
         }
       ],
@@ -1278,7 +1278,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Cache writes where the connector declared no size, so the post-upload byte-count validation was skipped — a client stream that died with a clean half-close mid-body is indistinguishable from a complete upload for these. Should be ~zero; any sustained rate means a connector is uploading unverifiable (possibly truncated) content.",
+      "description": "- Writes where the connector declared no size, so byte-count validation was skipped.\n- Should be ~0 \u2014 sustained rate means a connector is uploading unverifiable (possibly truncated) content.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1339,7 +1339,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Upload streams currently admitted on the transfer listener. Each in-flight multipart upload holds ~48-64MiB of transfer-manager buffers; the uploadAdmission interceptor caps this service-wide at UPLOAD_MAX_CONCURRENT (default 32 — the red line). Sustained saturation = connectors are queueing behind the gate. Previously every pod's line rendered under the identical legend \"in-flight uploads\" with no sum() — now split into one true aggregate line plus one line per pod (filterable via the Pod variable).",
+      "description": "- Upload streams currently admitted. Each holds ~48\u201364MiB of transfer-manager buffers.\n- Capped service-wide at UPLOAD_MAX_CONCURRENT (default 32, red line).\n- Sustained saturation \u2192 connectors are queueing behind the gate.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1416,7 +1416,7 @@
       },
       "id": 500,
       "panels": [],
-      "title": "Retry amplification — how one connector error becomes a platform stall (NXE-2480)",
+      "title": "Retry amplification \u2014 how one connector error becomes a platform stall (NXE-2480)",
       "type": "row"
     },
     {
@@ -1424,7 +1424,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Connector fetches issued per document actually drained by the privacy pipeline. 1.0 = healthy: every document fetched exactly once. The retry ladder is extractRetryMaxAttempts (5) × JetStream MaxDeliver (3) = 15, so a value approaching 15 means every failing document is consuming the whole ladder while holding one of the caller's workers. Measured 14.99 throughout the 2026-07-27 outage. NOTE: pii_* is emitted by the privacy job, so this reads true only while a privacy scan is running.",
+      "description": "- Connector fetches per document actually drained by the privacy pipeline. 1.0 = healthy (fetched exactly once).\n- Retry ladder ceiling = extractRetryMaxAttempts (5) \u00d7 JetStream MaxDeliver (3) = 15 \u2014 approaching 15 means failing documents consume the whole ladder while holding a caller's worker.\n- Reads true only while a privacy scan is running (pii_* is emitted by the privacy job).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1489,7 +1489,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "`failed_budget` is the one to read first — it is the common outcome now. The caller-wait budget (CALLER_WAIT_BUDGET_SECONDS, 5s) stops the in-handler retry ladder early, REPLIES to the caller so its worker is released, then Nak's with a 30s delay so the document is still retried. It was previously absent from this panel's query, which hid the majority of retry activity.\n\n`failed` is a mixed bag: the two silent-Nak paths (in-handler attempts exhausted with deliveries left, and the request deadline firing) send NO reply, but a malformed request and a non-retryable manager failure also land here and DO reply. Treat a rising `failed` as \"documents are being retried\", not as \"callers are stranded\".\n\n`failed_terminal` is the only outcome that both replies and Ack's — either MaxDeliver was reached or the budget was spent on the last allowed delivery. It is the end of the line for that document in this scan.\n\nAll three were EXACTLY 0.00/s during a clean S3-only window running at 87 completed/s, and ran sustained through the 2026-07-27 incident.\n\n`failed_draining` was missing from this panel's filter (added) — a pod refusing to start new extraction work while shutting down, Nak'ing for a healthy replica to pick up (manager.go).\n\nThis panel tells you THAT a delivery was Nak'd and which of the four give-up reasons applied — it does NOT tell you the underlying connector/extraction error that caused it. The closest thing to a \"why are we Naking\" metric today is Retry attempts by error code (content_retry_attempts_total), but that counts in-handler retry attempts generally, including ones that go on to succeed without ever reaching a Nak — it is not scoped to \"the attempt right before we gave up.\" The actual error code and message for a specific Nak are only in the Warn log line at the point of the decision (\"service: retries exhausted, Nak'ing for JetStream redelivery\" etc.), not in a metric label today.",
+      "description": "- `failed_budget` \u2014 read this one first, it's the common outcome. CALLER_WAIT_BUDGET_SECONDS (5s) stopped the retry ladder early, replied to the caller, then Nak'd with a 30s delay.\n- `failed` \u2014 in-handler attempts exhausted, or a malformed request / non-retryable manager failure. Rising `failed` means documents are being retried, not that callers are stranded.\n- `failed_terminal` \u2014 MaxDeliver reached or budget spent on the last delivery. Replies AND Acks \u2014 end of the line for that document.\n- `failed_draining` \u2014 a pod refusing new extraction work while shutting down; Nak'd for a healthy replica to pick up.\n- All four should sit near 0 in steady state; all four ran sustained through the 2026-07-27 incident.\n- Shows THAT and WHY (of these 4 reasons) a delivery was Nak'd, not the underlying connector/extraction error \u2014 for that, check \"Retry attempts by error code\" or the Warn log at the Nak decision point.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1534,7 +1534,7 @@
           "refId": "A"
         }
       ],
-      "title": "NATS retry outcomes — failed vs budget vs terminal vs draining (per delivery)",
+      "title": "NATS retry outcomes \u2014 failed vs budget vs terminal vs draining (per delivery)",
       "type": "timeseries"
     },
     {
@@ -1542,7 +1542,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "What to do: this should sit at ~0. If it's rising, requests are taking longer than the histogram can even measure (>60s) — every p95/p99 on this dashboard is being interpolated past its top bucket and UNDERSTATES the real tail, so don't trust those percentiles right now; go to Request latency and Extraction p99 latency to find which phase is stretching.\n\nA sustained, near-constant (not spiky) non-zero value is the pattern seen during the 2026-07-27 outage: p95 pinned at exactly 29.00s for 360 consecutive samples — that's histogram interpolation lying, not a plateaued-but-fine service, because 100% of requests were stuck in the same (10s, 30s] bucket.\n\nWhy 60s: the service permits pickup 60s + worker 180s = 240s end-to-end, but content_request_duration_seconds' top explicit bucket stops at 60s — this panel is the only place that can see a request between 60s and the real 240s ceiling.\n\nGotcha if you edit this query: the bucket label is decimal-formatted (le=\"60.0\"); le=\"60\" silently matches nothing.",
+      "description": "- Should sit at ~0.\n- Rising \u2192 requests exceed the histogram's 60s top bucket; every p95/p99 on this dashboard understates the real tail \u2014 go to \"Request latency\" / \"Extraction p99 latency\" to find the slow phase.\n- A steady, near-constant (not spiky) value is the 2026-07-27 outage pattern: p95 pinned at 29s because 100% of requests sat in the same interpolated bucket.\n- Ceiling is 60s because the service allows pickup 60s + worker 180s = 240s end-to-end, but the histogram's top bucket stops at 60s.\n- Query gotcha: the bucket label is decimal (`le=\"60.0\"`) \u2014 `le=\"60\"` silently matches nothing.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1592,7 +1592,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Privacy document throughput against the rate below which its OpenSearch Point-in-Time lease expires. The reader paginates only as documents drain, and its consumers synchronise, so the gap between searches is 32 consumers × 1000-document pages ÷ throughput. Against a 30-minute lease that gives a critical rate of 32000/1800 = 17.8 docs/s. Sustained operation below the red line ends in a 404 search_context_missing_exception — and because the reader error is discarded at main.go:219, the scan then reports SUCCESS having read only part of the index. Requires a running privacy scan.",
+      "description": "- Privacy document throughput vs. the rate below which its OpenSearch Point-in-Time lease expires.\n- Critical rate = 32 consumers \u00d7 1000-doc pages \u00f7 30-min lease = 17.8 docs/s (red line).\n- Sustained operation below the red line \u2192 PIT lease expires \u2192 404 search_context_missing_exception, and the scan then reports SUCCESS having read only part of the index (reader error is discarded).\n- Requires a running privacy scan.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1639,7 +1639,7 @@
             "uid": "${datasource}"
           },
           "expr": "vector(17.8)",
-          "legendFormat": "PIT critical rate (32 × 1000 / 1800)",
+          "legendFormat": "PIT critical rate (32 \u00d7 1000 / 1800)",
           "refId": "B"
         }
       ],
@@ -1664,7 +1664,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Time a request spent waiting for an extraction slot before reaching xberg. This is the panel that separates \"we queued\" from \"xberg was slow on this file\" — without it both surface as the same error codes. Rising p95 here with `Extraction slots in use` pinned at capacity is a queueing problem, not a document problem. Buckets run to 600s because the extraction semaphore has no acquire timeout.\n\nSplit by lane, because that is the question the gate exists to answer. EXTRACTION_PRIORITY_MAX_CONSECUTIVE is wired so interactive extractions are not starved by pipeline ones, and undimensioned this panel shows the queue is deep without saying whether the requests waiting are the ones a human is waiting on. `interactive` climbing toward `bulk` means the priority lane is no longer buying anything.",
+      "description": "- Time spent waiting for an extraction slot before reaching xberg \u2014 separates \"we queued\" from \"xberg was slow\", which otherwise surface as the same error codes.\n- Rising p95 + \"Extraction slots in use\" pinned at capacity \u2192 a queueing problem, not a document problem.\n- Split by lane: `interactive` wait climbing toward `bulk` \u2192 the priority lane (EXTRACTION_PRIORITY_MAX_CONSECUTIVE) isn't buying anything anymore.\n- Buckets run to 600s \u2014 the extraction semaphore has no acquire timeout.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1732,7 +1732,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Occupancy of the extraction gate against EXTRACTION_MAX_CONCURRENCY (60 — the red line). That 60 is the DEPLOYED value, set under `contentService.env` in the applications chart; the code default is 10, so re-check the red line if dev retunes it. Occupancy SATURATES: once it is pinned it cannot tell you how far behind you are, which is what the queue-wait panel is for. `aborted/s` is requests whose deadline expired while queueing — sustained non-zero means the gate is shedding work rather than pacing it.\n\nThe total is kept as its own series because the red line applies to it, not to either lane alone. The per-lane split is what tells you who is holding the gate: `bulk` filling it during a scan is expected, but interactive extractions should still get in — read alongside `Extraction queue wait`, and note that slots held by extractions whose caller already left are counted in `Extractions that outlived their caller`.",
+      "description": "- Slot occupancy (count, 0\u201360, left axis) vs. `aborted/s` (rate, right axis) \u2014 different units, check the legend value, not just line height.\n- Occupancy capped at EXTRACTION_MAX_CONCURRENCY \u2014 deployed value 60 (code default 10; confirm `contentService.env` before trusting the red line).\n- Occupancy saturates: once pinned it can't show how far behind you are \u2014 use \"Extraction queue wait\" for that.\n- Sustained `aborted/s` > 0 \u2192 the gate is shedding work (deadline expired while queueing), not just pacing it.\n- Per-lane split shows who holds the gate: `bulk` filling it during a scan is expected, interactive extractions should still get in. No line for a lane = no traffic, not zero.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1758,7 +1758,29 @@
               }
             ]
           }
-        }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "reqps"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "aborted/s"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -1792,7 +1814,7 @@
             "uid": "${datasource}"
           },
           "expr": "sum by (lane) (content_extraction_slots_in_use{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"})",
-          "legendFormat": "slots — {{lane}}",
+          "legendFormat": "slots \u2014 {{lane}}",
           "refId": "B"
         },
         {
@@ -1801,11 +1823,11 @@
             "uid": "${datasource}"
           },
           "expr": "sum by (lane) (rate(content_extraction_queue_wait_seconds_count{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", outcome=\"aborted\"}[5m]))",
-          "legendFormat": "aborted/s — {{lane}}",
+          "legendFormat": "aborted/s \u2014 {{lane}}",
           "refId": "C"
         }
       ],
-      "title": "Extraction concurrency (cap 60) — slots occupied vs. requests that gave up waiting",
+      "title": "Extraction concurrency (cap 60) \u2014 occupied slots (count) vs. abandoned-wait rate (req/s)",
       "type": "timeseries"
     },
     {
@@ -1813,7 +1835,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "What to do: a rising line here is a specific error driving repeated in-handler retries — the code name tells you where to look, not just that something's wrong.\n\nEXTRACTION_ERROR_SERVICE_UNAVAILABLE rising = kreuzberg is refusing work (likely overloaded); this is the amplification signal — content-service retrying a busy extractor 3x per delivery across multiple deliveries makes the backlog worse, not better. EXTRACTION_ERROR_TIMEOUT = documents are genuinely slow to extract; capped at fewer attempts than other codes because a document that timed out once will very likely time out again. CONTENT_ERROR_CACHE_WRITE_FAILED = the connector's write into our raw cache is failing — check S3/cache health, not the extractor. CONTENT_ERROR_INTERNAL here specifically means the connector couldn't reach or was rate-limited by the SOURCE system (Box/SharePoint/etc.) — a source-side problem, not a content-service one.",
+      "description": "- A rising line = a specific error is driving repeated in-handler retries.\n- `EXTRACTION_ERROR_SERVICE_UNAVAILABLE` rising \u2192 kreuzberg is refusing work (overloaded) \u2014 retrying it makes the backlog worse, not better.\n- `EXTRACTION_ERROR_TIMEOUT` \u2192 documents genuinely slow to extract (capped at fewer attempts \u2014 a timeout will likely repeat).\n- `CONTENT_ERROR_CACHE_WRITE_FAILED` \u2192 check S3/cache health, not the extractor.\n- `CONTENT_ERROR_INTERNAL` \u2192 the connector's source system (Box/SharePoint/etc.) is unreachable or rate-limiting it \u2014 a source-side problem.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1866,7 +1888,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "How a connector's Fetch attempt failed, one line per (code, retryable). Use `code` to jump from an error spike back to the URNs causing it. `retryable=true` means content-service will try this document again automatically — `retryable=false` means it won't, so a rising non-retryable line is documents that need a human or a source-side fix, not a wait-it-out situation.\n\nCACHE_WRITE_FAILED is always retryable regardless of what the connector reports — a failed write to our own S3 cache is treated as transient. TOO_LARGE is essentially never retryable — the source object is over the connector's size limit, and that won't change on the next attempt. CONNECTOR_UNAVAILABLE means no connector answered our reply inbox within PICKUP_TIMEOUT_SECONDS — it does NOT mean the request was lost, it stays queued on CONTENT_FETCH and will be picked up.",
+      "description": "- One line per (code, retryable) \u2014 use `code` to trace an error spike back to specific URNs.\n- `retryable=true` \u2192 content-service retries automatically. `retryable=false` rising \u2192 documents need a human or a source-side fix.\n- `CACHE_WRITE_FAILED` is always retryable (our own S3 write treated as transient).\n- `TOO_LARGE` is essentially never retryable \u2014 the source object exceeds the connector's size limit.\n- `CONNECTOR_UNAVAILABLE` = no connector answered within PICKUP_TIMEOUT_SECONDS \u2014 the request isn't lost, it stays queued on CONTENT_FETCH.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1919,7 +1941,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Valkey claims taken before a connector fetch or an xberg extraction, so two replicas don't do the same work. Expect everything but `won` to sit at zero until KEDA scales past one replica.\n\n`won` — this pod took the claim and is doing the work.\n`lost` — another replica holds it, so this one waits for the output instead.\n`preempted` — interactive work took a bulk holder's claim. A DELIBERATE duplicate: the displaced holder keeps working, so for a window two replicas do the same work. That is the price of putting a human ahead of a scan, and it is a separate label so the price is visible rather than folded into `won`.\n`held_by_self` — this pod found its OWN earlier claim, almost always a fetch claim retained past a reply timeout. No peer is involved and the work is at a connector. Split out of `lost` on purpose: counted as a cross-pod loss, a connector slowdown on one pod read as a dedup success story.\n`duplicated` — gave up waiting and did the work anyway knowing a peer holds the claim. Only interactive requests do this, because a synchronous call has no redelivery to defer to. Buys a full duplicate.\n`lease_lost` — a renewal found the claim gone while the work was still running: it lapsed, or an interactive claimant preempted it. This is the LEADING INDICATOR of duplicate work.\n`unavailable` — Valkey is unreachable and dedup has silently degraded. Everything still works, it just costs duplicate fetches and extractions.\n`disabled` — dedup is not running at all for that phase: VALKEY_HOST unset, or that phase's marker TTL zeroed. Emitted deliberately so \"dedup is off\" is visible; an absent series looks identical to no traffic. With both TTLs set and Valkey wired, this should be flat zero.\n\nThe two worth watching are `disabled` (off by configuration, a likelier regression than an outage) and `lease_lost` (duplicate work is now happening).",
+      "description": "- Valkey claims taken before a connector fetch or an xberg extraction, so two replicas don't duplicate work. Expect everything but `won` at 0 until KEDA scales past one replica.\n- `won` \u2192 this pod took the claim and is doing the work.\n- `lost` \u2192 another replica holds it; this pod waits for the output instead.\n- `preempted` \u2192 interactive work took a bulk holder's claim \u2014 a deliberate duplicate (the displaced holder keeps working).\n- `held_by_self` \u2192 this pod found its own earlier claim (usually a fetch claim outliving a reply timeout) \u2014 a connector slowdown, not a dedup event.\n- `duplicated` \u2192 gave up waiting and did the work anyway (interactive requests only \u2014 no redelivery to defer to).\n- `lease_lost` \u2192 a renewal found the claim gone mid-work \u2014 leading indicator of duplicate work.\n- `unavailable` \u2192 Valkey unreachable, dedup silently degraded (still correct, just costs duplicate fetches/extractions).\n- `disabled` \u2192 dedup off for that phase (VALKEY_HOST unset, or that phase's TTL zeroed) \u2014 should be flat 0 when configured correctly.\n- Watch `disabled` (likely misconfiguration) and `lease_lost` (duplicate work happening now) most closely.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1957,11 +1979,11 @@
             "uid": "${datasource}"
           },
           "expr": "sum by (phase, outcome) (rate(content_dedup_claims_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "{{phase}} — {{outcome}}",
+          "legendFormat": "{{phase}} \u2014 {{outcome}}",
           "refId": "A"
         }
       ],
-      "title": "Cross-pod dedup — claim outcomes",
+      "title": "Cross-pod dedup \u2014 claim outcomes",
       "type": "timeseries"
     },
     {
@@ -1969,7 +1991,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "What to look for: a rising `peer`/`satisfied` line is dedup actually paying off — another replica held the claim and this request waited instead of repeating a connector fetch or xberg run. A rising `connector` line is NOT dedup — it means this request holds its OWN claim and its own reply from the connector timed out, so read `connector` volume as connector slowness, not a dedup signal (reading it as dedup overstates the payoff by exactly that many reply timeouts). A rising `took_over` is the one to escalate: the previous claim holder stopped renewing with nothing written (it died mid-work), and this request discovered that and redid the work itself — a steady trickle is normal pod recycling, a spike means replicas are dying under load.\n\nWhy the two sources move independently: `peer` scales with replica count and hot keys (many pods racing the same document), `connector` scales with source-system load (Box/SharePoint/etc. being slow) — they are not substitutes for each other. `extract` is always `peer`, never `connector`, because an extraction is synchronous work with no dispatched request that could outlive our own timeout the way a connector fetch can.\n\nAny non-`satisfied` outcome means the request did the work itself rather than reusing someone else's — that is a missed optimization, never a failure; the wait can only save effort, not cause one. `skipped` specifically means there was no deadline left to wait within at all (PEER_WAIT_SECONDS/CONNECTOR_WAIT_SECONDS bound the wait itself, GET_CONTENT_DEADLINE_SECONDS bounds both) — a high `skipped` rate next to a flat `satisfied` rate is a timing-budget problem, not a dedup problem, and retuning those seconds is the fix, not investigating the claim logic. `expired` (someone is still working, we gave up waiting) and `took_over` (nobody was working, we found out) look identical in wall-clock terms but mean opposite things — don't conflate them.",
+      "description": "- Rising `peer`/`satisfied` \u2192 dedup paying off (waited instead of repeating a fetch/extraction).\n- Rising `connector` \u2192 NOT dedup \u2014 this request's own claim's connector reply timed out; read as connector slowness.\n- Rising `took_over` \u2192 escalate. The previous claim holder died mid-work and this request redid it. Steady trickle = normal pod recycling; a spike = replicas dying under load.\n- `peer` scales with replica count/hot keys; `connector` scales with source-system load \u2014 not substitutes for each other.\n- `extract` is always `peer`, never `connector` \u2014 extraction is synchronous, nothing can outlive it the way a fetch can.\n- Any non-`satisfied` outcome = a missed optimization, never a failure.\n- `skipped` = no deadline left to wait within (PEER_WAIT_SECONDS / CONNECTOR_WAIT_SECONDS / GET_CONTENT_DEADLINE_SECONDS) \u2014 high `skipped` next to flat `satisfied` is a timing-budget problem; retune those seconds, don't chase the claim logic.\n- `expired` (someone still working) and `took_over` (nobody was working) look identical in wall-clock terms but mean opposite things.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2010,11 +2032,11 @@
             "uid": "${datasource}"
           },
           "expr": "sum by (phase, source, outcome) (rate(content_dedup_waits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "{{phase}} — waiting on {{source}} — {{outcome}}",
+          "legendFormat": "{{phase}} \u2014 waiting on {{source}} \u2014 {{outcome}}",
           "refId": "A"
         }
       ],
-      "title": "Cross-pod dedup — work avoided vs redone",
+      "title": "Cross-pod dedup \u2014 work avoided vs redone",
       "type": "timeseries"
     },
     {
@@ -2022,7 +2044,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "How long a wait took before it paid off, split by who we waited on. Filtered to outcome=\"satisfied\" on purpose: an expired wait always equals its whole budget, so including it would flatten every quantile onto the ceiling and say nothing. Which budget depends on who we waited on — PEER_WAIT_SECONDS bounds a peer wait, CONNECTOR_WAIT_SECONDS a connector one, and GET_CONTENT_DEADLINE_SECONDS caps both. They are the same number in dev today only because PEER_WAIT_SECONDS is not templated into the configmap and inherits the connector value. Read with `Cross-pod dedup — work avoided vs redone`, which gives the counts these durations belong to.\n\n`fetch/peer` is how long a follower waits for the replica holding the claim — it tracks connector latency plus whatever was left of the holder's lease when we joined. `fetch/connector` is how far past our own reply timeout the connector actually ran, which is the number to size PICKUP_TIMEOUT_SECONDS and the worker timeout against. `extract/peer` is how long another replica's xberg run took to land.\n\np50 and p95 only, since splitting by phase and source already yields three series per quantile. Buckets run to 600s (cacheWriteBuckets), so waits longer than that are unresolvable — but the wait budget is well under it, so that ceiling should never bind.",
+      "description": "- How long a wait took before it paid off, split by who was waited on. Filtered to outcome=\"satisfied\" \u2014 an expired wait always equals its full budget and would flatten every quantile onto the ceiling.\n- PEER_WAIT_SECONDS bounds a peer wait, CONNECTOR_WAIT_SECONDS a connector wait, GET_CONTENT_DEADLINE_SECONDS caps both (same number in dev today only because PEER_WAIT_SECONDS isn't templated).\n- `fetch/peer` \u2248 connector latency + remaining holder lease. `fetch/connector` = how far past our own reply timeout the connector ran \u2014 use to size PICKUP_TIMEOUT_SECONDS / the worker timeout. `extract/peer` = how long another replica's xberg run took.\n- p50/p95 only. Buckets run to 600s \u2014 waits should stay well under that.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2073,7 +2095,7 @@
           "refId": "B"
         }
       ],
-      "title": "Cross-pod dedup — how long a paying wait took",
+      "title": "Cross-pod dedup \u2014 how long a paying wait took",
       "type": "timeseries"
     },
     {
@@ -2081,7 +2103,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Extractions that finished after the caller had already gone. This is DELIBERATE, not a leak: cancelling a POST to xberg mid-flight throws the whole run away, because nothing is persisted until the extractor returns. Carrying on means the caller's retry finds the text cached and pays for a HEAD instead of a second full run.\n\nWhat it costs is an extraction slot held for work nobody is waiting on, which is why it is counted here rather than left to be inferred from queue depth. Read it against `Extraction slots in use`: a rising count while the gate is pinned means part of your capacity is committed to callers who have left, and the queue behind it is waiting on them.\n\nA steady low rate is the design working — bulk requests hit their delivery deadline and retry into the cache. Sustained `interactive` is worse than sustained `bulk`: a human gave up waiting, and the deadline is doing the abandoning rather than the extractor being slow, so check GET_CONTENT_DEADLINE_SECONDS against the extraction phase before tuning anything else.",
+      "description": "- Extractions that finished after the caller left \u2014 deliberate, not a leak: canceling xberg mid-flight throws the whole run away, since nothing persists until it returns. Letting it finish means the caller's retry finds cached text instead of re-running.\n- Cost: an extraction slot held for a caller who's gone \u2014 pair with \"Extraction slots in use\": rising count while the gate is pinned means part of capacity is committed to callers who left.\n- Steady low rate = design working as intended (bulk requests hitting their delivery deadline).\n- Sustained `interactive` is worse than `bulk` \u2014 a human gave up waiting; check GET_CONTENT_DEADLINE_SECONDS against the extraction phase before tuning anything else.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2129,7 +2151,7 @@
     {
       "type": "row",
       "id": 700,
-      "title": "KEDA inflight trigger — baseline before retuning the threshold",
+      "title": "KEDA inflight trigger \u2014 baseline before retuning the threshold",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -2147,7 +2169,7 @@
         "uid": "${datasource}"
       },
       "title": "What the autoscaler sees vs what is really in flight",
-      "description": "The KEDA trigger runs sum(content_inflight_global) with NO label filter, so it is the series to read before changing contentService.autoscaling.triggers.inflight.threshold (default 100) or activationThreshold (default 20).\n\nTwo things inflate it against the job-filtered series below it.\n\n1. Dual scrape. Every app metric in eks-integration is scraped twice, by job=\"kubernetes-services\" and by the PodMonitor job, both reporting identical values — so an unfiltered sum() counts each pod twice. The three NATS triggers use max(), which is idempotent under that duplication; this trigger is the only one using sum(), so it is the only one affected.\n\n2. No namespace filter. If this Prometheus serves more than one namespace, they are all in the KEDA number and none of them are in $namespace.\n\nDivide the KEDA series by the threshold to get the replicas this trigger asks for. KEDA takes the highest count any trigger requests, so this one can only ever raise the count the queue triggers ask for.",
+      "description": "- The KEDA trigger runs sum(content_inflight_global) with NO label filter \u2014 the series to check before changing the inflight threshold (default 100) or activationThreshold (default 20).\n- Inflated by (1) dual scrape \u2014 every pod is scraped twice (kubernetes-services + PodMonitor), doubling an unfiltered sum(); the NATS triggers use max() so they're unaffected, this is the only sum()-based trigger \u2014 and (2) no namespace filter \u2014 a shared Prometheus counts every namespace, not just $namespace.\n- Divide by threshold to get the replicas this trigger is asking for. KEDA takes the highest count any trigger requests.",
       "gridPos": {
         "h": 9,
         "w": 16,
@@ -2206,7 +2228,7 @@
             "uid": "${datasource}"
           },
           "expr": "sum(content_inflight_global)",
-          "legendFormat": "KEDA query — unfiltered sum",
+          "legendFormat": "KEDA query \u2014 unfiltered sum",
           "refId": "A"
         },
         {
@@ -2233,7 +2255,7 @@
             "uid": "${datasource}"
           },
           "expr": "sum(content_inflight_stream{job=\"$job\"})",
-          "legendFormat": "stream gauge — zero means a pre-fix build",
+          "legendFormat": "stream gauge \u2014 zero means a pre-fix build",
           "refId": "D"
         }
       ]
@@ -2246,7 +2268,7 @@
         "uid": "${datasource}"
       },
       "title": "Replicas this trigger is asking for",
-      "description": "ceil(KEDA query / threshold), clamped to maxReplicas (default 5). Red at 5 means the trigger is pinned at the ceiling, where it can no longer distinguish \"full\" from \"far behind\" — the state to avoid when picking a new threshold. The admission gate refuses work past globalMaxInflight (deployed 200) per pod, so the gauge has a hard ceiling of its own.",
+      "description": "- ceil(KEDA query / threshold), clamped to maxReplicas (default 5).\n- Red at 5 \u2192 pinned at the ceiling \u2014 can no longer tell \"full\" from \"far behind\"; avoid this state when picking a new threshold.\n- Admission gate caps globalMaxInflight (deployed 200) per pod \u2014 a hard ceiling on the gauge itself.",
       "gridPos": {
         "h": 9,
         "w": 8,
@@ -2304,8 +2326,8 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "title": "Is there any See Content load to scale on?",
-      "description": "content_inflight_global carries no scope label, so the gauge cannot be split into NATS vs gRPC. Request rate by api is the closest proxy: grpc_get_content and grpc_fetch_stream are See Content, nats is the scan lane.\n\nThis is the traffic that was never counted in the gauge before the IncInflight scope fix. If these series are flat zero, the threshold does not need to move at all — nothing new is being added to the sum.",
+      "title": "Request rate: See Content (gRPC) vs NATS (bulk)",
+      "description": "- content_inflight_global has no scope label \u2014 request rate by api is the closest proxy: grpc_get_content / grpc_fetch_stream = See Content, nats = scan lane.\n- As of 2026-08-19 no production caller uses gRPC \u2014 both See Content series should read flat zero.\n- If flat zero, the KEDA threshold doesn't need to move \u2014 nothing new is being added to the sum since the IncInflight scope fix.",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -2365,7 +2387,7 @@
       },
       "id": 800,
       "panels": [],
-      "title": "TEXT vs RAW — cache path (NXS-2586 follow-up)",
+      "title": "TEXT vs RAW \u2014 cache path",
       "type": "row"
     },
     {
@@ -2373,7 +2395,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Where a request's bytes actually came from, split by request type. Read it as: rising 'text already cached' = TEXT requests answered with zero backend work. Rising 'raw already cached, extracted fresh' alongside a flat/low 'raw not cached' = TEXT misses are cheap — extraction only, no connector round-trip. Rising 'raw not cached' = TEXT requests paying for a connector fetch AND an extraction, the most expensive path — if this climbs during an incident, the raw cache is not doing its job for TEXT traffic specifically. The two 'direct RAW request' lines are the same question for plain RAW requests, which never run extraction at all.\n\nCaveat: a text-cache miss is recorded once per incoming request, but the raw-bucket check underneath it is deduplicated across concurrent requests for the same document (singleflight) — so during a concurrent burst on one URN, 'text already cached'-miss count and the two raw lines below it are not guaranteed to add up 1:1.",
+      "description": "- Where a request's bytes actually came from, by request type.\n- Rising \"text already cached\" \u2192 TEXT requests answered with zero backend work.\n- Rising \"raw already cached\" + flat \"raw not cached\" \u2192 TEXT misses are cheap (extraction only, no connector round-trip).\n- Rising \"raw not cached\" \u2192 TEXT requests paying for a connector fetch AND an extraction \u2014 the most expensive path.\n- \"Direct RAW request\" lines answer the same question for plain RAW requests, which never run extraction.\n- Caveat: a text-cache miss is counted once per request, but the raw-bucket check underneath is deduplicated across concurrent requests for the same URN (singleflight) \u2014 counts aren't guaranteed to add up 1:1 during a concurrent burst.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2411,7 +2433,7 @@
             "uid": "${datasource}"
           },
           "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"text\", phase=\"extract\"}[5m]))",
-          "legendFormat": "TEXT request — text already cached (no work needed)",
+          "legendFormat": "TEXT request \u2014 text already cached (no work needed)",
           "refId": "A"
         },
         {
@@ -2420,7 +2442,7 @@
             "uid": "${datasource}"
           },
           "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"extract\"}[5m]))",
-          "legendFormat": "TEXT request — raw already cached (extracted fresh, no connector call)",
+          "legendFormat": "TEXT request \u2014 raw already cached (extracted fresh, no connector call)",
           "refId": "B"
         },
         {
@@ -2429,7 +2451,7 @@
             "uid": "${datasource}"
           },
           "expr": "sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"extract\"}[5m]))",
-          "legendFormat": "TEXT request — raw not cached (connector fetch required)",
+          "legendFormat": "TEXT request \u2014 raw not cached (connector fetch required)",
           "refId": "C"
         },
         {
@@ -2438,7 +2460,7 @@
             "uid": "${datasource}"
           },
           "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"fetch\"}[5m]))",
-          "legendFormat": "Direct RAW request — served from cache",
+          "legendFormat": "Direct RAW request \u2014 served from cache",
           "refId": "D"
         },
         {
@@ -2447,11 +2469,151 @@
             "uid": "${datasource}"
           },
           "expr": "sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"fetch\"}[5m]))",
-          "legendFormat": "Direct RAW request — fetched from connector",
+          "legendFormat": "Direct RAW request \u2014 fetched from connector",
           "refId": "E"
         }
       ],
-      "title": "Cache path outcome — TEXT (extract) vs RAW (fetch)",
+      "title": "Cache path outcome \u2014 TEXT (extract) vs RAW (fetch)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 154
+      },
+      "id": 900,
+      "panels": [],
+      "title": "Bytes throughput \u2014 cache & extraction",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Raw read = rate(content_cache_read_bytes_sum{bucket=\"raw\"}) \u2014 bytes returned by cache Gets (sha256 safety-net + pre-extraction raw reads).\n- Raw write = rate(content_cache_write_bytes_sum) \u2014 bytes PUT into the raw bucket by S3Store (connector uploads).\n- Text write = rate(content_text_cache_stored_bytes_total) \u2014 compressed text bytes PUT into the text bucket.\n- No \"text read\" line \u2014 content-service never reads the text body back out. Text hits are served HEAD-only (CacheLocation-only delivery); the caller fetches bytes directly from S3, invisible to this service.\n- Raw read \u226b raw write, sustained \u2192 repeat reads of already-cached raw objects (sha256 safety-net or pre-extraction lookups on a hot document).\n- Text write \u226a raw write \u2192 most raw traffic is RAW requests or direct-store bypasses, not going through extraction.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "Bps"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 155
+      },
+      "id": 901,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_read_bytes_sum{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\"}[5m]))",
+          "legendFormat": "raw read",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_write_bytes_sum{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "raw write",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_text_cache_stored_bytes_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "text write",
+          "refId": "C"
+        }
+      ],
+      "title": "Cache bytes/sec \u2014 read vs write, raw vs text",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Sent = rate(content_extraction_bytes_sent_total) by parser_kind \u2014 content bytes handed to kreuzberg/tika, recorded regardless of outcome.\n- Received = rate(content_extraction_bytes_received_total) by parser_kind \u2014 extracted text bytes returned, success only.\n- Received \u226a sent \u2192 extraction is compressing, as expected for text-dense documents (PDFs/Office docs shrink a lot). A ratio near 1 on a compressible corpus is worth a second look.\n- `tika` series only appear when EXTRACTION_COMPARISON_ENABLED=true (shadow-run comparison) \u2014 flat/missing tika lines in normal operation are expected, not a gap.\n- Sent rising with no matching rise in received \u2192 extraction attempts are failing \u2014 check \"Extraction outcomes\".",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "Bps"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 155
+      },
+      "id": 902,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (parser_kind) (rate(content_extraction_bytes_sent_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "sent \u2014 {{parser_kind}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (parser_kind) (rate(content_extraction_bytes_received_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "received \u2014 {{parser_kind}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Extraction bytes/sec \u2014 sent vs received, by parser",
       "type": "timeseries"
     }
   ],
@@ -2489,9 +2651,9 @@
           "uid": "${datasource}"
         },
         "definition": "label_values(content_requests_total, job)",
-        "hide": 0,
+        "hide": 2,
         "includeAll": false,
-        "label": "Job",
+        "label": "Metrics source",
         "multi": false,
         "name": "job",
         "options": [],
@@ -2535,7 +2697,7 @@
           "uid": "${datasource}"
         },
         "definition": "label_values(content_requests_total{namespace=\"$namespace\", job=\"$job\"}, pod)",
-        "description": "Filters every panel below to the selected pod(s). Defaults to All, which is a no-op — every panel's query already carries pod=~\"$pod\" whether or not it also aggregates pod away with sum(...).",
+        "description": "Filters every panel below to the selected pod(s). Defaults to All, which is a no-op \u2014 every panel's query already carries pod=~\"$pod\" whether or not it also aggregates pod away with sum(...).",
         "hide": 0,
         "includeAll": true,
         "label": "Pod",
@@ -2585,6 +2747,6 @@
   "timezone": "browser",
   "title": "Content Service",
   "uid": "content-service",
-  "version": 6,
+  "version": 9,
   "weekStart": ""
 }
