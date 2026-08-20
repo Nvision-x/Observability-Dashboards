@@ -172,7 +172,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (status) (rate(content_requests_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m]))",
+          "expr": "sum by (status) (rate(content_requests_total{namespace=\"$namespace\", job=\"$job\"}[1m]))",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -222,7 +222,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))",
           "legendFormat": "p50",
           "refId": "A"
         },
@@ -231,7 +231,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))",
           "legendFormat": "p95",
           "refId": "B"
         },
@@ -240,7 +240,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -290,7 +290,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (reason) (rate(content_inflight_rejections_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m]))",
+          "expr": "sum by (reason) (rate(content_inflight_rejections_total{namespace=\"$namespace\", job=\"$job\"}[1m]))",
           "legendFormat": "{{reason}}",
           "refId": "A"
         }
@@ -353,7 +353,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum by (le, bucket, op) (rate(content_cache_op_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m])))",
+          "expr": "histogram_quantile(0.99, sum by (le, bucket, op) (rate(content_cache_op_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))",
           "legendFormat": "{{bucket}}/{{op}}",
           "refId": "A"
         }
@@ -406,7 +406,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (connector, outcome) (rate(content_nats_fetch_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m]))",
+          "expr": "sum by (connector, outcome) (rate(content_nats_fetch_total{namespace=\"$namespace\", job=\"$job\"}[1m]))",
           "legendFormat": "{{connector}}/{{outcome}}",
           "refId": "A"
         }
@@ -475,7 +475,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"fetch\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"fetch\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"fetch\"}[5m])))",
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"fetch\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"fetch\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"fetch\"}[5m])))",
           "legendFormat": "Direct RAW request — served from cache",
           "refId": "A"
         },
@@ -484,7 +484,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"extract\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"extract\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"extract\"}[5m])))",
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"extract\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"extract\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"extract\"}[5m])))",
           "legendFormat": "TEXT request — raw already cached",
           "refId": "B"
         },
@@ -493,7 +493,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"text\", phase=\"extract\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"text\", phase=\"extract\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"text\", phase=\"extract\"}[5m])))",
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"text\", phase=\"extract\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"text\", phase=\"extract\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", bucket=\"text\", phase=\"extract\"}[5m])))",
           "legendFormat": "TEXT request — text already cached",
           "refId": "C"
         }
@@ -543,7 +543,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum by (le, status) (rate(content_extraction_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m])))",
+          "expr": "histogram_quantile(0.99, sum by (le, status) (rate(content_extraction_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))",
           "legendFormat": "p99 — {{status}}",
           "refId": "A"
         }
@@ -593,7 +593,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_pickup_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m])))",
+          "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_pickup_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))",
           "legendFormat": "pickup p99 — {{connector}}",
           "refId": "A"
         },
@@ -602,7 +602,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_worker_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m])))",
+          "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_worker_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))",
           "legendFormat": "worker p99 — {{connector}}",
           "refId": "B"
         }
@@ -652,7 +652,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", result=\"success\"}[1m])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", result=\"success\"}[1m])))",
           "legendFormat": "p50",
           "refId": "A"
         },
@@ -661,7 +661,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", result=\"success\"}[1m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", result=\"success\"}[1m])))",
           "legendFormat": "p95",
           "refId": "B"
         },
@@ -670,7 +670,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", result=\"success\"}[1m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", result=\"success\"}[1m])))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -770,7 +770,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max(content_extraction_circuit_state{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"})",
+          "expr": "max(content_extraction_circuit_state{namespace=\"$namespace\", job=\"$job\"})",
           "refId": "A"
         }
       ],
@@ -819,7 +819,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (bucket, op, error_type) (rate(content_cache_op_errors_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m]))",
+          "expr": "sum by (bucket, op, error_type) (rate(content_cache_op_errors_total{namespace=\"$namespace\", job=\"$job\"}[1m]))",
           "legendFormat": "{{bucket}}/{{op}}/{{error_type}}",
           "refId": "A"
         }
@@ -872,7 +872,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (result) (rate(content_cache_write_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m]))",
+          "expr": "sum by (result) (rate(content_cache_write_total{namespace=\"$namespace\", job=\"$job\"}[1m]))",
           "legendFormat": "{{result}}",
           "refId": "A"
         }
@@ -922,7 +922,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(content_shutdown_pending_failed_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m])",
+          "expr": "rate(content_shutdown_pending_failed_total{namespace=\"$namespace\", job=\"$job\"}[1m])",
           "legendFormat": "shutdown_failed",
           "refId": "A"
         }
@@ -972,7 +972,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (connector, reason) (rate(content_sha256_safety_net_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m]))",
+          "expr": "sum by (connector, reason) (rate(content_sha256_safety_net_total{namespace=\"$namespace\", job=\"$job\"}[1m]))",
           "legendFormat": "{{connector}}/{{reason}}",
           "refId": "A"
         }
@@ -1038,7 +1038,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (status) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[1m]))",
+          "expr": "sum by (status) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\"}[1m]))",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -1088,7 +1088,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.50, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\"}[5m])))",
           "legendFormat": "p50 — {{result}}",
           "refId": "A"
         },
@@ -1097,7 +1097,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\"}[5m])))",
           "legendFormat": "p95 — {{result}}",
           "refId": "B"
         },
@@ -1106,7 +1106,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\"}[5m])))",
           "legendFormat": "p99 — {{result}}",
           "refId": "C"
         }
@@ -1156,7 +1156,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", result=\"success\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", result=\"success\"}[5m])))",
           "legendFormat": "total p95",
           "refId": "A"
         },
@@ -1165,7 +1165,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(content_cache_write_stream_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", result=\"success\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(content_cache_write_stream_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", result=\"success\"}[5m])))",
           "legendFormat": "stream-wait p95 (connector-paced)",
           "refId": "B"
         }
@@ -1215,7 +1215,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", result=~\"canceled|timeout\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", result=~\"canceled|timeout\"}[5m])))",
           "legendFormat": "p95 — {{result}}",
           "refId": "A"
         }
@@ -1265,7 +1265,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_sha_stamp_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_sha_stamp_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[5m])))",
           "legendFormat": "p95 — {{result}}",
           "refId": "A"
         }
@@ -1327,7 +1327,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(content_cache_write_unverified_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
+          "expr": "sum(rate(content_cache_write_unverified_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -1477,7 +1477,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(content_nats_fetch_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m])) / sum(rate(pii_bulk_docs_updated_total{namespace=\"$namespace\"}[5m]))",
+          "expr": "sum(rate(content_nats_fetch_total{namespace=\"$namespace\", job=\"$job\"}[5m])) / sum(rate(pii_bulk_docs_updated_total{namespace=\"$namespace\"}[5m]))",
           "refId": "A"
         }
       ],
@@ -1529,7 +1529,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (status) (rate(content_requests_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", api=\"nats\", status=~\"failed|failed_budget|failed_terminal|failed_draining\"}[5m]))",
+          "expr": "sum by (status) (rate(content_requests_total{namespace=\"$namespace\", job=\"$job\", api=\"nats\", status=~\"failed|failed_budget|failed_terminal|failed_draining\"}[5m]))",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -1579,7 +1579,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", api=\"nats\", le=\"+Inf\"}[5m])) - sum(rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", api=\"nats\", le=\"60.0\"}[5m]))",
+          "expr": "sum(rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", api=\"nats\", le=\"+Inf\"}[5m])) - sum(rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", api=\"nats\", le=\"60.0\"}[5m]))",
           "legendFormat": "slower than 60s",
           "refId": "A"
         }
@@ -1701,7 +1701,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", outcome=\"admitted\"}[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
           "legendFormat": "p99 {{lane}}",
           "refId": "A"
         },
@@ -1710,7 +1710,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", outcome=\"admitted\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
           "legendFormat": "p95 {{lane}}",
           "refId": "B"
         },
@@ -1719,7 +1719,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.50, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", outcome=\"admitted\"}[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
           "legendFormat": "p50 {{lane}}",
           "refId": "C"
         }
@@ -1782,7 +1782,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(content_extraction_slots_in_use{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"})",
+          "expr": "sum(content_extraction_slots_in_use{namespace=\"$namespace\", job=\"$job\"})",
           "legendFormat": "slots in use (total)",
           "refId": "A"
         },
@@ -1791,7 +1791,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (lane) (content_extraction_slots_in_use{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"})",
+          "expr": "sum by (lane) (content_extraction_slots_in_use{namespace=\"$namespace\", job=\"$job\"})",
           "legendFormat": "slots — {{lane}}",
           "refId": "B"
         },
@@ -1800,7 +1800,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (lane) (rate(content_extraction_queue_wait_seconds_count{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", outcome=\"aborted\"}[5m]))",
+          "expr": "sum by (lane) (rate(content_extraction_queue_wait_seconds_count{namespace=\"$namespace\", job=\"$job\", outcome=\"aborted\"}[5m]))",
           "legendFormat": "aborted/s — {{lane}}",
           "refId": "C"
         }
@@ -1853,7 +1853,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (error_code) (rate(content_retry_attempts_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
+          "expr": "sum by (error_code) (rate(content_retry_attempts_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
           "legendFormat": "{{error_code}}",
           "refId": "A"
         }
@@ -1906,7 +1906,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (code, retryable) (rate(content_fetch_errors_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
+          "expr": "sum by (code, retryable) (rate(content_fetch_errors_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
           "legendFormat": "{{code}} (retryable={{retryable}})",
           "refId": "A"
         }
@@ -1956,7 +1956,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (phase, outcome) (rate(content_dedup_claims_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
+          "expr": "sum by (phase, outcome) (rate(content_dedup_claims_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
           "legendFormat": "{{phase}} — {{outcome}}",
           "refId": "A"
         }
@@ -2009,7 +2009,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (phase, source, outcome) (rate(content_dedup_waits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
+          "expr": "sum by (phase, source, outcome) (rate(content_dedup_waits_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
           "legendFormat": "{{phase}} — waiting on {{source}} — {{outcome}}",
           "refId": "A"
         }
@@ -2059,7 +2059,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, phase, source) (rate(content_dedup_wait_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", outcome=\"satisfied\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, phase, source) (rate(content_dedup_wait_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"satisfied\"}[5m])))",
           "legendFormat": "p95 {{phase}}/{{source}}",
           "refId": "A"
         },
@@ -2068,7 +2068,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.50, sum by (le, phase, source) (rate(content_dedup_wait_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", outcome=\"satisfied\"}[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (le, phase, source) (rate(content_dedup_wait_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"satisfied\"}[5m])))",
           "legendFormat": "p50 {{phase}}/{{source}}",
           "refId": "B"
         }
@@ -2118,7 +2118,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (lane) (rate(content_extraction_after_caller_left_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
+          "expr": "sum by (lane) (rate(content_extraction_after_caller_left_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
           "legendFormat": "{{lane}}",
           "refId": "A"
         }
@@ -2410,7 +2410,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"text\", phase=\"extract\"}[5m]))",
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"text\", phase=\"extract\"}[5m]))",
           "legendFormat": "TEXT request — text already cached (no work needed)",
           "refId": "A"
         },
@@ -2419,7 +2419,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"extract\"}[5m]))",
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"extract\"}[5m]))",
           "legendFormat": "TEXT request — raw already cached (extracted fresh, no connector call)",
           "refId": "B"
         },
@@ -2428,7 +2428,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"extract\"}[5m]))",
+          "expr": "sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"extract\"}[5m]))",
           "legendFormat": "TEXT request — raw not cached (connector fetch required)",
           "refId": "C"
         },
@@ -2437,7 +2437,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"fetch\"}[5m]))",
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"fetch\"}[5m]))",
           "legendFormat": "Direct RAW request — served from cache",
           "refId": "D"
         },
@@ -2446,7 +2446,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\", bucket=\"raw\", phase=\"fetch\"}[5m]))",
+          "expr": "sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"fetch\"}[5m]))",
           "legendFormat": "Direct RAW request — fetched from connector",
           "refId": "E"
         }
@@ -2512,7 +2512,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (mime_type) (rate(content_extraction_files_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
+          "expr": "sum by (mime_type) (rate(content_extraction_files_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
           "legendFormat": "{{mime_type}}",
           "refId": "A"
         }
@@ -2565,7 +2565,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (mime_type) (rate(content_extraction_warnings_total{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}[5m]))",
+          "expr": "sum by (mime_type) (rate(content_extraction_warnings_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
           "legendFormat": "{{mime_type}}",
           "refId": "A"
         }
@@ -2654,7 +2654,7 @@
           "uid": "${datasource}"
         },
         "definition": "label_values(content_requests_total{namespace=\"$namespace\", job=\"$job\"}, pod)",
-        "description": "Filters every panel below to the selected pod(s). Defaults to All, which is a no-op — every panel's query already carries pod=~\"$pod\" whether or not it also aggregates pod away with sum(...).",
+        "description": "Only affects the two panels with a per-pod breakdown — 'In-flight requests (global vs stream)' and 'Upload streams in flight' — where it filters which {{pod}} lines are drawn alongside the total. Every other panel below queries by namespace/job only and ignores this variable by design, so historical data survives pod churn (restarts, scale-downs, recycled pod names) instead of silently dropping out when a pod leaves the current option list.",
         "hide": 0,
         "includeAll": true,
         "label": "Pod",
@@ -2704,6 +2704,6 @@
   "timezone": "browser",
   "title": "Content Service",
   "uid": "content-service",
-  "version": 7,
+  "version": 8,
   "weekStart": ""
 }
