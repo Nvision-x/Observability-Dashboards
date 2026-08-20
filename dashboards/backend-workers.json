@@ -2715,6 +2715,447 @@
       "type": "row"
     },
     {
+      "type": "row",
+      "title": "🏥 Health Status - Am I Healthy, Sick, or Dead?",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 112
+      },
+      "id": 30099
+    },
+    {
+      "title": "Overall Health Status",
+      "type": "stat",
+      "id": 30100,
+      "gridPos": {
+        "x": 0,
+        "y": 113,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "sum(kube_pod_status_ready{namespace=\"default\", pod=~\"applications-enricher-.*\", condition=\"true\"})",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DEAD",
+                  "color": "dark-red"
+                },
+                "1": {
+                  "text": "HEALTHY",
+                  "color": "dark-green"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "DEAD",
+                  "color": "dark-red"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.5
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "transparent": false
+    },
+    {
+      "title": "Pods Running",
+      "type": "stat",
+      "id": 30101,
+      "gridPos": {
+        "x": 6,
+        "y": 113,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "expr": "count(up{job=\"default/applications-enricher\", namespace=\"default\"} == 1)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "green",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
+      "title": "Desired Replicas",
+      "type": "stat",
+      "id": 30102,
+      "gridPos": {
+        "x": 10,
+        "y": 113,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "expr": "max(kube_deployment_spec_replicas{namespace=\"default\", deployment=~\".*enricher.*\"})",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
+      "title": "Pod Restarts (5m)",
+      "type": "stat",
+      "id": 30103,
+      "gridPos": {
+        "x": 14,
+        "y": 113,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"default\", pod=~\"applications-enricher-.*\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
+      "title": "Liveness Probe Status",
+      "type": "stat",
+      "id": 30104,
+      "gridPos": {
+        "x": 6,
+        "y": 116,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "expr": "sum(kube_pod_status_ready{namespace=\"default\", pod=~\"applications-enricher-.*\", condition=\"true\"})",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "FAILING",
+                  "color": "dark-red"
+                },
+                "1": {
+                  "text": "PASSING",
+                  "color": "dark-green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
+      "title": "Pod Ready Status",
+      "type": "stat",
+      "id": 30105,
+      "gridPos": {
+        "x": 10,
+        "y": 116,
+        "w": 4,
+        "h": 3
+      },
+      "targets": [
+        {
+          "expr": "sum(kube_pod_status_ready{namespace=\"default\", pod=~\"applications-enricher-.*\", condition=\"true\"})",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "green",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
+      "title": "Uptime",
+      "type": "stat",
+      "id": 30106,
+      "gridPos": {
+        "x": 14,
+        "y": 116,
+        "w": 10,
+        "h": 3
+      },
+      "targets": [
+        {
+          "expr": "avg(time() - process_start_time_seconds{namespace=\"default\", job=\"default/applications-enricher\"})",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "yellow",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 300
+              }
+            ]
+          },
+          "unit": "s"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2730,7 +3171,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 112
+        "y": 119
       },
       "id": 30000,
       "targets": [
@@ -2759,7 +3200,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 112
+        "y": 119
       },
       "id": 30001,
       "targets": [
@@ -2787,7 +3228,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 112
+        "y": 119
       },
       "id": 30002,
       "targets": [
@@ -2820,7 +3261,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 118
+        "y": 125
       },
       "id": 30003,
       "targets": [
@@ -2846,7 +3287,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 118
+        "y": 125
       },
       "id": 30004,
       "targets": [
@@ -2872,7 +3313,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 118
+        "y": 125
       },
       "id": 30005,
       "targets": [
@@ -2900,7 +3341,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 124
+        "y": 131
       },
       "id": 30006,
       "targets": [
@@ -2933,7 +3374,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 124
+        "y": 131
       },
       "id": 30007,
       "targets": [
@@ -2961,7 +3402,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 124
+        "y": 131
       },
       "id": 30008,
       "targets": [
