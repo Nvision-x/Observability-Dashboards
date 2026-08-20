@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "Sales Performance Dashboard - A non-technical view of application health and business metrics for sales teams",
+  "description": "Fleet-wide health rollup across the applications layer (content-service, archiver/archiverv2, enricher, extractor, api, nxmain, privacy, and all connectors). Real per-service breakdown via the job label (job=\"default/applications-<name>\") — not an aggregate blob.",
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
@@ -57,14 +57,11 @@
       },
       "id": 1,
       "options": {
-        "text": {
-          "titleSize": 24,
-          "valueSize": 18
-        }
+        "content": "Fleet-wide status across every application-layer service in this cluster. Each panel below breaks down **by service** (the Prometheus `job` label), not a single combined number — use it to spot which specific service is unhealthy, not just that \"something\" is.",
+        "mode": "markdown"
       },
-      "pluginVersion": "8.0.0",
       "targets": [],
-      "title": "📊 Sales Performance Dashboard - Real-time Business Health",
+      "title": "NVisionX — Application Health (Executive View)",
       "type": "text"
     },
     {
@@ -117,21 +114,13 @@
       },
       "targets": [
         {
-          "expr": "sum by (application) (up{job=~\".*application.*\"})",
-          "legendFormat": "{{application}}",
+          "expr": "sum by (job) (up{job=~\".*applications-.*\"})",
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ],
-      "title": "🟢 Applications Running Smoothly",
-      "transformations": [
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "(.+)",
-            "renamePattern": "$1 App"
-          }
-        }
-      ],
+      "title": "Services Up, by Service",
+      "transformations": [],
       "type": "piechart"
     },
     {
@@ -179,12 +168,12 @@
       },
       "targets": [
         {
-          "expr": "(sum(up{job=~\".*application.*\"}) / count(up{job=~\".*application.*\"})) * 100",
+          "expr": "(sum(up{job=~\".*applications-.*\"}) / count(up{job=~\".*applications-.*\"})) * 100",
           "legendFormat": "System Health",
           "refId": "A"
         }
       ],
-      "title": "📈 Overall System Health Score",
+      "title": "Overall Fleet Health (% targets up)",
       "transformations": [
         {
           "id": "organize",
@@ -244,12 +233,12 @@
       },
       "targets": [
         {
-          "expr": "avg(http_request_duration_seconds{job=~\".*application.*\"}) * 1000",
-          "legendFormat": "Customer Experience",
+          "expr": "histogram_quantile(0.95, sum by (le, job) (rate(http_request_duration_seconds_bucket{job=~\".*applications-.*\"}[5m]))) * 1000",
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ],
-      "title": "⚡ Customer Experience Speed",
+      "title": "Request Latency p95 (where instrumented)",
       "transformations": [
         {
           "id": "organize",
@@ -260,7 +249,8 @@
           }
         }
       ],
-      "type": "table"
+      "type": "table",
+      "description": "http_request_duration_seconds is opt-in per service (pipeline-lib-go's shared HTTP metric set) — not every service installs it. No data for a service here means it hasn't wired up the shared HTTP metrics, not that it's slow."
     },
     {
       "datasource": {
@@ -322,12 +312,12 @@
       },
       "targets": [
         {
-          "expr": "sum by (application) (rate(http_requests_total{job=~\".*application.*\"}[5m]))",
-          "legendFormat": "{{application}} Customer Activity",
+          "expr": "sum by (job) (rate(http_requests_total{job=~\".*applications-.*\"}[5m]))",
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ],
-      "title": "👥 Customer Activity Trends (Last 24 Hours)",
+      "title": "Request Rate by Service (rolling 5m)",
       "type": "timeseries"
     },
     {
@@ -375,12 +365,12 @@
       },
       "targets": [
         {
-          "expr": "avg by (application) ((sum(rate(http_requests_total{job=~\".*application.*\", status!~\"5.*\"}[5m])) by (application) / sum(rate(http_requests_total{job=~\".*application.*\"}[5m])) by (application)) * 100)",
-          "legendFormat": "{{application}}",
+          "expr": "sum by (job) (rate(http_requests_total{job=~\".*applications-.*\", status!~\"5.*\"}[5m])) / sum by (job) (rate(http_requests_total{job=~\".*applications-.*\"}[5m])) * 100",
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ],
-      "title": "✅ Customer Success Rate by Application",
+      "title": "HTTP Success Rate by Service (non-5xx)",
       "transformations": [
         {
           "id": "organize",
@@ -453,12 +443,12 @@
       },
       "targets": [
         {
-          "expr": "sum by (application) (increase(http_requests_total{job=~\".*application.*\"}[1h]))",
-          "legendFormat": "{{application}} - Hourly Customer Interactions",
+          "expr": "sum by (job) (increase(http_requests_total{job=~\".*applications-.*\"}[1h]))",
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ],
-      "title": "📊 Hourly Customer Engagement by Application",
+      "title": "Hourly Request Volume by Service",
       "type": "timeseries"
     },
     {
@@ -506,12 +496,12 @@
       },
       "targets": [
         {
-          "expr": "avg by (application) (rate(container_cpu_usage_seconds_total{container=~\".*application.*\"}[5m]) * 100)",
-          "legendFormat": "{{application}}",
+          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"default\", pod=~\"applications-.*\", container!=\"\", container!=\"POD\"}[5m])) * 100",
+          "legendFormat": "{{pod}}",
           "refId": "A"
         }
       ],
-      "title": "🔧 System Resource Usage",
+      "title": "CPU Usage by Pod (%)",
       "transformations": [
         {
           "id": "organize",
@@ -569,12 +559,12 @@
       },
       "targets": [
         {
-          "expr": "sum by (application) (up{job=~\".*application.*\"} == 0)",
-          "legendFormat": "{{application}}",
+          "expr": "sum by (job) (up{job=~\".*applications-.*\"} == 0)",
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ],
-      "title": "🚨 Issues Requiring Attention",
+      "title": "Services Down (instant)",
       "transformations": [
         {
           "id": "organize",
@@ -620,11 +610,11 @@
       },
       "id": 10,
       "options": {
-        "content": "## 📈 Key Insights for Sales Team\n\n- **Green status** means our systems are performing well and customers are having a great experience\n- **Yellow status** indicates we should monitor closely but no immediate customer impact\n- **Red status** means there may be customer impact and technical team is working on it\n\n**What this means for sales:**\n- Higher customer activity = more engagement opportunities\n- Faster response times = better customer satisfaction\n- Higher success rates = customers getting value from our products\n\n*Dashboard updates every 30 seconds to give you real-time insights*",
+        "content": "## How to read this dashboard\n\n- **Services Up, by Service** — which specific services are being scraped and reporting healthy.\n- **Overall Fleet Health** — a single aggregate % up across the whole applications layer; use it as a headline number, not for diagnosis.\n- **Request Latency p95** — only populated for services that install the shared HTTP latency histogram (`http_request_duration_seconds`). Blank does not mean broken.\n- **Services Down** — the actionable panel: any non-zero row here is a specific service to go investigate, identified by its real `job` label (`default/applications-<name>`).\n\n*Dashboard refreshes every 30 seconds.*",
         "mode": "markdown"
       },
       "pluginVersion": "8.0.0",
-      "title": "💡 How to Read This Dashboard",
+      "title": "How to Read This Dashboard",
       "type": "text"
     }
   ],
@@ -633,10 +623,9 @@
   "style": "dark",
   "tags": [
     "git-sync",
-    "sales",
-    "business",
     "applications",
-    "customer-experience"
+    "overview",
+    "executive"
   ],
   "templating": {
     "list": [
