@@ -1,7 +1,7 @@
 {
   "id": null,
   "uid": "s3-parquet-processing",
-  "title": "NVisionX — S3 Parquet Inventory Connector (All Clusters)",
+  "title": "S3 Parquet Inventory Connector (All Clusters)",
   "tags": [
     "s3",
     "parquet",
@@ -490,5 +490,6 @@
       }
     ]
   },
-  "__comment": "CONFIRMED via kubectl exec into applications-s3-connector-go-content-* (image alpine-main-2026.07.22-92) and curling its own /metrics on port 8080: this connector currently emits ZERO s3_parquet_* business metrics - only generic OpenTelemetry HTTP-server telemetry for its own /health and /metrics routes (http_requests_total, http_request_duration_seconds, http_response_size_bytes). target_info confirms this is the right pod (service_name=\"unknown_service:s3-inventory-connector\"), so this is not a wrong-pod or wrong-job issue - the business metrics this dashboard queries were never instrumented into the current build. Kept all 13 original s3_parquet_* panels as-is (query fixes here wouldn't help - the metrics don't exist under any name) and added a Live Data section at the top showing what the pod actually exposes today, so the dashboard isn't 100% \"No data\". Whoever owns s3-connector-go-content needs to add business-metric instrumentation before the panels below the red divider will ever show anything."
+  "__comment": "CONFIRMED via kubectl exec into applications-s3-connector-go-content-* (image alpine-main-2026.07.22-92) and curling its own /metrics on port 8080: this connector currently emits ZERO s3_parquet_* business metrics - only generic OpenTelemetry HTTP-server telemetry for its own /health and /metrics routes (http_requests_total, http_request_duration_seconds, http_response_size_bytes). target_info confirms this is the right pod (service_name=\"unknown_service:s3-inventory-connector\"), so this is not a wrong-pod or wrong-job issue - the business metrics this dashboard queries were never instrumented into the current build. Kept all 13 original s3_parquet_* panels as-is (query fixes here wouldn't help - the metrics don't exist under any name) and added a Live Data section at the top showing what the pod actually exposes today, so the dashboard isn't 100% \"No data\". Whoever owns s3-connector-go-content needs to add business-metric instrumentation before the panels below the red divider will ever show anything.",
+  "folderUid": "applications-folder"
 }
