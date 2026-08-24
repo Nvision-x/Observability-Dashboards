@@ -172,7 +172,7 @@
       "title": "Scanner Errors (rate)",
       "description": "Query failures against the source database. These are the only two counters that mean \"MySQL refused something\" — everything on the next two panels is deliberately kept out of them.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 9 },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
       "targets": [
         { "refId": "A", "expr": "sum(rate(mysql_scanner_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "database" },
@@ -185,7 +185,7 @@
       "title": "Skips & Connector Bugs (count, 5m)",
       "description": "Three failure modes counted apart from table_errors_total because none of them is the source database's fault. no visible columns — INFORMATION_SCHEMA.COLUMNS returned nothing (missing column-level GRANT, or a table dropped mid-scan); alert on a sustained rate, not any non-zero value. inline fallback — the worker pool refused a table after Shutdown and the scanner ran it on the consumer goroutine, serialising the rest of that database. table panics — always a connector bug, any non-zero value is worth acting on.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 9 },
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "targets": [
         { "refId": "A", "expr": "sum(increase(mysql_scanner_tables_no_visible_columns_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "no visible columns" },
@@ -199,11 +199,23 @@
       "title": "Error Reporter Drops by Reason (count, 5m)",
       "description": "Structured errors that never reached the observer, so the job record is showing a truncated view of the scan's failures. buffer_full — the buffered channel saturated. after_close — PublishError called after Close. publish_failed — the observer refused or could not be reached; this is the remote failure mode, and without it an unreachable observer used to lose every ItemError while the drop counter stayed at zero. close timeouts counts one abandonment of an unknown number of reports rather than individual errors, which is why it is a separate series: reaching it means publishLoop was parked inside a single publish for the whole flush budget, so check the control plane's health, not the scan.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 9 },
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "targets": [
         { "refId": "A", "expr": "sum by (reason) (increase(mysql_scanner_error_reporter_dropped_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{reason}}" },
         { "refId": "B", "expr": "sum(increase(mysql_scanner_error_reporter_close_timeouts_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "close timeouts" }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Error Reporter — Abandoned Flushes (live)",
+      "description": "Abandoned error-reporter flushes whose background goroutine is still parked in a publish — a live count on this pod, not a rate. Its sibling on the panel to the left counts how many times an abandonment has happened since the pod started; this one is how many are outstanding right now, which is the number that says whether the pod is still healthy. The two differ because an ErrorReporter is built and closed per message (one per ScanStart, one per DatabaseFork): an abandoned flush leaves a goroutine plus its 100-slot buffer behind, and the error that Close's caller returns NAKs the message, so redelivery supplies another fork that does it again. It unwinds on its own — each goroutine exits as soon as its publish returns — so a value that climbs and stays up is a control plane that is not answering, not a leak the connector can close from the inside. On the pinned pipeline-lib-go that publish resolves the job's step through GetJobSettings on a context with no deadline, which is why there is nothing bounding it below the reporter's 5s flush budget. Sustained above zero is alert-worthy; check the control plane, not the scan.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 } },
+      "targets": [
+        { "refId": "A", "expr": "sum(mysql_scanner_error_reporter_abandoned_flushes{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "abandoned flushes" }
       ]
     },
     {
