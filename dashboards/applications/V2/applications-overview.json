@@ -584,6 +584,162 @@
       "targets": [
         { "refId": "A", "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"failed_permanent\"}[5m]))" }
       ]
+    },
+    {
+      "type": "row",
+      "id": 800,
+      "title": "MySQL — Scanner",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 },
+      "panels": []
+    },
+    {
+      "id": 29,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 36 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "green", "value": 1 }
+          ]},
+          "links": [{
+            "title": "Open MySQL Overview",
+            "url": "/d/apps-v2-mysql-overview?${namespace:queryparam}"
+          }]
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "sum(up{job=~\".*mysql-connector-be-go\", namespace=\"$namespace\"})" }
+      ]
+    },
+    {
+      "id": 30,
+      "type": "stat",
+      "title": "Items Sent (rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 36 },
+      "fieldConfig": { "defaults": { "unit": "ops", "decimals": 2 } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(mysql_scanner_items_sent_total{namespace=\"$namespace\"}[5m]))" }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "stat",
+      "title": "Scan p95",
+      "description": "ScanStart discovery + fan-out phase, on a 0.5s–1024s ladder. Not whole-scan duration.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 36 },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 1 } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(mysql_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\"}[5m])))" }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "stat",
+      "title": "Error Rate",
+      "description": "Query failures against the source database only. Skipped tables, inline fallbacks and connector panics are counted apart — see the MySQL overview's Silent-Failure Signals row.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 36 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops", "decimals": 3,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.01 },
+            { "color": "red", "value": 0.1 }
+          ]}
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(mysql_scanner_database_errors_total{namespace=\"$namespace\"}[5m])) + sum(rate(mysql_scanner_table_errors_total{namespace=\"$namespace\"}[5m]))" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 900,
+      "title": "MySQL — Content",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 40 },
+      "panels": []
+    },
+    {
+      "id": 33,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 41 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "green", "value": 1 }
+          ]},
+          "links": [{
+            "title": "Open MySQL Overview",
+            "url": "/d/apps-v2-mysql-overview?${namespace:queryparam}"
+          }]
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "sum(up{job=~\".*mysql-connector-be-go-content\", namespace=\"$namespace\"})" }
+      ]
+    },
+    {
+      "id": 34,
+      "type": "stat",
+      "title": "Fetches (rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 41 },
+      "fieldConfig": { "defaults": { "unit": "ops", "decimals": 2 } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(mysql_content_requests_total{namespace=\"$namespace\"}[5m]))" }
+      ]
+    },
+    {
+      "id": 35,
+      "type": "stat",
+      "title": "Fetch p95",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 41 },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 1 } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(mysql_content_duration_seconds_bucket{namespace=\"$namespace\", outcome=\"success\"}[5m])))" }
+      ]
+    },
+    {
+      "id": 36,
+      "type": "stat",
+      "title": "Error Rate",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 41 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops", "decimals": 3,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.01 },
+            { "color": "red", "value": 0.1 }
+          ]}
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(mysql_content_requests_total{namespace=\"$namespace\", outcome=\"error\"}[5m]))" }
+      ]
     }
   ]
 }

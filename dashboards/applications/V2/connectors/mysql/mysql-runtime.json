@@ -1,0 +1,267 @@
+{
+  "uid": "apps-v2-mysql-runtime",
+  "title": "MySQL Connector — Runtime",
+  "tags": ["git-sync", "apps-v2", "connector:mysql", "runtime"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-mysql-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "MySQL — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-mysql-overview?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "MySQL — Pipeline",
+      "type": "link",
+      "url": "/d/apps-v2-mysql-pipeline?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": { "selected": false, "text": "Prometheus", "value": "prometheus-nx" },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(process_start_time_seconds{job=~\".*mysql-connector-be-go.*\"}, namespace)",
+        "current": { "selected": true, "text": "default", "value": "default" },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "component",
+        "type": "custom",
+        "label": "Component",
+        "query": "All : .*mysql-connector-be-go.*, Scanner : .*mysql-connector-be-go, Content : .*mysql-connector-be-go-content",
+        "current": { "selected": true, "text": "All", "value": ".*mysql-connector-be-go.*" },
+        "options": [
+          { "selected": true, "text": "All", "value": ".*mysql-connector-be-go.*" },
+          { "selected": false, "text": "Scanner", "value": ".*mysql-connector-be-go" },
+          { "selected": false, "text": "Content", "value": ".*mysql-connector-be-go-content" }
+        ],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(process_start_time_seconds{job=~\"$component\", namespace=\"$namespace\"}, pod)",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "enable": true,
+        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\".*mysql-connector.*\"}[5m]) > 0",
+        "name": "Pod Restarts",
+        "tagKeys": "pod",
+        "titleFormat": "Pod Restart"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Process — CPU & Memory",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Process CPU (rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [
+        { "refId": "A", "expr": "rate(process_cpu_seconds_total{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Process Resident Memory",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "process_resident_memory_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Process Virtual Memory",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "process_virtual_memory_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Container — Resource Usage",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Container CPU Usage",
+      "description": "cAdvisor series, so it is selected by pod name rather than by job — the Component variable does not filter this panel.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*mysql-connector.*\", container!=\"\", container!=\"POD\"}[5m]))", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Container Memory (working set)",
+      "description": "cAdvisor series, so it is selected by pod name rather than by job — the Component variable does not filter this panel. This is the number the OOM killer watches, not process RSS.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*mysql-connector.*\", container!=\"\", container!=\"POD\"})", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "Go Runtime",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Goroutines",
+      "description": "A count that climbs and never comes back down across scans is the leak signature — the leaf worker pool and the content streaming producers are the two places goroutines are spawned per unit of work.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "go_goroutines{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Heap In-Use",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "go_memstats_heap_inuse_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "GC Pause (max / p75)",
+      "description": "go_gc_duration_seconds is a SUMMARY, not a histogram — there is no _bucket series, so histogram_quantile against it returns nothing. These are the pre-computed quantiles the Go collector exports; the available ones are 0, 0.25, 0.5, 0.75 and 1, so there is no p99 to plot. The label is matched with =~ because client_golang formats these values as \"0.0\"/\"1.0\" here while older versions emit \"0\"/\"1\" — an exact quantile=\"1\" silently returns nothing.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "go_gc_duration_seconds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\", quantile=~\"1(.0)?\"}", "legendFormat": "max {{pod}}" },
+        { "refId": "B", "expr": "go_gc_duration_seconds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\", quantile=~\"0.75\"}", "legendFormat": "p75 {{pod}}" }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "GC Cycles (rate)",
+      "description": "Completed GC cycles per second, from the summary's observation count. A rate that climbs alongside flat heap in-use means allocation churn rather than growth.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "rate(go_gc_duration_seconds_count{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 400,
+      "title": "File Descriptors & Threads",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Open vs Max FDs",
+      "description": "Every pooled MySQL connection is a socket, so an open count converging on max is how connection-pool exhaustion presents at the process level.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 25 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "process_open_fds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "open {{pod}}" },
+        { "refId": "B", "expr": "process_max_fds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "max {{pod}}" }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "OS Threads",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 25 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "go_threads{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    }
+  ]
+}
