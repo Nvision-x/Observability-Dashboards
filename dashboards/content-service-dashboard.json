@@ -316,7 +316,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "- Cache S3 op latency p99, by bucket/op — isolates S3 latency from content-service code paths.\n- Since 2026-08, hits are served HEAD-only (bodies delivered via CacheLocation) — `get` volume should be a small fraction of `head`.\n- Rising `get` rate → the extraction path or the sha256 safety-net is doing real reads.",
+      "description": "- Cache S3 op latency p99, by bucket/op — isolates S3 latency from content-service code paths.\n- bucket ∈ {raw, processed} since 2026-08: this label used to carry the deployed bucket NAME (nvisionx-raw-content-cache-…), so legends were environment-specific and queries written against \"raw\" matched nothing. \"other\" would mean a bucket nothing wired up.\n- Since 2026-08, hits are served HEAD-only (bodies delivered via CacheLocation) — `get` volume should be a small fraction of `head`.\n- Rising `get` rate → the extraction path or the sha256 safety-net is doing real reads.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -419,7 +419,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "- Three independent ratios — they answer different questions and don't move together.\n- \"Direct RAW request — served from cache\": plain RAW-request hits (phase=fetch). Drop → RAW callers increasingly missing.\n- \"TEXT request — raw already cached\": the raw-bucket check before extraction (phase=extract). Low/red → TEXT requests are paying for a connector round-trip before extraction even starts.\n- \"TEXT request — text already cached\": final extracted output already cached — the cheapest possible outcome.\n- No data on a tile = zero traffic on that path, not a ratio of zero.\n- Red tile on unique-document traffic (first-pass scan) is expected. Red tile on repeat-document traffic is worth investigating.",
+      "description": "- Three independent ratios — they answer different questions and don't move together.\n- \"Direct RAW request — served from cache\": plain RAW-request hits (phase=fetch). Drop → RAW callers increasingly missing.\n- \"TEXT request — raw already cached\": the raw-bucket check before extraction (phase=extract). Low/red → TEXT requests are paying for a connector round-trip before extraction even starts.\n- \"TEXT request — output already cached\": final extracted output already cached — the cheapest possible outcome.\n- No data on a tile = zero traffic on that path, not a ratio of zero.\n- Red tile on unique-document traffic (first-pass scan) is expected. Red tile on repeat-document traffic is worth investigating.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -493,8 +493,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"text\", phase=\"extract\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"text\", phase=\"extract\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", bucket=\"text\", phase=\"extract\"}[5m])))",
-          "legendFormat": "TEXT request — text already cached",
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"processed\", phase=\"extract\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"processed\", phase=\"extract\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", bucket=\"processed\", phase=\"extract\"}[5m])))",
+          "legendFormat": "TEXT request — output already cached",
           "refId": "C"
         }
       ],
@@ -2433,8 +2433,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"text\", phase=\"extract\"}[5m]))",
-          "legendFormat": "TEXT request — text already cached (no work needed)",
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"processed\", phase=\"extract\"}[5m]))",
+          "legendFormat": "TEXT request — output already cached (no work needed)",
           "refId": "A"
         },
         {
@@ -2734,6 +2734,122 @@
         }
       ],
       "title": "Extraction bytes/sec — sent vs received, by parser",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 174
+      },
+      "id": 1010,
+      "panels": [],
+      "title": "Processed bucket — by output format",
+      "type": "row",
+      "description": null
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Processed-bucket hit ratio split by the serialization the caller asked for.\n- One bucket holds them all (text, markdown, html, djot), so `bucket=\"processed\"` alone cannot tell a markdown hit from a text hit — that is what the `format` label is for. Summing over `format` still gives the complete processed-bucket total.\n- A format's ratio starts at 0 and climbs: switching a caller's format changes the cache key, so every document it had already processed is a miss until it is re-extracted.\n- format=\"unspecified\" means the caller named no format and was served plain text. See the panel beside this one.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "max": 1,
+          "min": 0,
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 175
+      },
+      "id": 1011,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (format) (rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"processed\", phase=\"extract\"}[5m])) / (sum by (format) (rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"processed\", phase=\"extract\"}[5m])) + sum by (format) (rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", bucket=\"processed\", phase=\"extract\"}[5m])))",
+          "legendFormat": "{{format}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Processed-bucket hit ratio — by format",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Requests that named NO output format and were served plain text.\n- This is the gate on REQUIRE_OUTPUT_FORMAT. While it is above zero, turning that flag on answers those requests with CONTENT_ERROR_INVALID_ARGUMENT (retryable=false) instead of content — so wait for it to reach and hold zero, then flip dev first.\n- Nonzero after every caller is believed updated → a caller was missed, or an old build is still running. It counts lookups rather than callers, so use it as a yes/no signal, not a headcount.\n- Deliberately distinct from format=\"text\": both produce the same cache key and the same extractor request, and are kept apart only so this signal exists.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 175
+      },
+      "id": 1012,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", format=\"unspecified\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", format=\"unspecified\"}[5m]))",
+          "legendFormat": "requests with no output_format",
+          "refId": "A"
+        }
+      ],
+      "title": "Callers not yet stating an output format",
       "type": "timeseries"
     }
   ],
