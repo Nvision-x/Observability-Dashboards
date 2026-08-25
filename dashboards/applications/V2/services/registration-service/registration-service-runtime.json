@@ -1,28 +1,26 @@
 {
-  "uid": "apps-v2-snowflake-runtime",
-  "title": "Snowflake Connector — Runtime",
-  "tags": ["git-sync", "apps-v2", "connector:snowflake", "runtime"],
+  "uid": "apps-v2-registration-service-runtime",
+  "title": "Registration Service — Runtime",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "service:registration-service",
+    "runtime"
+  ],
   "timezone": "utc",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "30s",
-  "folderUid": "apps-v2-snowflake-folder",
+  "folderUid": "apps-v2-registration-service-folder",
   "time": {
     "from": "now-1h",
     "to": "now"
   },
   "links": [
     {
-      "title": "Snowflake — Overview",
+      "title": "Registration Service — Overview",
       "type": "link",
-      "url": "/d/apps-v2-snowflake-overview?${namespace:queryparam}&${component:queryparam}",
-      "targetBlank": false,
-      "icon": "external link"
-    },
-    {
-      "title": "Snowflake — Pipeline",
-      "type": "link",
-      "url": "/d/apps-v2-snowflake-pipeline?${namespace:queryparam}&${component:queryparam}",
+      "url": "/d/apps-v2-registration-service-overview?${namespace:queryparam}",
       "targetBlank": false,
       "icon": "external link"
     },
@@ -50,7 +48,7 @@
         "type": "query",
         "label": "Namespace",
         "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "query": "label_values(process_start_time_seconds{job=~\".*snowflake-connector-be-go.*\"}, namespace)",
+        "query": "label_values(process_start_time_seconds{job=~\".*registration-service.*\"}, namespace)",
         "current": { "selected": true, "text": "default", "value": "default" },
         "hide": 0,
         "includeAll": false,
@@ -59,26 +57,11 @@
         "sort": 1
       },
       {
-        "name": "component",
-        "type": "custom",
-        "label": "Component",
-        "query": "All : .*snowflake-connector-be-go.*, Scanner : .*snowflake-connector-be-go, Content : .*snowflake-connector-be-go-content",
-        "current": { "selected": true, "text": "All", "value": ".*snowflake-connector-be-go.*" },
-        "options": [
-          { "selected": true, "text": "All", "value": ".*snowflake-connector-be-go.*" },
-          { "selected": false, "text": "Scanner", "value": ".*snowflake-connector-be-go" },
-          { "selected": false, "text": "Content", "value": ".*snowflake-connector-be-go-content" }
-        ],
-        "hide": 0,
-        "includeAll": false,
-        "multi": false
-      },
-      {
         "name": "pod",
         "type": "query",
         "label": "Pod",
         "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "query": "label_values(process_start_time_seconds{job=~\"$component\", namespace=\"$namespace\"}, pod)",
+        "query": "label_values(process_start_time_seconds{job=~\".*registration-service.*\", namespace=\"$namespace\"}, pod)",
         "current": { "selected": true, "text": "All", "value": "$__all" },
         "hide": 0,
         "includeAll": true,
@@ -94,7 +77,7 @@
       {
         "datasource": { "type": "prometheus", "uid": "${datasource}" },
         "enable": true,
-        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\".*snowflake-connector.*\"}[5m]) > 0",
+        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\".*registration-service.*\"}[5m]) > 0",
         "name": "Pod Restarts",
         "tagKeys": "pod",
         "titleFormat": "Pod Restart"
@@ -118,7 +101,7 @@
       "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "percentunit" } },
       "targets": [
-        { "refId": "A", "expr": "rate(process_cpu_seconds_total{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "rate(process_cpu_seconds_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])", "legendFormat": "{{pod}}" }
       ]
     },
     {
@@ -129,7 +112,7 @@
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "bytes" } },
       "targets": [
-        { "refId": "A", "expr": "process_resident_memory_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "process_resident_memory_bytes{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
       ]
     },
     {
@@ -140,7 +123,7 @@
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "bytes" } },
       "targets": [
-        { "refId": "A", "expr": "process_virtual_memory_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "process_virtual_memory_bytes{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
       ]
     },
     {
@@ -159,7 +142,7 @@
       "gridPos": { "h": 7, "w": 12, "x": 0, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "percentunit" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*snowflake-connector.*\", container!=\"\", container!=\"POD\"}[5m]))", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*registration-service.*\", container!=\"\", container!=\"POD\"}[5m]))", "legendFormat": "{{pod}}" }
       ]
     },
     {
@@ -170,7 +153,7 @@
       "gridPos": { "h": 7, "w": 12, "x": 12, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "bytes" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*snowflake-connector.*\", container!=\"\", container!=\"POD\"})", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*registration-service.*\", container!=\"\", container!=\"POD\"})", "legendFormat": "{{pod}}" }
       ]
     },
     {
@@ -189,7 +172,7 @@
       "gridPos": { "h": 7, "w": 8, "x": 0, "y": 17 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "targets": [
-        { "refId": "A", "expr": "go_goroutines{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "go_goroutines{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
       ]
     },
     {
@@ -200,18 +183,19 @@
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 17 },
       "fieldConfig": { "defaults": { "unit": "bytes" } },
       "targets": [
-        { "refId": "A", "expr": "go_memstats_heap_inuse_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "go_memstats_heap_inuse_bytes{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
       ]
     },
     {
       "id": 22,
       "type": "timeseries",
-      "title": "GC Pause p99",
+      "title": "GC Pause (max)",
+      "description": "Longest stop-the-world GC pause per pod. go_gc_duration_seconds is a Prometheus summary, not a histogram: there is no _bucket series, so histogram_quantile cannot be used here. The Go collector exposes quantiles 0, 0.25, 0.5, 0.75 and 1 only — there is no 0.99. quantile=\"1\" is the max pause over the runtime's buffer of recent GC cycles, so it reports the worst recent pause rather than a windowed percentile.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 17 },
       "fieldConfig": { "defaults": { "unit": "s" } },
       "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.99, sum by (le, pod) (rate(go_gc_duration_seconds_bucket{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "go_gc_duration_seconds{quantile=\"1\", job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
       ]
     },
     {
@@ -230,8 +214,8 @@
       "gridPos": { "h": 7, "w": 12, "x": 0, "y": 25 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "targets": [
-        { "refId": "A", "expr": "process_open_fds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "open {{pod}}" },
-        { "refId": "B", "expr": "process_max_fds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "max {{pod}}" }
+        { "refId": "A", "expr": "process_open_fds{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "open {{pod}}" },
+        { "refId": "B", "expr": "process_max_fds{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "max {{pod}}" }
       ]
     },
     {
@@ -242,7 +226,38 @@
       "gridPos": { "h": 7, "w": 12, "x": 12, "y": 25 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "targets": [
-        { "refId": "A", "expr": "go_threads{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "go_threads{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 500,
+      "title": "Uptime & Restarts",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 },
+      "panels": []
+    },
+    {
+      "id": 40,
+      "type": "timeseries",
+      "title": "Process Uptime",
+      "description": "Time since process start. A sawtooth here is a restart.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 33 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "time() - process_start_time_seconds{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Container Restarts (1h increase)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 33 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\".*registration-service.*\"}[1h]))", "legendFormat": "{{pod}}" }
       ]
     }
   ]

@@ -1,0 +1,512 @@
+{
+  "uid": "apps-v2-registration-service-overview",
+  "title": "Registration Service — Overview",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "service:registration-service",
+    "overview"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-registration-service-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "Registration Service — Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-registration-service-runtime?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": { "selected": false, "text": "Prometheus", "value": "prometheus-nx" },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(process_start_time_seconds{job=~\".*registration-service.*\"}, namespace)",
+        "current": { "selected": true, "text": "default", "value": "default" },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "description": "Applies only to the per-pod panels at the bottom of this dashboard. Aggregate panels deliberately ignore it so pod churn does not gap the graphs.",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(process_start_time_seconds{job=~\".*registration-service.*\", namespace=\"$namespace\"}, pod)",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "enable": true,
+        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\".*registration-service.*\"}[5m]) > 0",
+        "name": "Pod Restarts",
+        "tagKeys": "pod",
+        "titleFormat": "Pod Restart"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Service Health",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum(up{job=~\".*registration-service.*\", namespace=\"$namespace\"})" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Registrations (5m)",
+      "description": "Successful RegisterConnector calls in the last 5 minutes (increase on connector_registrations_total).",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum(increase(connector_registrations_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "gRPC Requests (5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2 } },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "gRPC Error Rate (5m)",
+      "description": "Fraction of gRPC calls returning a non-OK status code (code != 0).",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.01 },
+              { "color": "red", "value": 0.05 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", code!=\"0\"}[5m])) / clamp_min(sum(rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])), 0.0001)" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "HTTP Requests (5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2 } },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))" }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "HTTP 5xx Rate (5m)",
+      "description": "Fraction of REST requests answered with a 5xx status.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.01 },
+              { "color": "red", "value": 0.05 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])), 0.0001)" }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "gRPC In Flight",
+      "description": "grpc_active_requests — unary calls currently executing inside the metrics interceptor.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 5 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum(grpc_active_requests{job=~\".*registration-service.*\", namespace=\"$namespace\"})" }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "HTTP In Flight",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 5 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum(http_active_requests{job=~\".*registration-service.*\", namespace=\"$namespace\"})" }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "gRPC p95 (5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 5 },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3 } },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))" }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "HTTP p95 (5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 5 },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3 } },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Connector Registrations",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Registrations by Connector (5m increase)",
+      "description": "connector_registrations_total counts successful RegisterConnector calls. Connectors re-register on every startup, so steps here usually line up with connector rollouts.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (connector) (increase(connector_registrations_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "{{connector}}" }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "bargauge",
+      "title": "Registrations by Connector (dashboard window)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "displayMode": "gradient",
+        "orientation": "horizontal"
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum by (connector) (increase(connector_registrations_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[$__range]))", "legendFormat": "{{connector}}", "instant": true }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "gRPC — Registration API",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "gRPC Request Rate by Method",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 19 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (method) (rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "{{method}}" }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "gRPC Request Rate by Status Code",
+      "description": "The `code` label is the numeric gRPC status (0 = OK). The `status` label carries the full formatted status string and is intentionally not used for grouping.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 19 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (code) (rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "code {{code}}" }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "gRPC In Flight by Method",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 19 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (method) (grpc_active_requests{job=~\".*registration-service.*\", namespace=\"$namespace\"})", "legendFormat": "{{method}}" }
+      ]
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "gRPC Duration — p50 / p95 / p99",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 26 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "gRPC Mean Duration by Method",
+      "description": "sum/count over the 5m window — unaffected by the coarse default histogram bucket boundaries, so it is the more trustworthy latency signal for sub-second calls.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 26 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (method) (rate(grpc_request_duration_seconds_sum{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])) / clamp_min(sum by (method) (rate(grpc_request_duration_seconds_count{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])), 0.0001)", "legendFormat": "{{method}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 400,
+      "title": "HTTP — REST API",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
+      "panels": []
+    },
+    {
+      "id": 40,
+      "type": "timeseries",
+      "title": "HTTP Request Rate by Route",
+      "description": "Route is chi's matched pattern (e.g. /api/v1/connectors/{name}/config-schema). Requests matching no route collapse to \"unmatched\".",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 34 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (route) (rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "{{route}}" }
+      ]
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "HTTP Request Rate by Status",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 34 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (status) (rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "{{status}}" }
+      ]
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "HTTP Duration — p50 / p95 / p99",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 41 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "id": 43,
+      "type": "timeseries",
+      "title": "HTTP Mean Duration by Route",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 41 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (route) (rate(http_request_duration_seconds_sum{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])) / clamp_min(sum by (route) (rate(http_request_duration_seconds_count{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])), 0.0001)", "legendFormat": "{{route}}" }
+      ]
+    },
+    {
+      "id": 44,
+      "type": "timeseries",
+      "title": "HTTP Payload Throughput",
+      "description": "Bytes/s in and out, from the http_request_size_bytes / http_response_size_bytes histogram sums. Only non-zero-length bodies are recorded.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 41 },
+      "fieldConfig": { "defaults": { "unit": "Bps" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(http_request_size_bytes_sum{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "request" },
+        { "refId": "B", "expr": "sum(rate(http_response_size_bytes_sum{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "response" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 500,
+      "title": "Per-Pod Drill-Down",
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 48 },
+      "panels": [
+        {
+          "id": 50,
+          "type": "timeseries",
+          "title": "gRPC Request Rate by Pod",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 7, "w": 8, "x": 0, "y": 49 },
+          "fieldConfig": { "defaults": { "unit": "reqps" } },
+          "targets": [
+            { "refId": "A", "expr": "sum by (pod) (rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{pod}}" }
+          ]
+        },
+        {
+          "id": 51,
+          "type": "timeseries",
+          "title": "HTTP Request Rate by Pod",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 7, "w": 8, "x": 8, "y": 49 },
+          "fieldConfig": { "defaults": { "unit": "reqps" } },
+          "targets": [
+            { "refId": "A", "expr": "sum by (pod) (rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{pod}}" }
+          ]
+        },
+        {
+          "id": 52,
+          "type": "timeseries",
+          "title": "Registrations by Pod (5m increase)",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 7, "w": 8, "x": 16, "y": 49 },
+          "fieldConfig": { "defaults": { "unit": "short" } },
+          "targets": [
+            { "refId": "A", "expr": "sum by (pod) (increase(connector_registrations_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{pod}}" }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,497 @@
+{
+  "uid": "apps-v2-mysql-pipeline",
+  "title": "MySQL Connector — Pipeline",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "connector:mysql",
+    "pipeline"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-mysql-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "MySQL — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-mysql-overview?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "MySQL — Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-mysql-runtime?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": { "selected": false, "text": "Prometheus", "value": "prometheus-nx" },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(process_start_time_seconds{job=~\".*mysql-connector-be-go.*\"}, namespace)",
+        "current": { "selected": true, "text": "default", "value": "default" },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "component",
+        "type": "custom",
+        "label": "Component",
+        "query": "All : .*mysql-connector-be-go.*, Scanner : .*mysql-connector-be-go, Content : .*mysql-connector-be-go-content",
+        "current": { "selected": true, "text": "All", "value": ".*mysql-connector-be-go.*" },
+        "options": [
+          { "selected": true, "text": "All", "value": ".*mysql-connector-be-go.*" },
+          { "selected": false, "text": "Scanner", "value": ".*mysql-connector-be-go" },
+          { "selected": false, "text": "Content", "value": ".*mysql-connector-be-go-content" }
+        ],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(process_start_time_seconds{job=~\"$component\", namespace=\"$namespace\"}, pod)",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      },
+      {
+        "name": "query_type",
+        "type": "query",
+        "label": "Query Type",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(mysql_scanner_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}, query_type)",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 1,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Scanner — Discovery & Throughput",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Tables & Columns Discovered (rate)",
+      "description": "Tables successfully scanned and columns retrieved, per second. Tables that failed or were skipped are not in these counters — see the Errors & Silent Failures row.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(mysql_scanner_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "tables/s" },
+        { "refId": "B", "expr": "sum(rate(mysql_scanner_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "columns/s" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Items & Batches Sent (rate)",
+      "description": "items/s is the connector's own mysql_scanner_items_sent_total. The other two come from the shared ItemBatchSender in pipeline-lib-go and carry no connector prefix, so they are filtered by job — batches/s is how often the batch is flushed to JobEngine.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(mysql_scanner_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "items/s" },
+        { "refId": "B", "expr": "sum by (operation) (rate(connector_items_processed_total{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "queued/s ({{operation}})" },
+        { "refId": "C", "expr": "sum(rate(connector_batches_sent_total{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "batches/s" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Scan Duration — p50 / p95 / p99",
+      "description": "ScanStart database discovery + fan-out phase, on a 0.5s–1024s ladder. This runs on the single pod that received the ScanStart message; the leaf work it hands out is not included.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(mysql_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(mysql_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(mysql_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 150,
+      "title": "Scanner — Errors & Silent Failures",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Scanner Errors (rate)",
+      "description": "Query failures against the source database. These are the only two counters that mean \"MySQL refused something\" — everything on the next two panels is deliberately kept out of them.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(mysql_scanner_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "database" },
+        { "refId": "B", "expr": "sum(rate(mysql_scanner_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "table" }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Skips & Connector Bugs (count, 5m)",
+      "description": "Three failure modes counted apart from table_errors_total because none of them is the source database's fault. no visible columns — INFORMATION_SCHEMA.COLUMNS returned nothing (missing column-level GRANT, or a table dropped mid-scan); alert on a sustained rate, not any non-zero value. inline fallback — the worker pool refused a table after Shutdown and the scanner ran it on the consumer goroutine, serialising the rest of that database. table panics — always a connector bug, any non-zero value is worth acting on.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(increase(mysql_scanner_tables_no_visible_columns_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "no visible columns" },
+        { "refId": "B", "expr": "sum(increase(mysql_scanner_table_inline_fallback_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "inline fallback" },
+        { "refId": "C", "expr": "sum(increase(mysql_scanner_table_panics_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "table panics" }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Error Reporter Drops by Reason (count, 5m)",
+      "description": "Structured errors that never reached the observer, so the job record is showing a truncated view of the scan's failures. buffer_full — the buffered channel saturated. after_close — PublishError called after Close. publish_failed — the observer refused or could not be reached; this is the remote failure mode, and without it an unreachable observer used to lose every ItemError while the drop counter stayed at zero. close timeouts counts one abandonment of an unknown number of reports rather than individual errors, which is why it is a separate series: reaching it means publishLoop was parked inside a single publish for the whole flush budget, so check the control plane's health, not the scan.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (reason) (increase(mysql_scanner_error_reporter_dropped_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{reason}}" },
+        { "refId": "B", "expr": "sum(increase(mysql_scanner_error_reporter_close_timeouts_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "close timeouts" }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Error Reporter — Abandoned Flushes (live)",
+      "description": "Abandoned error-reporter flushes whose background goroutine is still parked in a publish — a live count on this pod, not a rate. Its sibling on the panel to the left counts how many times an abandonment has happened since the pod started; this one is how many are outstanding right now, which is the number that says whether the pod is still healthy. The two differ because an ErrorReporter is built and closed per message (one per ScanStart, one per DatabaseFork): an abandoned flush leaves a goroutine plus its 100-slot buffer behind, and the error that Close's caller returns NAKs the message, so redelivery supplies another fork that does it again. It unwinds on its own — each goroutine exits as soon as its publish returns — so a value that climbs and stays up is a control plane that is not answering, not a leak the connector can close from the inside. On the pinned pipeline-lib-go that publish resolves the job's step through GetJobSettings on a context with no deadline, which is why there is nothing bounding it below the reporter's 5s flush budget. Sustained above zero is alert-worthy; check the control plane, not the scan.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 } },
+      "targets": [
+        { "refId": "A", "expr": "sum(mysql_scanner_error_reporter_abandoned_flushes{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "abandoned flushes" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Scanner — In Flight & Query Performance",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "heatmap",
+      "title": "Query Duration Heatmap",
+      "description": "Scanner-path SQL latency distribution, on a 10ms–20s ladder.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 9, "w": 8, "x": 0, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "options": {
+        "calculate": false,
+        "yAxis": { "unit": "s" }
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum by (le) (rate(mysql_scanner_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[5m]))", "format": "heatmap", "legendFormat": "{{le}}" }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Query p95 by query_type",
+      "description": "query_type is list_tables (INFORMATION_SCHEMA.TABLES per database) or query_columns (INFORMATION_SCHEMA.COLUMNS per table). A list_tables p95 climbing alone points at a database with a very wide table count; query_columns climbing points at the tables themselves.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 9, "w": 8, "x": 8, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, query_type) (rate(mysql_scanner_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[5m])))", "legendFormat": "{{query_type}}" }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Scanner Connections by Type",
+      "description": "Aggregated across every active scanner pool at scrape time. in-use pinned at open with idle at zero is the pool running at its ceiling.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(mysql_scanner_connections_open{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "open" },
+        { "refId": "B", "expr": "sum(mysql_scanner_connections_in_use{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "in-use" },
+        { "refId": "C", "expr": "sum(mysql_scanner_connections_idle{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "idle" }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Scanner — In Flight",
+      "description": "scanstart is the discovery + fan-out phase on the pod that received ScanStart. tables (leaf pool) is the per-table work the fan-out handed to the worker pool — the two are counted separately on purpose, so a busy leaf pool does not look like a stuck ScanStart.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 26 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(mysql_scanner_scanstart_in_flight{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "scanstart" },
+        { "refId": "B", "expr": "sum(mysql_scanner_tables_in_flight{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "tables (leaf pool)" }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Query Rate by query_type",
+      "description": "Observation count on the query-duration histogram — how many scanner-path queries are actually being issued, split by kind.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 26 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (query_type) (rate(mysql_scanner_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[5m]))", "legendFormat": "{{query_type}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 250,
+      "title": "Content — Activity",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Content — In Flight",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 34 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(mysql_content_fetch_in_flight{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "fetches" }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Content Connections by Type",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 34 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(mysql_content_connections_open{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "open" },
+        { "refId": "B", "expr": "sum(mysql_content_connections_in_use{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "in-use" },
+        { "refId": "C", "expr": "sum(mysql_content_connections_idle{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "idle" }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Content Requests by outcome (rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 34 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (outcome) (rate(mysql_content_requests_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{outcome}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "Content — Fetch & Streaming",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 41 },
+      "panels": []
+    },
+    {
+      "id": 40,
+      "type": "timeseries",
+      "title": "Fetch Duration — p50 / p95 / p99 by outcome",
+      "description": "End-to-end request latency, split by outcome so a fast failure does not flatter the success distribution: handler entry (URN parse, datasource resolve, conn acquire) through stream completion and reply publish.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 42 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le, outcome) (rate(mysql_content_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p50 {{outcome}}" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le, outcome) (rate(mysql_content_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p95 {{outcome}}" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le, outcome) (rate(mysql_content_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p99 {{outcome}}" }
+      ]
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Stream Duration — p50 / p95 / p99",
+      "description": "The streaming pipeline only — from the producer goroutine pulling its first row out of MySQL until UploadFrom returns. Excludes handler setup. Query and upload run concurrently, so this reflects whichever leg is slower at any moment; the gap between this and Fetch Duration is setup cost.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 42 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(mysql_content_stream_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(mysql_content_stream_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(mysql_content_stream_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Stream Bytes — p50 / p95 / p99",
+      "description": "Bytes per successful fetch, taken from UploadResponse.Size — the count the content transfer service actually stored, not Info.Size, which this connector leaves at 0 because a sample's length is unknown until the last row streams. Ladder runs 1KiB to 4GiB.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 42 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(mysql_content_stream_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(mysql_content_stream_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(mysql_content_stream_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "id": 43,
+      "type": "timeseries",
+      "title": "Stream Throughput (bytes/s)",
+      "description": "Sum of stored bytes per second across successful fetches.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 49 },
+      "fieldConfig": { "defaults": { "unit": "Bps" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(mysql_content_stream_bytes_sum{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "bytes/s" }
+      ]
+    },
+    {
+      "id": 44,
+      "type": "timeseries",
+      "title": "Stream Rows — Rate (rows/s)",
+      "description": "Sampled rows written per second across successful fetches.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 49 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(mysql_content_stream_rows_sum{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "rows/s" }
+      ]
+    },
+    {
+      "id": 45,
+      "type": "timeseries",
+      "title": "Stream Rows — Avg per Fetch",
+      "description": "Average sampled rows per successful fetch (sum / count over the window). Compare against MYSQL_CONTENT_SAMPLE_MIN_ROWS and MAX_ROWS: sitting at the ceiling means the sampler is being capped, sitting at the floor means it is being rescued by re-draws.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 49 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(mysql_content_stream_rows_sum{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) / sum(rate(mysql_content_stream_rows_count{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "avg rows/fetch" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 350,
+      "title": "Content — Sampling & Integrity",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 56 },
+      "panels": []
+    },
+    {
+      "id": 50,
+      "type": "timeseries",
+      "title": "Sample Re-draws by Outcome (count, 5m)",
+      "description": "Fetches whose first draw fell under MYSQL_CONTENT_SAMPLE_MIN_ROWS and were re-drawn at a higher percent. recovered — a later draw reached the floor. short — every draw stayed under it, and since the final draw runs at 100% that means the column genuinely holds fewer non-NULL values than the floor, not a sampling miss. failed — a draw errored before finishing, so its row count says nothing about the column; kept separate so a broken query is not read as a small column. A fourth case carries no label and appears in none of these: a draw torn down because the upload died. During a content-service outage the three series therefore do not sum to the number of fetches that re-drew. Sustained recovered/short means raise MYSQL_CONTENT_SAMPLE_PERCENT, not the floor — each re-draw is an extra table scan. Sustained failed is a different problem: look at the query timeout and the source database.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 57 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (outcome) (increase(mysql_content_sample_resample_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{outcome}}" }
+      ]
+    },
+    {
+      "id": 51,
+      "type": "timeseries",
+      "title": "Sample Percent Used",
+      "description": "The percent the streamed draw actually ran at. It equals MYSQL_CONTENT_SAMPLE_PERCENT whenever the first draw was kept, so drift above the configured value is the signal that the row floor is doing the work instead of the percent.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 57 },
+      "fieldConfig": { "defaults": { "unit": "percent" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(mysql_content_sample_percent_used_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(mysql_content_sample_percent_used_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "sum(rate(mysql_content_sample_percent_used_sum{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) / sum(rate(mysql_content_sample_percent_used_count{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "avg" }
+      ]
+    },
+    {
+      "id": 52,
+      "type": "timeseries",
+      "title": "Conn Discard by Outcome (count, 5m)",
+      "description": "Abandoned result sets whose driver connection was thrown away rather than drained. discarded — the connection was closed so the driver skips its post-finish drain; the intended path. unsupported — the Querier exposed no raw connection, so nothing could be closed and the DSN's ReadTimeout is the only bound left on the drain. close_error — the raw-connection callback or the Close itself failed, so the drain very likely still happened. Anything other than discarded is worth alerting on: the byte budget stops bounding what crosses the wire, and the symptom is pool exhaustion rather than an error anyone would connect back to sampling.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 57 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (outcome) (increase(mysql_content_conn_discard_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{outcome}}" }
+      ]
+    },
+    {
+      "id": 53,
+      "type": "timeseries",
+      "title": "Content Bugs (count, 5m)",
+      "description": "producer panics — a streaming producer panicked and was recovered; the requester is told INTERNAL/retryable and the message is redelivered, so nothing in the request's own outcome says this connector crashed. byte mismatch — the stored size disagreed with what was sampled and streamed; the handler NAKs without replying, so one count is a transient a redelivery repaired, while a repeating one means the same URN fails verification every attempt and once MaxDeliver is spent the object proven wrong stays under that URN with no reply ever sent.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 64 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(increase(mysql_content_producer_panics_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "producer panics" },
+        { "refId": "B", "expr": "sum(increase(mysql_content_byte_mismatch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "byte mismatch" }
+      ]
+    },
+    {
+      "id": 54,
+      "type": "timeseries",
+      "title": "Content Connections (Open) by Pod",
+      "description": "Per-pod so one replica leaking connections stands out from the aggregate.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 64 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (mysql_content_connections_open{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "{{pod}}" }
+      ]
+    }
+  ]
+}

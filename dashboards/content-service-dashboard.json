@@ -3,7 +3,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -22,18 +25,28 @@
   "panels": [
     {
       "collapsed": false,
-      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
       "id": 100,
       "panels": [],
       "title": "Saturation — load-test row",
       "type": "row"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "Concurrent in-flight Fetch calls. Compare against GLOBAL_MAX_INFLIGHT (default 200) — when this gauge plateaus there, requests start queueing in the semaphore and queue time shows up as request latency.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Concurrent in-flight Fetch calls, per pod.\n- GLOBAL_MAX_INFLIGHT (default 200) is a per-pod cap — compare the red line to the per-pod lines, not the total-across-pods line.\n- Plateaued at the cap → requests are queueing in the semaphore; queue time shows up as request latency.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
@@ -41,368 +54,2820 @@
             "lineWidth": 2,
             "showPoints": "never"
           },
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 200}]},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 200
+              }
+            ]
+          },
           "unit": "short"
         }
       },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 1},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
       "id": 1,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "content_inflight_global{namespace=\"$namespace\", job=\"$job\"}", "legendFormat": "global", "refId": "A"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "content_inflight_stream{namespace=\"$namespace\", job=\"$job\"}", "legendFormat": "stream", "refId": "B"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(content_inflight_global{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"})",
+          "legendFormat": "global — total (all pods)",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "content_inflight_global{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}",
+          "legendFormat": "global — {{pod}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(content_inflight_stream{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"})",
+          "legendFormat": "stream — total (all pods)",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "content_inflight_stream{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}",
+          "legendFormat": "stream — {{pod}}",
+          "refId": "D"
+        }
       ],
       "title": "In-flight requests (global vs stream)",
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "Request rate split by status. Sustained 'failed' is the load-test failure signal.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Request rate by status. Sustained `failed` is the load-test failure signal.\n- Counted per DELIVERY, not per document — a Nak'd + redelivered message counts as a failure AND (if the retry succeeds) a completion.\n- A burst of redeliveries raises every status line at once, including `completed` — don't read that as broad recovery.\n- For NATS-only failure reasons, see \"NATS retry outcomes\" below.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "stacking": {"mode": "normal"}},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
           "unit": "reqps"
         }
       },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 1},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
       "id": 2,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (status) (rate(content_requests_total{namespace=\"$namespace\", job=\"$job\"}[1m]))", "legendFormat": "{{status}}", "refId": "A"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (status) (rate(content_requests_total{namespace=\"$namespace\", job=\"$job\"}[1m]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
       ],
       "title": "Request rate by status",
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "End-to-end Fetch latency p50/p95/p99 across all api+content_type combinations.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- End-to-end Fetch latency p50/p95/p99, across all api + content_type combinations.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 2, "showPoints": "never"},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
           "unit": "s"
         }
       },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 9},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
       "id": 3,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.50, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "p50", "refId": "A"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.95, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "p95", "refId": "B"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "p99", "refId": "C"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
       ],
       "title": "Request latency (p50/p95/p99)",
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "Rejections by reason. Non-zero = you've hit a concurrency ceiling. reason ∈ {global_full, stream_full, shutdown}.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Rejections by reason. Non-zero → hit a concurrency ceiling.\n- reason ∈ {global_full, stream_full, shutdown}.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"drawStyle": "bars", "fillOpacity": 60, "lineWidth": 1, "showPoints": "never"},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
           "unit": "ops"
         }
       },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 9},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
       "id": 4,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (reason) (rate(content_inflight_rejections_total{namespace=\"$namespace\", job=\"$job\"}[1m]))", "legendFormat": "{{reason}}", "refId": "A"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (reason) (rate(content_inflight_rejections_total{namespace=\"$namespace\", job=\"$job\"}[1m]))",
+          "legendFormat": "{{reason}}",
+          "refId": "A"
+        }
       ],
       "title": "Rejections by reason",
       "type": "timeseries"
     },
     {
       "collapsed": false,
-      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 17},
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
       "id": 200,
       "panels": [],
       "title": "Where the time goes",
       "type": "row"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "Cache S3 op latency p99 split by op. Separates S3 latency from CS code paths.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Cache S3 op latency p99, by bucket/op — isolates S3 latency from content-service code paths.\n- bucket ∈ {raw, processed} since 2026-08: this label used to carry the deployed bucket NAME (nvisionx-raw-content-cache-…), so legends were environment-specific and queries written against \"raw\" matched nothing. \"other\" would mean a bucket nothing wired up.\n- Since 2026-08, hits are served HEAD-only (bodies delivered via CacheLocation) — `get` volume should be a small fraction of `head`.\n- Rising `get` rate → the extraction path or the sha256 safety-net is doing real reads.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 2, "showPoints": "never"},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
           "unit": "s"
         }
       },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 18},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
       "id": 5,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, bucket, op) (rate(content_cache_op_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "{{bucket}}/{{op}}", "refId": "A"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, bucket, op) (rate(content_cache_op_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))",
+          "legendFormat": "{{bucket}}/{{op}}",
+          "refId": "A"
+        }
       ],
       "title": "Cache op p99 latency (by bucket/op)",
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "NATS fetch outcomes per second by connector. outcome ∈ {completed, pickup_timeout, worker_timeout, canceled, error}. The *_timeout series are the load-test failure signals — non-zero pickup_timeout means connectors aren't keeping up; worker_timeout means they're stuck mid-fetch.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- NATS fetch outcomes/sec by connector. outcome ∈ {completed, pickup_timeout, worker_timeout, canceled, error}.\n- Non-zero `pickup_timeout` → connectors aren't keeping up.\n- Non-zero `worker_timeout` → connectors are stuck mid-fetch.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "stacking": {"mode": "normal"}},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
           "unit": "ops"
         }
       },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 18},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
       "id": 6,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (connector, outcome) (rate(content_nats_fetch_total{namespace=\"$namespace\", job=\"$job\"}[1m]))", "legendFormat": "{{connector}}/{{outcome}}", "refId": "A"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (connector, outcome) (rate(content_nats_fetch_total{namespace=\"$namespace\", job=\"$job\"}[1m]))",
+          "legendFormat": "{{connector}}/{{outcome}}",
+          "refId": "A"
+        }
       ],
       "title": "NATS fetch outcomes by connector",
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "Cache hit ratio by bucket. Drop under load = colder cache or churn.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Three independent ratios — they answer different questions and don't move together.\n- \"Direct RAW request — served from cache\": plain RAW-request hits (phase=fetch). Drop → RAW callers increasingly missing.\n- \"TEXT request — raw already cached\": the raw-bucket check before extraction (phase=extract). Low/red → TEXT requests are paying for a connector round-trip before extraction even starts.\n- \"TEXT request — output already cached\": final extracted output already cached — the cheapest possible outcome.\n- No data on a tile = zero traffic on that path, not a ratio of zero.\n- Red tile on unique-document traffic (first-pass scan) is expected. Red tile on repeat-document traffic is worth investigating.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "thresholds"},
+          "color": {
+            "mode": "thresholds"
+          },
           "mappings": [],
           "max": 1,
           "min": 0,
-          "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 0.5}, {"color": "green", "value": 0.8}]},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.5
+              },
+              {
+                "color": "green",
+                "value": 0.8
+              }
+            ]
+          },
           "unit": "percentunit"
         }
       },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 26},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
       "id": 7,
-      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (bucket) (rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\"}[1m])) / (sum by (bucket) (rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\"}[1m])) + sum by (bucket) (rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "{{bucket}}", "refId": "A"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"fetch\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"fetch\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"fetch\"}[5m])))",
+          "legendFormat": "Direct RAW request — served from cache",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"extract\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"extract\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"extract\"}[5m])))",
+          "legendFormat": "TEXT request — raw already cached",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"processed\", phase=\"extract\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"processed\", phase=\"extract\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", bucket=\"processed\", phase=\"extract\"}[5m])))",
+          "legendFormat": "TEXT request — output already cached",
+          "refId": "C"
+        }
       ],
-      "title": "Cache hit ratio (by bucket)",
+      "title": "Cache hit ratio — by request type",
       "type": "stat"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "Text extraction p99 latency split by outcome. Only `success`/`failed` populate the histogram (skipped/breaker_open record duration=0 by design).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Text extraction p99 latency by outcome.\n- Only `success`/`failed` populate the histogram — `skipped`/`breaker_open` record duration=0 by design.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 2, "showPoints": "never"},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
           "unit": "s"
         }
       },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 26},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
       "id": 8,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, status) (rate(content_extraction_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "p99 — {{status}}", "refId": "A"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, status) (rate(content_extraction_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))",
+          "legendFormat": "p99 — {{status}}",
+          "refId": "A"
+        }
       ],
       "title": "Extraction p99 latency (by status)",
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "NATS two-phase reply latency p99 by connector. pickup = publish → PROCESSING signal; worker = PROCESSING → COMPLETED reply. PICKUP_TIMEOUT and WORKER_TIMEOUT both default to 30s — sustained p99 climbing toward those thresholds means timeouts are imminent. Pairs with the NATS-outcomes panel.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- NATS two-phase reply latency p99 by connector. pickup = publish→PROCESSING; worker = PROCESSING→COMPLETED.\n- Both timeouts default to 30s — p99 climbing toward 30s means timeouts are imminent.\n- Pair with \"NATS fetch outcomes\" for the actual timeout counts.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 2, "showPoints": "never"},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
           "unit": "s"
         }
       },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 34},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 34
+      },
       "id": 19,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_pickup_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "pickup p99 — {{connector}}", "refId": "A"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_worker_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "worker p99 — {{connector}}", "refId": "B"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_pickup_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))",
+          "legendFormat": "pickup p99 — {{connector}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_worker_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))",
+          "legendFormat": "worker p99 — {{connector}}",
+          "refId": "B"
+        }
       ],
       "title": "NATS two-phase reply p99 (by connector)",
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "Cache write latency p50/p95/p99 by result. Pairs with the cache-write outcomes panel (count) and write-size distribution (bytes). p99 climbing on `success` indicates S3 backpressure; p99 on `s3_error` reflects how long failed Puts hang before erroring out.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Cache write latency p50/p95/p99, success only — canceled/timeout are long-running by definition and would poison the percentiles (see their own panel).\n- Covers stream ingest + S3 upload; excludes the sha256 stamp copy (own panel).\n- Buckets explicit since 2026-08 — earlier data read 10–1000x too high (SDK's ms-scale default buckets).",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 2, "showPoints": "never"},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
           "unit": "s"
         }
       },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 34},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 34
+      },
       "id": 20,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.50, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "p50 — {{result}}", "refId": "A"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "p95 — {{result}}", "refId": "B"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[1m])))", "legendFormat": "p99 — {{result}}", "refId": "C"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", result=\"success\"}[1m])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", result=\"success\"}[1m])))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", result=\"success\"}[1m])))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
       ],
-      "title": "Cache write latency (p50/p95/p99)",
+      "title": "Cache write latency — success only (p50/p95/p99)",
       "type": "timeseries"
     },
     {
       "collapsed": false,
-      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 42},
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
       "id": 300,
       "panels": [],
       "title": "Failure modes",
       "type": "row"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "Extractor circuit breaker state — 0=closed, 1=half-open, 2=open. Big and red when open.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Placeholder — content-service emits no `content_extraction_circuit_state` today; shows No data by design.\n- Will start working unchanged once the extractor circuit breaker (xberg backpressure work) ships (0=closed / 1=half-open / 2=open).\n- Until then, use \"Retry attempts by error code\": a rising SERVICE_UNAVAILABLE line is what a breaker would trip on.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "thresholds"},
+          "color": {
+            "mode": "thresholds"
+          },
           "mappings": [
-            {"options": {"0": {"text": "CLOSED", "color": "green", "index": 0}, "1": {"text": "HALF-OPEN", "color": "yellow", "index": 1}, "2": {"text": "OPEN", "color": "red", "index": 2}}, "type": "value"}
+            {
+              "options": {
+                "0": {
+                  "text": "CLOSED",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "HALF-OPEN",
+                  "color": "yellow",
+                  "index": 1
+                },
+                "2": {
+                  "text": "OPEN",
+                  "color": "red",
+                  "index": 2
+                }
+              },
+              "type": "value"
+            }
           ],
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}, {"color": "red", "value": 2}]}
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          }
         }
       },
-      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 43},
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 43
+      },
       "id": 9,
-      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "value"},
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "max(content_extraction_circuit_state{namespace=\"$namespace\", job=\"$job\"})", "refId": "A"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(content_extraction_circuit_state{namespace=\"$namespace\", job=\"$job\"})",
+          "refId": "A"
+        }
       ],
-      "title": "Extractor circuit",
+      "title": "Extractor circuit (DISABLED — pending breaker)",
       "type": "stat"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "S3 cache operation errors per second. error_type ∈ {read_failed, write_failed, other}.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- S3 cache operation errors/sec. error_type ∈ {read_failed, write_failed, other}.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"drawStyle": "bars", "fillOpacity": 60, "lineWidth": 1, "showPoints": "never"},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
           "unit": "ops"
         }
       },
-      "gridPos": {"h": 6, "w": 9, "x": 6, "y": 43},
+      "gridPos": {
+        "h": 6,
+        "w": 9,
+        "x": 6,
+        "y": 43
+      },
       "id": 10,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (bucket, op, error_type) (rate(content_cache_op_errors_total{namespace=\"$namespace\", job=\"$job\"}[1m]))", "legendFormat": "{{bucket}}/{{op}}/{{error_type}}", "refId": "A"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (bucket, op, error_type) (rate(content_cache_op_errors_total{namespace=\"$namespace\", job=\"$job\"}[1m]))",
+          "legendFormat": "{{bucket}}/{{op}}/{{error_type}}",
+          "refId": "A"
+        }
       ],
       "title": "Cache op errors (by error_type)",
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "Cache write outcomes from S3Store. result ∈ {success, read_error, size_mismatch, s3_error, canceled}.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Cache write outcomes from S3Store. result ∈ {success, read_error, size_mismatch, s3_error, canceled, timeout}.\n- `timeout` → CACHE_WRITE_TIMEOUT_SECONDS fired.\n- `size_mismatch` also deletes the truncated object.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"drawStyle": "bars", "fillOpacity": 60, "lineWidth": 1, "showPoints": "never", "stacking": {"mode": "normal"}},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
           "unit": "ops"
         }
       },
-      "gridPos": {"h": 6, "w": 9, "x": 15, "y": 43},
+      "gridPos": {
+        "h": 6,
+        "w": 9,
+        "x": 15,
+        "y": 43
+      },
       "id": 11,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (result) (rate(content_cache_write_total{namespace=\"$namespace\", job=\"$job\"}[1m]))", "legendFormat": "{{result}}", "refId": "A"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (result) (rate(content_cache_write_total{namespace=\"$namespace\", job=\"$job\"}[1m]))",
+          "legendFormat": "{{result}}",
+          "refId": "A"
+        }
       ],
       "title": "Cache write outcomes",
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "Requests FAILED during graceful shutdown drain. Should be zero except during deploy/restart.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Requests FAILED during graceful shutdown drain. Should be ~0 except during deploy/restart.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"drawStyle": "bars", "fillOpacity": 60, "lineWidth": 1, "showPoints": "never"},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
           "unit": "ops"
         }
       },
-      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 49},
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 49
+      },
       "id": 12,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "rate(content_shutdown_pending_failed_total{namespace=\"$namespace\", job=\"$job\"}[1m])", "legendFormat": "shutdown_failed", "refId": "A"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "rate(content_shutdown_pending_failed_total{namespace=\"$namespace\", job=\"$job\"}[1m])",
+          "legendFormat": "shutdown_failed",
+          "refId": "A"
+        }
       ],
       "title": "Shutdown-time failures",
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "sha256 safety-net activations — fires when the connector didn't supply sha256 in S3 user-metadata. Steady non-zero rate = upstream regression.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Fires when a raw object has no sha256 metadata (normally stamped synchronously at write time) — should be ~0 outside legacy objects aging out of the 7d raw TTL.\n- Steady `computed_in_process` → stamping regression.\n- `raw_head_miss_text_hit` → text served after its raw was evicted, and the text object predates the sha stamp.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"drawStyle": "bars", "fillOpacity": 60, "lineWidth": 1, "showPoints": "never"},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
           "unit": "ops"
         }
       },
-      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 49},
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 49
+      },
       "id": 14,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (connector, reason) (rate(content_sha256_safety_net_total{namespace=\"$namespace\", job=\"$job\"}[1m]))", "legendFormat": "{{connector}}/{{reason}}", "refId": "A"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (connector, reason) (rate(content_sha256_safety_net_total{namespace=\"$namespace\", job=\"$job\"}[1m]))",
+          "legendFormat": "{{connector}}/{{reason}}",
+          "refId": "A"
+        }
       ],
       "title": "sha256 safety-net activations",
       "type": "timeseries"
     },
     {
       "collapsed": false,
-      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 55},
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 55
+      },
       "id": 400,
       "panels": [],
       "title": "Extraction & cache writes",
       "type": "row"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "Text extraction outcomes per second. status ∈ {success, failed, skipped, breaker_open}. Sustained `breaker_open` = kreuzberg is sick; `skipped` rate spikes when files exceed EXTRACTION_MAX_SIZE.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Text extraction outcomes/sec. status ∈ {success, failed, skipped, breaker_open}.\n- `skipped` tracking near `success` → large share of TEXT requests exceed EXTRACTION_MAX_SIZE (deployed 50 MiB) and are served raw with no extraction — confirm this matches the expected corpus mix.\n- Sustained `breaker_open` → kreuzberg is unhealthy and content-service stopped sending it work; expect SERVICE_UNAVAILABLE to climb on \"Retry attempts by error code\" too.\n- Rising `failed` with flat `success` → documents failing extraction outright (corrupt/unsupported), not a capacity problem.\n- `success` alone doesn't show cost — pair with \"Extraction p99 latency\".",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "stacking": {"mode": "normal"}},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
           "unit": "ops"
         }
       },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 56},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 56
+      },
       "id": 15,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (status) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\"}[1m]))", "legendFormat": "{{status}}", "refId": "A"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (status) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\"}[1m]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
       ],
       "title": "Extraction outcomes",
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "${datasource}"},
-      "description": "Distribution of bytes written per S3 cache Put — p50/p95/p99. Crosses S3_MULTIPART_THRESHOLD (8 MiB default) → multipart path. Useful for sizing payload-mix in load tests. 5m window deliberately wider than other panels — write events are infrequent and benefit from smoothing.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Distribution of bytes written per S3 cache Put — p50/p95/p99.\n- Bodies over the 16 MiB multipart threshold take the multipart upload path.\n- 5m window (wider than other panels) — write events are infrequent and benefit from smoothing.\n- Buckets explicit (4KiB–5GiB) since 2026-08; earlier data used ms-scale defaults and is unreadable.",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 2, "showPoints": "never"},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
           "unit": "bytes"
         }
       },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 56},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 56
+      },
       "id": 18,
-      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.50, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\"}[5m])))", "legendFormat": "p50 — {{result}}", "refId": "A"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\"}[5m])))", "legendFormat": "p95 — {{result}}", "refId": "B"},
-        {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\"}[5m])))", "legendFormat": "p99 — {{result}}", "refId": "C"}
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\"}[5m])))",
+          "legendFormat": "p50 — {{result}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\"}[5m])))",
+          "legendFormat": "p95 — {{result}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\"$namespace\", job=\"$job\"}[5m])))",
+          "legendFormat": "p99 — {{result}}",
+          "refId": "C"
+        }
       ],
       "title": "Cache write size distribution",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Splits successful raw-write latency: `total p95` = whole write (connector stream read + S3 PutObject); `stream-wait p95` = time blocked reading the connector.\n- total − stream-wait ≈ S3-side time.\n- `stream-wait` ≈ `total` → the connector/source system is slow, not the cache.\n- `stream-wait` small, `total` high → S3 itself is slow.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 64
+      },
+      "id": 25,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", result=\"success\"}[5m])))",
+          "legendFormat": "total p95",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(content_cache_write_stream_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", result=\"success\"}[5m])))",
+          "legendFormat": "stream-wait p95 (connector-paced)",
+          "refId": "B"
+        }
+      ],
+      "title": "Raw cache write p95 — time waiting on connector vs. total",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- How long abandoned writes ran before dying. `canceled` = peer went away (connector crash, pod eviction, client deadline). `timeout` = CACHE_WRITE_TIMEOUT_SECONDS fired.\n- Kept separate from the main latency panel — this is client-abandonment behavior, not cache performance.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 64
+      },
+      "id": 26,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", result=~\"canceled|timeout\"}[5m])))",
+          "legendFormat": "p95 — {{result}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Cache write — abandoned transfers (canceled/timeout)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Post-upload sha256 stamp (server-side CopyObject self-copy), synchronous within Put but excluded from write-duration.\n- Cost scales with object size — up to the 5GB CopyObject ceiling.\n- Sustained `error` → objects left unstamped → sha safety-net activations rise downstream.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 72
+      },
+      "id": 27,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_sha_stamp_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\"}[5m])))",
+          "legendFormat": "p95 — {{result}}",
+          "refId": "A"
+        }
+      ],
+      "title": "sha256 stamp (CopyObject) p95 by result",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Writes where the connector declared no size, so byte-count validation was skipped.\n- Should be ~0 — sustained rate means a connector is uploading unverifiable (possibly truncated) content.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.001
+              }
+            ]
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 72
+      },
+      "id": 28,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_write_unverified_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Unverified writes (no declared size)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Upload streams currently admitted. Each holds ~48–64MiB of transfer-manager buffers.\n- Capped service-wide at UPLOAD_MAX_CONCURRENT (default 32, red line).\n- Sustained saturation → connectors are queueing behind the gate.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 32
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 72
+      },
+      "id": 29,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(content_upload_concurrent_streams{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"})",
+          "legendFormat": "total (all pods)",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "content_upload_concurrent_streams{namespace=\"$namespace\", job=\"$job\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Upload streams in flight (cap 32)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 78
+      },
+      "id": 500,
+      "panels": [],
+      "title": "Retry amplification — how one connector error becomes a platform stall (NXE-2480)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Connector fetches per document actually drained by the privacy pipeline. 1.0 = healthy (fetched exactly once).\n- Retry ladder ceiling = extractRetryMaxAttempts (5) × JetStream MaxDeliver (3) = 15 — approaching 15 means failing documents consume the whole ladder while holding a caller's worker.\n- Reads true only while a privacy scan is running (pii_* is emitted by the privacy job).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 79
+      },
+      "id": 21,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_nats_fetch_total{namespace=\"$namespace\", job=\"$job\"}[5m])) / sum(rate(pii_bulk_docs_updated_total{namespace=\"$namespace\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Fetch amplification (fetches per document)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- `failed_budget` — read this one first, it's the common outcome. CALLER_WAIT_BUDGET_SECONDS (5s) stopped the retry ladder early, replied to the caller, then Nak'd with a 30s delay.\n- `failed` — in-handler attempts exhausted, or a malformed request / non-retryable manager failure. Rising `failed` means documents are being retried, not that callers are stranded.\n- `failed_terminal` — MaxDeliver reached or budget spent on the last delivery. Replies AND Acks — end of the line for that document.\n- `failed_draining` — a pod refusing new extraction work while shutting down; Nak'd for a healthy replica to pick up.\n- All four should sit near 0 in steady state; all four ran sustained through the 2026-07-27 incident.\n- Shows THAT and WHY (of these 4 reasons) a delivery was Nak'd, not the underlying connector/extraction error — for that, check \"Retry attempts by error code\" or the Warn log at the Nak decision point.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 9,
+        "x": 6,
+        "y": 79
+      },
+      "id": 22,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (status) (rate(content_requests_total{namespace=\"$namespace\", job=\"$job\", api=\"nats\", status=~\"failed|failed_budget|failed_terminal|failed_draining\"}[5m]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "NATS retry outcomes — failed vs budget vs terminal vs draining (per delivery)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Should sit at ~0.\n- Rising → requests exceed the histogram's 60s top bucket; every p95/p99 on this dashboard understates the real tail — go to \"Request latency\" / \"Extraction p99 latency\" to find the slow phase.\n- A steady, near-constant (not spiky) value is the 2026-07-27 outage pattern: p95 pinned at 29s because 100% of requests sat in the same interpolated bucket.\n- Ceiling is 60s because the service allows pickup 60s + worker 180s = 240s end-to-end, but the histogram's top bucket stops at 60s.\n- Query gotcha: the bucket label is decimal (`le=\"60.0\"`) — `le=\"60\"` silently matches nothing.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 9,
+        "x": 15,
+        "y": 79
+      },
+      "id": 23,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", api=\"nats\", le=\"+Inf\"}[5m])) - sum(rate(content_request_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", api=\"nats\", le=\"60.0\"}[5m]))",
+          "legendFormat": "slower than 60s",
+          "refId": "A"
+        }
+      ],
+      "title": "Requests past the 60s top bucket",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Privacy document throughput vs. the rate below which its OpenSearch Point-in-Time lease expires.\n- Critical rate = 32 consumers × 1000-doc pages ÷ 30-min lease = 17.8 docs/s (red line).\n- Sustained operation below the red line → PIT lease expires → 404 search_context_missing_exception, and the scan then reports SUCCESS having read only part of the index (reader error is discarded).\n- Requires a running privacy scan.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 85
+      },
+      "id": 24,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(pii_docs_processed_total{namespace=\"$namespace\", job=\"$privacy_job\"}[5m]))",
+          "legendFormat": "documents analysed/s",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "vector(17.8)",
+          "legendFormat": "PIT critical rate (32 × 1000 / 1800)",
+          "refId": "B"
+        }
+      ],
+      "title": "Privacy throughput vs the PIT critical rate",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 92
+      },
+      "id": 600,
+      "panels": [],
+      "title": "Backpressure & cross-pod dedup",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Time spent waiting for an extraction slot before reaching xberg — separates \"we queued\" from \"xberg was slow\", which otherwise surface as the same error codes.\n- Rising p95 + \"Extraction slots in use\" pinned at capacity → a queueing problem, not a document problem.\n- Split by lane: `interactive` wait climbing toward `bulk` → the priority lane (EXTRACTION_PRIORITY_MAX_CONSECUTIVE) isn't buying anything anymore.\n- Buckets run to 600s — the extraction semaphore has no acquire timeout.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 93
+      },
+      "id": 30,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
+          "legendFormat": "p99 {{lane}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
+          "legendFormat": "p95 {{lane}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"admitted\"}[5m])))",
+          "legendFormat": "p50 {{lane}}",
+          "refId": "C"
+        }
+      ],
+      "title": "Extraction queue wait (admitted)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Slot occupancy (count, 0–60, left axis) vs. `aborted/s` (rate, right axis) — different units, check the legend value, not just line height.\n- Occupancy capped at EXTRACTION_MAX_CONCURRENCY — deployed value 60 (code default 10; confirm `contentService.env` before trusting the red line).\n- Occupancy saturates: once pinned it can't show how far behind you are — use \"Extraction queue wait\" for that.\n- Sustained `aborted/s` > 0 → the gate is shedding work (deadline expired while queueing), not just pacing it.\n- Per-lane split shows who holds the gate: `bulk` filling it during a scan is expected, interactive extractions should still get in. No line for a lane = no traffic, not zero.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "reqps"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "aborted/s"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 93
+      },
+      "id": 31,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(content_extraction_slots_in_use{namespace=\"$namespace\", job=\"$job\"})",
+          "legendFormat": "slots in use (total)",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (lane) (content_extraction_slots_in_use{namespace=\"$namespace\", job=\"$job\"})",
+          "legendFormat": "slots — {{lane}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (lane) (rate(content_extraction_queue_wait_seconds_count{namespace=\"$namespace\", job=\"$job\", outcome=\"aborted\"}[5m]))",
+          "legendFormat": "aborted/s — {{lane}}",
+          "refId": "C"
+        }
+      ],
+      "title": "Extraction concurrency (cap 60) — occupied slots (count) vs. abandoned-wait rate (req/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- A rising line = a specific error is driving repeated in-handler retries.\n- `EXTRACTION_ERROR_SERVICE_UNAVAILABLE` rising → kreuzberg is refusing work (overloaded) — retrying it makes the backlog worse, not better.\n- `EXTRACTION_ERROR_TIMEOUT` → documents genuinely slow to extract (capped at fewer attempts — a timeout will likely repeat).\n- `CONTENT_ERROR_CACHE_WRITE_FAILED` → check S3/cache health, not the extractor.\n- `CONTENT_ERROR_INTERNAL` → the connector's source system (Box/SharePoint/etc.) is unreachable or rate-limiting it — a source-side problem.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 101
+      },
+      "id": 32,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (error_code) (rate(content_retry_attempts_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{error_code}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Retry attempts by error code",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- One line per (code, retryable) — use `code` to trace an error spike back to specific URNs.\n- `retryable=true` → content-service retries automatically. `retryable=false` rising → documents need a human or a source-side fix.\n- `CACHE_WRITE_FAILED` is always retryable (our own S3 write treated as transient).\n- `TOO_LARGE` is essentially never retryable — the source object exceeds the connector's size limit.\n- `CONNECTOR_UNAVAILABLE` = no connector answered within PICKUP_TIMEOUT_SECONDS — the request isn't lost, it stays queued on CONTENT_FETCH.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 101
+      },
+      "id": 33,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (code, retryable) (rate(content_fetch_errors_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{code}} (retryable={{retryable}})",
+          "refId": "A"
+        }
+      ],
+      "title": "Connector fetch errors by code",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Valkey claims taken before a connector fetch or an xberg extraction, so two replicas don't duplicate work. Expect everything but `won` at 0 until KEDA scales past one replica.\n- `won` → this pod took the claim and is doing the work.\n- `lost` → another replica holds it; this pod waits for the output instead.\n- `preempted` → interactive work took a bulk holder's claim — a deliberate duplicate (the displaced holder keeps working).\n- `held_by_self` → this pod found its own earlier claim (usually a fetch claim outliving a reply timeout) — a connector slowdown, not a dedup event.\n- `duplicated` → gave up waiting and did the work anyway (interactive requests only — no redelivery to defer to).\n- `lease_lost` → a renewal found the claim gone mid-work — leading indicator of duplicate work.\n- `unavailable` → Valkey unreachable, dedup silently degraded (still correct, just costs duplicate fetches/extractions).\n- `disabled` → dedup off for that phase (VALKEY_HOST unset, or that phase's TTL zeroed) — should be flat 0 when configured correctly.\n- Watch `disabled` (likely misconfiguration) and `lease_lost` (duplicate work happening now) most closely.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 109
+      },
+      "id": 34,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (phase, outcome) (rate(content_dedup_claims_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{phase}} — {{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Cross-pod dedup — claim outcomes",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Rising `peer`/`satisfied` → dedup paying off (waited instead of repeating a fetch/extraction).\n- Rising `connector` → NOT dedup — this request's own claim's connector reply timed out; read as connector slowness.\n- Rising `took_over` → escalate. The previous claim holder died mid-work and this request redid it. Steady trickle = normal pod recycling; a spike = replicas dying under load.\n- `peer` scales with replica count/hot keys; `connector` scales with source-system load — not substitutes for each other.\n- `extract` is always `peer`, never `connector` — extraction is synchronous, nothing can outlive it the way a fetch can.\n- Any non-`satisfied` outcome = a missed optimization, never a failure.\n- `skipped` = no deadline left to wait within (PEER_WAIT_SECONDS / CONNECTOR_WAIT_SECONDS / GET_CONTENT_DEADLINE_SECONDS) — high `skipped` next to flat `satisfied` is a timing-budget problem; retune those seconds, don't chase the claim logic.\n- `expired` (someone still working) and `took_over` (nobody was working) look identical in wall-clock terms but mean opposite things.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 109
+      },
+      "id": 35,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (phase, source, outcome) (rate(content_dedup_waits_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{phase}} — waiting on {{source}} — {{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Cross-pod dedup — work avoided vs redone",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- How long a wait took before it paid off, split by who was waited on. Filtered to outcome=\"satisfied\" — an expired wait always equals its full budget and would flatten every quantile onto the ceiling.\n- PEER_WAIT_SECONDS bounds a peer wait, CONNECTOR_WAIT_SECONDS a connector wait, GET_CONTENT_DEADLINE_SECONDS caps both (same number in dev today only because PEER_WAIT_SECONDS isn't templated).\n- `fetch/peer` ≈ connector latency + remaining holder lease. `fetch/connector` = how far past our own reply timeout the connector ran — use to size PICKUP_TIMEOUT_SECONDS / the worker timeout. `extract/peer` = how long another replica's xberg run took.\n- p50/p95 only. Buckets run to 600s — waits should stay well under that.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 117
+      },
+      "id": 36,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, phase, source) (rate(content_dedup_wait_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"satisfied\"}[5m])))",
+          "legendFormat": "p95 {{phase}}/{{source}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le, phase, source) (rate(content_dedup_wait_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", outcome=\"satisfied\"}[5m])))",
+          "legendFormat": "p50 {{phase}}/{{source}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Cross-pod dedup — how long a paying wait took",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Extractions that finished after the caller left — deliberate, not a leak: canceling xberg mid-flight throws the whole run away, since nothing persists until it returns. Letting it finish means the caller's retry finds cached text instead of re-running.\n- Cost: an extraction slot held for a caller who's gone — pair with \"Extraction slots in use\": rising count while the gate is pinned means part of capacity is committed to callers who left.\n- Steady low rate = design working as intended (bulk requests hitting their delivery deadline).\n- Sustained `interactive` is worse than `bulk` — a human gave up waiting; check GET_CONTENT_DEADLINE_SECONDS against the extraction phase before tuning anything else.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 117
+      },
+      "id": 37,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (lane) (rate(content_extraction_after_caller_left_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{lane}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Extractions that outlived their caller",
+      "type": "timeseries"
+    },
+    {
+      "type": "row",
+      "id": 700,
+      "title": "KEDA inflight trigger — baseline before retuning the threshold",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 125
+      },
+      "panels": []
+    },
+    {
+      "id": 701,
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "title": "What the autoscaler sees vs what is really in flight",
+      "description": "- The KEDA trigger runs sum(content_inflight_global) with NO label filter — the series to check before changing the inflight threshold (default 100) or activationThreshold (default 20).\n- Inflated by (1) dual scrape — every pod is scraped twice (kubernetes-services + PodMonitor), doubling an unfiltered sum(); the NATS triggers use max() so they're unaffected, this is the only sum()-based trigger — and (2) no namespace filter — a shared Prometheus counts every namespace, not just $namespace.\n- Divide by threshold to get the replicas this trigger is asking for. KEDA takes the highest count any trigger requests.",
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 0,
+        "y": 126
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 20
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(content_inflight_global)",
+          "legendFormat": "KEDA query — unfiltered sum",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(content_inflight_global{job=\"$job\"})",
+          "legendFormat": "job-filtered (removes dual scrape)",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(content_inflight_global{job=\"$job\", namespace=\"$namespace\"})",
+          "legendFormat": "job + namespace filtered",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(content_inflight_stream{job=\"$job\"})",
+          "legendFormat": "stream gauge — zero means a pre-fix build",
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "id": 702,
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "title": "Replicas this trigger is asking for",
+      "description": "- ceil(KEDA query / threshold), clamped to maxReplicas (default 5).\n- Red at 5 → pinned at the ceiling — can no longer tell \"full\" from \"far behind\"; avoid this state when picking a new threshold.\n- Admission gate caps globalMaxInflight (deployed 200) per pod — a hard ceiling on the gauge itself.",
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 126
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 3
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "clamp_max(ceil(sum(content_inflight_global) / 100), 5)",
+          "legendFormat": "replicas requested",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 703,
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "title": "Request rate: See Content (gRPC) vs NATS (bulk)",
+      "description": "- content_inflight_global has no scope label — request rate by api is the closest proxy: grpc_get_content / grpc_fetch_stream = See Content, nats = scan lane.\n- As of 2026-08-19 no production caller uses gRPC — both See Content series should read flat zero.\n- If flat zero, the KEDA threshold doesn't need to move — nothing new is being added to the sum since the IncInflight scope fix.",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 135
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "reqps"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (api) (rate(content_requests_total{job=\"$job\", namespace=\"$namespace\"}[$__rate_interval]))",
+          "legendFormat": "{{api}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 144
+      },
+      "id": 800,
+      "panels": [],
+      "title": "TEXT vs RAW — cache path",
+      "type": "row",
+      "description": null
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Where a request's bytes actually came from, by request type.\n- Rising \"text already cached\" → TEXT requests answered with zero backend work.\n- Rising \"raw already cached\" + flat \"raw not cached\" → TEXT misses are cheap (extraction only, no connector round-trip).\n- Rising \"raw not cached\" → TEXT requests paying for a connector fetch AND an extraction — the most expensive path.\n- \"Direct RAW request\" lines answer the same question for plain RAW requests, which never run extraction.\n- Caveat: a text-cache miss is counted once per request, but the raw-bucket check underneath is deduplicated across concurrent requests for the same URN (singleflight) — counts aren't guaranteed to add up 1:1 during a concurrent burst.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 145
+      },
+      "id": 801,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"processed\", phase=\"extract\"}[5m]))",
+          "legendFormat": "TEXT request — output already cached (no work needed)",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"extract\"}[5m]))",
+          "legendFormat": "TEXT request — raw already cached (extracted fresh, no connector call)",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"extract\"}[5m]))",
+          "legendFormat": "TEXT request — raw not cached (connector fetch required)",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"fetch\"}[5m]))",
+          "legendFormat": "Direct RAW request — served from cache",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\", phase=\"fetch\"}[5m]))",
+          "legendFormat": "Direct RAW request — fetched from connector",
+          "refId": "E"
+        }
+      ],
+      "title": "Cache path outcome — TEXT (extract) vs RAW (fetch)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 155
+      },
+      "id": 900,
+      "panels": [],
+      "title": "Document types & processing warnings (xberg)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Successfully extracted documents per second, split by the extractor's detected mime_type (normalized — charset and other parameters stripped; \"unknown\" means the extractor reported no type at all, or reported one that couldn't be parsed). Counted once per successful parse, so with EXTRACTION_COMPARISON_ENABLED on, a sampled document contributes to both a kreuzberg and a tika series — this panel does not split by parser_kind; see the Tika comparison dashboard for that breakdown. A shift in mix (e.g. \"unknown\" growing) usually means upstream content-type detection regressed, not that the corpus changed. Pair with Extraction outcomes: this panel only counts successes, so a mime_type dropping out here while overall extraction volume holds steady points at that type failing outright, not disappearing from the corpus.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 156
+      },
+      "id": 901,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (mime_type) (rate(content_extraction_files_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{mime_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Documents processed by mime type",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "kreuzberg's processing_warnings count, summed per document and split by detected mime_type. A clean document contributes nothing to this series by design — zero warnings is not recorded as a zero-value point (see content-service's RecordExtractionDocument) — so any nonzero rate here means some fraction of documents of that type are hitting a non-fatal issue during extraction (e.g. an OCR fallback), not merely that documents are being processed. tika has no equivalent field and always contributes 0, so during a comparison-sampled window this series under-represents total document volume relative to Documents processed by mime type for tika's share — that gap is expected, not missing data. Rising warnings against a flat Documents processed count for the same mime_type is a quality signal on documents you're already handling at the same rate, worth checking against kreuzberg's own logs before assuming a code regression.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 156
+      },
+      "id": 902,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (mime_type) (rate(content_extraction_warnings_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{mime_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Processing warnings by mime type",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 164
+      },
+      "id": 1000,
+      "panels": [],
+      "title": "Bytes throughput — cache & extraction",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Raw read = rate(content_cache_read_bytes_sum{bucket=\"raw\"}) — bytes returned by cache Gets (sha256 safety-net + pre-extraction raw reads).\n- Raw write = rate(content_cache_write_bytes_sum) — bytes PUT into the raw bucket by S3Store (connector uploads).\n- Text write = rate(content_text_cache_stored_bytes_total) — compressed text bytes PUT into the text bucket.\n- No \"text read\" line — content-service never reads the text body back out. Text hits are served HEAD-only (CacheLocation-only delivery); the caller fetches bytes directly from S3, invisible to this service.\n- Raw read ≫ raw write, sustained → repeat reads of already-cached raw objects (sha256 safety-net or pre-extraction lookups on a hot document).\n- Text write ≪ raw write → most raw traffic is RAW requests or direct-store bypasses, not going through extraction.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "Bps"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 165
+      },
+      "id": 1001,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_read_bytes_sum{namespace=\"$namespace\", job=\"$job\", bucket=\"raw\"}[5m]))",
+          "legendFormat": "raw read",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_write_bytes_sum{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "raw write",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_text_cache_stored_bytes_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "text write",
+          "refId": "C"
+        }
+      ],
+      "title": "Cache bytes/sec — read vs write, raw vs text",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Sent = rate(content_extraction_bytes_sent_total) by parser_kind — content bytes handed to kreuzberg/tika, recorded regardless of outcome.\n- Received = rate(content_extraction_bytes_received_total) by parser_kind — extracted text bytes returned, success only.\n- Received ≪ sent → extraction is compressing, as expected for text-dense documents (PDFs/Office docs shrink a lot). A ratio near 1 on a compressible corpus is worth a second look.\n- `tika` series only appear when EXTRACTION_COMPARISON_ENABLED=true (shadow-run comparison) — flat/missing tika lines in normal operation are expected, not a gap.\n- Sent rising with no matching rise in received → extraction attempts are failing — check \"Extraction outcomes\".",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "Bps"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 165
+      },
+      "id": 1002,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (parser_kind) (rate(content_extraction_bytes_sent_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "sent — {{parser_kind}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (parser_kind) (rate(content_extraction_bytes_received_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "received — {{parser_kind}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Extraction bytes/sec — sent vs received, by parser",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 174
+      },
+      "id": 1010,
+      "panels": [],
+      "title": "Processed bucket — by output format",
+      "type": "row",
+      "description": null
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Processed-bucket hit ratio split by the serialization the caller asked for.\n- One bucket holds them all (text, markdown, html, djot), so `bucket=\"processed\"` alone cannot tell a markdown hit from a text hit — that is what the `format` label is for. Summing over `format` still gives the complete processed-bucket total.\n- A format's ratio starts at 0 and climbs: switching a caller's format changes the cache key, so every document it had already processed is a miss until it is re-extracted.\n- format=\"unspecified\" means the caller named no format and was served plain text. See the panel beside this one.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "max": 1,
+          "min": 0,
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 175
+      },
+      "id": 1011,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (format) (rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"processed\", phase=\"extract\"}[5m])) / (sum by (format) (rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", bucket=\"processed\", phase=\"extract\"}[5m])) + sum by (format) (rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", bucket=\"processed\", phase=\"extract\"}[5m])))",
+          "legendFormat": "{{format}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Processed-bucket hit ratio — by format",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "- Requests that named NO output format and were served plain text.\n- This is the gate on REQUIRE_OUTPUT_FORMAT. While it is above zero, turning that flag on answers those requests with CONTENT_ERROR_INVALID_ARGUMENT (retryable=false) instead of content — so wait for it to reach and hold zero, then flip dev first.\n- Nonzero after every caller is believed updated → a caller was missed, or an old build is still running. It counts lookups rather than callers, so use it as a yes/no signal, not a headcount.\n- Deliberately distinct from format=\"text\": both produce the same cache key and the same extractor request, and are kept apart only so this signal exists.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 175
+      },
+      "id": 1012,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(content_cache_hits_total{namespace=\"$namespace\", job=\"$job\", format=\"unspecified\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\"$namespace\", job=\"$job\", format=\"unspecified\"}[5m]))",
+          "legendFormat": "requests with no output_format",
+          "refId": "A"
+        }
+      ],
+      "title": "Callers not yet stating an output format",
       "type": "timeseries"
     }
   ],
   "refresh": "30s",
   "schemaVersion": 39,
-  "tags": ["content-service", "pipeline", "git-sync"],
+  "tags": [
+    "content-service",
+    "pipeline",
+    "git-sync"
+  ],
   "templating": {
     "list": [
       {
-        "current": {"selected": false, "text": "Prometheus", "value": "Prometheus"},
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "Prometheus"
+        },
         "hide": 0,
         "includeAll": false,
         "label": "Datasource",
@@ -417,7 +2882,10 @@
       },
       {
         "current": {},
-        "datasource": {"type": "prometheus", "uid": "${datasource}"},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
         "definition": "label_values(content_requests_total, job)",
         "hide": 0,
         "includeAll": false,
@@ -425,7 +2893,10 @@
         "multi": false,
         "name": "job",
         "options": [],
-        "query": {"query": "label_values(content_requests_total, job)", "refId": "PrometheusVariableQueryEditor-VariableQuery"},
+        "query": {
+          "query": "label_values(content_requests_total, job)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -434,7 +2905,10 @@
       },
       {
         "current": {},
-        "datasource": {"type": "prometheus", "uid": "${datasource}"},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
         "definition": "label_values(up{job=\"$job\"}, namespace)",
         "hide": 0,
         "includeAll": false,
@@ -442,7 +2916,57 @@
         "multi": false,
         "name": "namespace",
         "options": [],
-        "query": {"query": "label_values(up{job=\"$job\"}, namespace)", "refId": "PrometheusVariableQueryEditor-VariableQuery"},
+        "query": {
+          "query": "label_values(up{job=\"$job\"}, namespace)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(content_requests_total{namespace=\"$namespace\", job=\"$job\"}, pod)",
+        "description": "Only affects the two panels with a per-pod breakdown — 'In-flight requests (global vs stream)' and 'Upload streams in flight' — where it filters which {{pod}} lines are drawn alongside the total. Every other panel below queries by namespace/job only and ignores this variable by design, so historical data survives pod churn (restarts, scale-downs, recycled pod names) instead of silently dropping out when a pod leaves the current option list.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Pod",
+        "multi": true,
+        "name": "pod",
+        "options": [],
+        "query": {
+          "query": "label_values(content_requests_total{namespace=\"$namespace\", job=\"$job\"}, pod)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(pii_docs_processed_total, job)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Privacy job",
+        "multi": false,
+        "name": "privacy_job",
+        "options": [],
+        "query": {
+          "query": "label_values(pii_docs_processed_total, job)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -451,11 +2975,14 @@
       }
     ]
   },
-  "time": {"from": "now-30m", "to": "now"},
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "browser",
   "title": "Content Service",
   "uid": "content-service",
-  "version": 2,
+  "version": 9,
   "weekStart": ""
 }
