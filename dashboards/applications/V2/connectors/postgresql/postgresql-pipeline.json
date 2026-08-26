@@ -1,7 +1,12 @@
 {
   "uid": "apps-v2-postgresql-pipeline",
   "title": "PostgreSQL Connector — Pipeline",
-  "tags": ["git-sync", "apps-v2", "connector:postgresql", "pipeline"],
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "connector:postgresql",
+    "pipeline"
+  ],
   "timezone": "utc",
   "schemaVersion": 39,
   "version": 1,
@@ -25,6 +30,13 @@
       "url": "/d/apps-v2-postgresql-runtime?${namespace:queryparam}&${component:queryparam}",
       "targetBlank": false,
       "icon": "external link"
+    },
+    {
+      "title": "Applications V2 — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
     }
   ],
   "templating": {
@@ -34,7 +46,11 @@
         "type": "datasource",
         "label": "Datasource",
         "query": "prometheus",
-        "current": { "selected": false, "text": "Prometheus", "value": "prometheus-nx" },
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
         "hide": 0,
         "refresh": 1
       },
@@ -42,9 +58,16 @@
         "name": "namespace",
         "type": "query",
         "label": "Namespace",
-        "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "query": "label_values(process_start_time_seconds{job=~\"postgresql-connector-be-go.*\"}, namespace)",
-        "current": { "selected": true, "text": "default", "value": "default" },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*postgresql-connector-be-go.*\"}, namespace)",
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
         "hide": 0,
         "includeAll": false,
         "multi": false,
@@ -55,12 +78,16 @@
         "name": "component",
         "type": "custom",
         "label": "Component",
-        "query": "All : postgresql-connector-be-go.*, Scanner : postgresql-connector-be-go, Content : postgresql-connector-be-go-content",
-        "current": { "selected": true, "text": "All", "value": "postgresql-connector-be-go.*" },
+        "query": "All : .*postgresql-connector-be-go.*, Scanner : .*postgresql-connector-be-go, Content : .*postgresql-connector-be-go-content",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": ".*postgresql-connector-be-go.*"
+        },
         "options": [
-          { "selected": true, "text": "All", "value": "postgresql-connector-be-go.*" },
-          { "selected": false, "text": "Scanner", "value": "postgresql-connector-be-go" },
-          { "selected": false, "text": "Content", "value": "postgresql-connector-be-go-content" }
+          { "selected": true, "text": "All", "value": ".*postgresql-connector-be-go.*" },
+          { "selected": false, "text": "Scanner", "value": ".*postgresql-connector-be-go" },
+          { "selected": false, "text": "Content", "value": ".*postgresql-connector-be-go-content" }
         ],
         "hide": 0,
         "includeAll": false,
@@ -70,9 +97,16 @@
         "name": "pod",
         "type": "query",
         "label": "Pod",
-        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
         "query": "label_values(process_start_time_seconds{job=~\"$component\", namespace=\"$namespace\"}, pod)",
-        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
         "hide": 0,
         "includeAll": true,
         "allValue": ".*",
@@ -84,15 +118,37 @@
         "name": "query_type",
         "type": "query",
         "label": "Query Type",
-        "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "query": "label_values(postgresql_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}, query_type)",
-        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}, query_type)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
         "hide": 0,
         "includeAll": true,
         "allValue": ".*",
         "multi": true,
-        "refresh": 1,
+        "refresh": 2,
         "sort": 1
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "enable": true,
+        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\".*postgresql-connector.*\"}[5m]) > 0",
+        "name": "Pod Restarts",
+        "tagKeys": "pod",
+        "titleFormat": "Pod Restart"
       }
     ]
   },
@@ -100,7 +156,7 @@
     {
       "type": "row",
       "id": 100,
-      "title": "Discovery & Throughput",
+      "title": "Scanner — Discovery & Throughput",
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "panels": []
@@ -108,140 +164,385 @@
     {
       "id": 1,
       "type": "timeseries",
-      "title": "Tables Scanned (rate)",
+      "title": "Databases & Schemas Discovered (rate)",
+      "description": "The two fan-out stages: pg_database enumeration on the ScanStart handler, then pg_namespace enumeration on each DatabaseFork. Schemas rising with databases flat is normal mid-scan — the forks are being worked through.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(postgresql_scanner_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "tables/s" }
+        {
+          "refId": "A",
+          "expr": "sum(rate(postgresql_connector_databases_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "databases/s"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(postgresql_connector_schemas_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "schemas/s"
+        }
       ]
     },
     {
       "id": 2,
       "type": "timeseries",
-      "title": "Columns Found (rate)",
+      "title": "Tables & Columns Discovered (rate)",
+      "description": "Tables successfully scanned and columns retrieved from pg_catalog. Columns are added per table in the bulk path and per column list in the fallback path, so the ratio between the two lines tracks average table width.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(postgresql_scanner_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "cols/s" }
+        {
+          "refId": "A",
+          "expr": "sum(rate(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "tables/s"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "columns/s"
+        }
       ]
     },
     {
       "id": 3,
       "type": "timeseries",
       "title": "Items Sent (rate)",
+      "description": "Items accepted by ItemBatchSender.UpsertItem. This is the connector's actual output — everything above it is discovery.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(postgresql_scanner_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "items/s" }
+        {
+          "refId": "A",
+          "expr": "sum(rate(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "items/s"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (pod) (rate(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "{{pod}}"
+        }
       ]
     },
     {
       "type": "row",
       "id": 200,
-      "title": "Query Performance — by query_type",
+      "title": "Scanner — Duration & Errors",
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
       "panels": []
     },
     {
       "id": 10,
-      "type": "heatmap",
-      "title": "Query Duration Heatmap",
+      "type": "timeseries",
+      "title": "Scan Duration — p50 / p95 / p99",
+      "description": "The ScanStart discovery + fan-out phase only, on a 1s-to-~2048s ladder. It ends when the DatabaseFork work items are published, so it does not measure how long the whole crawl takes.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "s" } },
-      "options": { "calculate": false, "yAxis": { "unit": "s" } },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (le) (rate(postgresql_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[5m]))",
-          "format": "heatmap",
-          "legendFormat": "{{le}}"
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(postgresql_connector_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(postgresql_connector_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(postgresql_connector_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p99"
+        },
+        {
+          "refId": "D",
+          "expr": "sum(rate(postgresql_connector_scan_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) / sum(rate(postgresql_connector_scan_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "avg"
         }
       ]
     },
     {
       "id": 11,
       "type": "timeseries",
-      "title": "Query p95 by query_type",
+      "title": "Scanner Errors (rate)",
+      "description": "database_errors_total is raised when listing a database's schemas fails; table_errors_total when a table's scan or publish fails. Both are source-database faults — a credential, a grant, a timeout — not connector bugs.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
-      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le, query_type) (rate(postgresql_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[5m])))",
-          "legendFormat": "{{query_type}}"
+          "expr": "sum(rate(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "database errors"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "table errors"
+        },
+        {
+          "refId": "C",
+          "expr": "sum by (pod) (rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "table errors — {{pod}}"
         }
       ]
     },
     {
       "type": "row",
       "id": 300,
-      "title": "Content Fetch",
+      "title": "Scanner — Query Performance",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
       "panels": []
     },
     {
       "id": 20,
-      "type": "timeseries",
-      "title": "Content Requests by Outcome (rate)",
+      "type": "heatmap",
+      "title": "Query Duration Heatmap",
+      "description": "Scan-path SQL latency distribution across the selected query types, on a 50ms-to-~102s ladder.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 19 },
-      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "gridPos": { "h": 9, "w": 8, "x": 0, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "options": {
+        "calculate": false,
+        "yAxis": { "unit": "s" }
+      },
       "targets": [
-        { "refId": "A", "expr": "sum by (success, error_code) (rate(postgresql_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "success={{success}} ({{error_code}})" }
+        {
+          "refId": "A",
+          "expr": "sum by (le) (rate(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[5m]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
       ]
     },
     {
       "id": 21,
       "type": "timeseries",
-      "title": "Content Fetch Duration — p50 / p95 / p99",
+      "title": "Query p95 by query_type",
+      "description": "query_type values are the six labelled call sites: list_databases and list_schemas (enumeration), tables_in_schema, bulk_tables and bulk_columns (the batched crawl path), and list_columns (the per-table fallback). A rising list_columns share means the bulk path is falling back more often.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 19 },
+      "gridPos": { "h": 9, "w": 8, "x": 8, "y": 17 },
       "fieldConfig": { "defaults": { "unit": "s" } },
       "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(postgresql_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p50" },
-        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(postgresql_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p95" },
-        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(postgresql_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p99" }
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, query_type) (rate(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[5m])))",
+          "legendFormat": "{{query_type}}"
+        }
       ]
     },
     {
       "id": 22,
       "type": "timeseries",
-      "title": "Content Upload Duration p95",
+      "title": "Query Rate by query_type",
+      "description": "Observations per second per call site, from the histogram's _count series. This is how many queries the connector is issuing, as opposed to how long they take.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 19 },
-      "fieldConfig": { "defaults": { "unit": "s" } },
-      "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(postgresql_content_cache_write_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p95" }
-      ]
-    },
-    {
-      "id": 23,
-      "type": "timeseries",
-      "title": "Content Requests In Flight",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 26 },
-      "fieldConfig": { "defaults": { "unit": "short" } },
-      "targets": [
-        { "refId": "A", "expr": "sum by (pod) (postgresql_content_fetch_in_flight{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "{{pod}}" }
-      ]
-    },
-    {
-      "id": 24,
-      "type": "timeseries",
-      "title": "Errors (rate)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 26 },
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 17 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(postgresql_scanner_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "database" },
-        { "refId": "B", "expr": "sum(rate(postgresql_scanner_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "table" }
+        {
+          "refId": "A",
+          "expr": "sum by (query_type) (rate(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[5m]))",
+          "legendFormat": "{{query_type}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 400,
+      "title": "Content — Fetch Activity",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Content Requests by Outcome (rate)",
+      "description": "success is a string label, \"true\" or \"false\"; error_code is \"NONE\" on success. Grouping by both keeps the successful and failed paths on the same axis.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 27 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (success) (rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "success={{success}}"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Fetch Duration — p50 / p95 / p99 by outcome",
+      "description": "Split by success because a failure's latency measures how fast the handler gave up, not how fast it did the work. A p95 that improves while the error rate climbs is the failure path getting faster, not the fetch path.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 27 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le, success) (rate(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p50 success={{success}}"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le, success) (rate(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p95 success={{success}}"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le, success) (rate(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p99 success={{success}}"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Content Errors by error_code (count, 5m)",
+      "description": "The distinction that matters here is transport versus reply. NAK_UNMARSHAL, NAK_PROCESSING, NAK_MARSHAL_COMPLETED and NAK_PUBLISH_COMPLETED mean the message was NAKed and will be redelivered with no reply sent — a requester waiting on that reply sees a timeout, not an error. The FETCH_ERROR_* codes were answered: INVALID_URN, CREDENTIAL_FAILURE, CONNECTION_FAILED, NOT_FOUND, TOO_LARGE, CACHE_WRITE_FAILED and INTERNAL.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 27 },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (error_code) (increase(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"false\"}[5m]))",
+          "legendFormat": "{{error_code}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 500,
+      "title": "Content — Payload & Sampling",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "panels": []
+    },
+    {
+      "id": 40,
+      "type": "timeseries",
+      "title": "Document Size — p50 / p95 / p99",
+      "description": "Bytes per content document produced, including what is written to the raw-content-cache. Ladder runs 1KiB to 256MiB (ExponentialBuckets(1024, 4, 10)), so a percentile sitting on the top boundary means the tail is in +Inf and its real size is unknown.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 35 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p99"
+        },
+        {
+          "refId": "D",
+          "expr": "sum(rate(postgresql_connector_content_fetch_bytes_sum{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) / sum(rate(postgresql_connector_content_fetch_bytes_count{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "avg"
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Sample Rows per Document — p50 / p95 / p99",
+      "description": "Rows serialised into each sampled document, on a 10-to-~20k ladder. Read it against Document Size: rows flat while bytes climb means wider rows, not more of them.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 35 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p99"
+        },
+        {
+          "refId": "D",
+          "expr": "sum(rate(postgresql_connector_content_sample_rows_sum{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) / sum(rate(postgresql_connector_content_sample_rows_count{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "avg"
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Cache Write Throughput (bytes/s)",
+      "description": "Bytes per second this connector pushes into the raw-content-cache, from the cumulative counter. Only the success path adds to it, so it should track the success line on Content Requests by Outcome.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 35 },
+      "fieldConfig": { "defaults": { "unit": "Bps" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(postgresql_connector_content_cache_write_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "total"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (pod) (rate(postgresql_connector_content_cache_write_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "{{pod}}"
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "type": "timeseries",
+      "title": "Fetches per Pod (rate)",
+      "description": "Per-pod content fetch rate. A single pod carrying the whole load while others sit idle points at the consumer's work distribution rather than at the connector.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 42 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "{{pod}}"
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "type": "timeseries",
+      "title": "Fetch Success Ratio",
+      "description": "Successful fetches as a fraction of all fetches over 5 minutes. Flat 1 with no traffic is an artefact of the division, so read it alongside Fetches per Pod rather than on its own.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 42 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"true\"}[5m])) / sum(rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "success ratio"
+        }
       ]
     }
   ]
