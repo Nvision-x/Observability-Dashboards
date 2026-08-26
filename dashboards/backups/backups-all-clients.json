@@ -579,12 +579,126 @@
       "type": "stat"
     },
     {
-      "collapsed": true,
+      "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 7
+      },
+      "id": 30,
+      "panels": [],
+      "title": "AWS-Managed OpenSearch — Automated Snapshot Status",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "afw9bld1rx0jkc"
+      },
+      "description": "AWS only publishes a failure counter for OpenSearch's built-in automated snapshots - no success/last-successful-time metric exists. No data in the lookback window means no failures occurred (healthy); any value >= 1 means a snapshot failed. Currently only Integration (nx-integration-os) is known to have an Amazon-managed OpenSearch domain - other clients use the self-hosted in-cluster OpenSearch covered by the panels below instead. Add a target here if another client is confirmed to have its own managed domain.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "Healthy",
+                  "color": "green"
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 0,
+                "to": 0,
+                "result": {
+                  "text": "Healthy",
+                  "color": "green"
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1,
+                "to": 1000000,
+                "result": {
+                  "text": "Failed",
+                  "color": "red"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 8
+      },
+      "id": 31,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "afw9bld1rx0jkc"
+          },
+          "namespace": "AWS/ES",
+          "metricName": "AutomatedSnapshotFailure",
+          "statistic": "Maximum",
+          "dimensions": {
+            "DomainName": "nx-integration-os"
+          },
+          "region": "us-east-1",
+          "matchExact": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Integration (nx-integration-os)",
+      "type": "stat"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 12
       },
       "id": 20,
       "repeat": "client_ds",
@@ -879,7 +993,7 @@
   "timezone": "",
   "title": "Backup Status Overview",
   "uid": "nx-backups-all-clients",
-  "version": 2,
+  "version": 3,
   "weekStart": "",
   "folderUid": "backups-folder"
 }
