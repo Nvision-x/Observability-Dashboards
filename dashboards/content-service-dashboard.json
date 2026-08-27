@@ -1622,6 +1622,262 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
+      "description": "- Same series as \"Extraction outcomes\", counted per bucket instead of per second, so the bands add up: the top of the stack is every extraction attempt in that bucket, and each band is its share.\n- Read this one for \"how many documents did that outage cost\" and for a status whose rate is too small to see next to `success`. Read the rate panel for trend and for comparing shapes across a zoom level.\n- An all-`service_unavailable` stack with no `success` band means the extractor is unreachable, not that documents are bad — extraction failures return an empty-text response with a successful RPC, so nothing on the request panels turns red.\n- Counted with `increase()`, which extrapolates at bucket edges, so a bar can read slightly off a whole number. Min step is pinned to 1m so a bar never covers less than one scrape window; widen the time range and the bars widen with it.\n- Band colours match \"Extraction outcomes\" — the same status is the same colour in both.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 90,
+            "lineWidth": 0,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            },
+            "barAlignment": 0
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "success"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "empty_content"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unsupported_type"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "encrypted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "semi-dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "file_too_large"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "corrupted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ocr_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "semi-dark-orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "timeout"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "service_unavailable"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "canceled"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "breaker_open"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unspecified"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "super-light-red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 64
+      },
+      "id": 38,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "sum",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (status) (increase(content_extraction_total{namespace=\"$namespace\", job=\"$job\"}[$__interval]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Extraction attempts by status (stacked counts)",
+      "type": "timeseries",
+      "interval": "1m"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "description": "- Splits successful raw-write latency: `total p95` = whole write (connector stream read + S3 PutObject); `stream-wait p95` = time blocked reading the connector.\n- total − stream-wait ≈ S3-side time.\n- `stream-wait` ≈ `total` → the connector/source system is slow, not the cache.\n- `stream-wait` small, `total` high → S3 itself is slow.",
       "fieldConfig": {
         "defaults": {
@@ -1641,7 +1897,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 64
+        "y": 72
       },
       "id": 25,
       "options": {
@@ -1700,7 +1956,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 64
+        "y": 72
       },
       "id": 26,
       "options": {
@@ -1750,7 +2006,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 72
+        "y": 80
       },
       "id": 27,
       "options": {
@@ -1807,7 +2063,7 @@
         "h": 6,
         "w": 6,
         "x": 12,
-        "y": 72
+        "y": 80
       },
       "id": 28,
       "options": {
@@ -1874,7 +2130,7 @@
         "h": 6,
         "w": 6,
         "x": 18,
-        "y": 72
+        "y": 80
       },
       "id": 29,
       "options": {
@@ -1915,7 +2171,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 78
+        "y": 86
       },
       "id": 500,
       "panels": [],
@@ -1957,7 +2213,7 @@
         "h": 6,
         "w": 6,
         "x": 0,
-        "y": 79
+        "y": 87
       },
       "id": 21,
       "options": {
@@ -2076,7 +2332,7 @@
         "h": 6,
         "w": 9,
         "x": 6,
-        "y": 79
+        "y": 87
       },
       "id": 22,
       "options": {
@@ -2126,7 +2382,7 @@
         "h": 6,
         "w": 9,
         "x": 15,
-        "y": 79
+        "y": 87
       },
       "id": 23,
       "options": {
@@ -2176,7 +2432,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 85
+        "y": 93
       },
       "id": 24,
       "options": {
@@ -2217,7 +2473,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 92
+        "y": 100
       },
       "id": 600,
       "panels": [],
@@ -2248,7 +2504,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 93
+        "y": 101
       },
       "id": 30,
       "options": {
@@ -2351,7 +2607,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 93
+        "y": 101
       },
       "id": 31,
       "options": {
@@ -2423,7 +2679,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 101
+        "y": 109
       },
       "id": 32,
       "options": {
@@ -2477,7 +2733,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 101
+        "y": 109
       },
       "id": 33,
       "options": {
@@ -2527,7 +2783,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 109
+        "y": 117
       },
       "id": 34,
       "options": {
@@ -2687,7 +2943,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 109
+        "y": 117
       },
       "id": 35,
       "options": {
@@ -2737,7 +2993,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 117
+        "y": 125
       },
       "id": 36,
       "options": {
@@ -2796,7 +3052,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 117
+        "y": 125
       },
       "id": 37,
       "options": {
@@ -2831,7 +3087,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 125
+        "y": 133
       },
       "panels": []
     },
@@ -2848,7 +3104,7 @@
         "h": 9,
         "w": 16,
         "x": 0,
-        "y": 126
+        "y": 134
       },
       "fieldConfig": {
         "defaults": {
@@ -2947,7 +3203,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 126
+        "y": 134
       },
       "fieldConfig": {
         "defaults": {
@@ -3006,7 +3262,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 135
+        "y": 143
       },
       "fieldConfig": {
         "defaults": {
@@ -3104,7 +3360,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 144
+        "y": 152
       },
       "id": 800,
       "panels": [],
@@ -3136,7 +3392,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 145
+        "y": 153
       },
       "id": 801,
       "options": {
@@ -3204,7 +3460,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 155
+        "y": 163
       },
       "id": 900,
       "panels": [],
@@ -3239,7 +3495,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 156
+        "y": 164
       },
       "id": 901,
       "options": {
@@ -3293,7 +3549,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 156
+        "y": 164
       },
       "id": 902,
       "options": {
@@ -3325,7 +3581,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 164
+        "y": 172
       },
       "id": 1000,
       "panels": [],
@@ -3356,7 +3612,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 165
+        "y": 173
       },
       "id": 1001,
       "options": {
@@ -3424,7 +3680,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 165
+        "y": 173
       },
       "id": 1002,
       "options": {
@@ -3465,7 +3721,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 174
+        "y": 182
       },
       "id": 1010,
       "panels": [],
@@ -3499,7 +3755,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 175
+        "y": 183
       },
       "id": 1011,
       "options": {
@@ -3549,7 +3805,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 175
+        "y": 183
       },
       "id": 1012,
       "options": {

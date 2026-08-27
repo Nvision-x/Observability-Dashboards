@@ -698,6 +698,160 @@
         "service": "knowledge-service-be-go",
         "alerttype": "application"
       }
+    },
+    {
+      "uid": "nx-cs-extraction-failing",
+      "title": "Extraction Failing - Content Service",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-nx"
+          },
+          "model": {
+            "expr": "100 * sum(rate(content_extraction_total{job=~\".*content-service.*\", status=~\"service_unavailable|timeout\"}[5m])) / clamp_min(sum(rate(content_extraction_total{job=~\".*content-service.*\"}[5m])), 0.001)",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "A",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "reducer": "last",
+            "refId": "B",
+            "type": "reduce"
+          }
+        },
+        {
+          "refId": "C",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "B > 10",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "refId": "C",
+            "type": "threshold"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "10m",
+      "annotations": {
+        "description": "More than 10% of extraction attempts are failing with service_unavailable or timeout — the extractor is unreachable, overloaded, or gone, not handed bad documents. Nothing downstream will say so on its own: an extraction failure returns a SUCCESSFUL RPC with empty text and an extraction_error, so content-service's request panels and the API error-rate alert both stay green while no document gets extracted. First check whether TEXT_EXTRACTOR_URL points at a Service with ready endpoints — the URL is derived from xbergGpu.enabled, so enabling the GPU extractor moves every extraction to it and an unready GPU pod takes extraction down with no CPU fallback. Then open \"Extraction attempts by status (stacked counts)\" on the content-service dashboard to see how many documents the window cost, and \"Retry attempts by error code\" for the amplification (each failure is retried up to EXTRACT_RETRY_MAX_ATTEMPTS times, so request volume RISES during an outage). Deliberately narrow: it counts only the two infrastructure statuses. Per-document verdicts (empty_content, corrupted, unsupported_type, encrypted, file_too_large, ocr_failed) are corpus-driven and run high on image-heavy scans, so including them would keep this rule near its threshold and train everyone to ignore it. skipped (over EXTRACTION_MAX_SIZE) and canceled (caller gave up, or a drain) are not failures and are excluded too. Idle is not alerting: with no extraction traffic the ratio is 0.",
+        "summary": "Content Service extractions are failing — the extractor is unreachable, and no document is being extracted"
+      },
+      "labels": {
+        "severity": "critical",
+        "team": "development",
+        "service": "content-service-be-go",
+        "alerttype": "application"
+      }
+    },
+    {
+      "uid": "nx-cs-extraction-document-quality",
+      "title": "Documents Failing Extraction - Content Service",
+      "condition": "C",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 900,
+            "to": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-nx"
+          },
+          "model": {
+            "expr": "100 * sum(rate(content_extraction_total{job=~\".*content-service.*\", status!~\"success|skipped|canceled|service_unavailable|timeout|breaker_open\"}[10m])) / clamp_min(sum(rate(content_extraction_total{job=~\".*content-service.*\"}[10m])), 0.001)",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        },
+        {
+          "refId": "B",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "A",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "reducer": "last",
+            "refId": "B",
+            "type": "reduce"
+          }
+        },
+        {
+          "refId": "C",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 0,
+            "to": 0
+          },
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "model": {
+            "expression": "B > 50",
+            "intervalMs": 1000,
+            "maxDataPoints": 43200,
+            "refId": "C",
+            "type": "threshold"
+          }
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "30m",
+      "annotations": {
+        "description": "More than half of extraction attempts are ending in a per-document verdict — empty_content, corrupted, unsupported_type, encrypted, file_too_large, ocr_failed. The extractor is answering; it is the documents it cannot turn into text. Distinct from \"Extraction Failing - Content Service\", which owns the unreachable-extractor case: the two rules split the same counter and cannot both claim a status. Split by status on \"Extraction attempts by status (stacked counts)\" before treating it as a fault, because one status means one thing and they do not share a fix: encrypted and unsupported_type are corpus facts, corrupted is either genuinely malformed documents or an extractor error this build does not map (see docs/error-codes.md in content-service-be-go), file_too_large is the extractor's own ceiling rather than EXTRACTION_MAX_SIZE, and ocr_failed means OCR ran and lost — which on the GPU extractor means paddle-ocr, a different backend to the CPU instance's tesseract, so check which instance TEXT_EXTRACTOR_URL resolved to before blaming the documents. Threshold is deliberately high and slow (50% over 30m) because this is corpus-driven and not urgent: nothing is lost, the failure is recorded per document, and a scan moving through one bad folder should not page anyone. EXPECTED FALSE POSITIVE: a large image-only scan can legitimately sit near 100% empty_content, since a JPEG with no text in it is a correct empty result. If that becomes routine here, the two honest levers are raising this threshold or dropping empty_content from the numerator — not lowering the bar and living with a rule everyone mutes. The numerator is written as an exclusion so a newly added extraction error code is covered by default; the statuses named in it are the ones that are NOT document verdicts.",
+        "summary": "Over half of Content Service extraction attempts are failing on the documents themselves, not the extractor"
+      },
+      "labels": {
+        "severity": "warning",
+        "team": "development",
+        "service": "content-service-be-go",
+        "alerttype": "application"
+      }
     }
   ]
 }
