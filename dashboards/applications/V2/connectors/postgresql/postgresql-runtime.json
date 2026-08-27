@@ -113,27 +113,6 @@
         "multi": true,
         "refresh": 2,
         "sort": 1
-      },
-      {
-        "name": "component_pod",
-        "type": "query",
-        "label": "Component Pods",
-        "description": "Hidden helper: the pod names belonging to $component. Container panels use this because cAdvisor series have no job label to match $component against.",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "query": "label_values(process_start_time_seconds{job=~\"$component\", namespace=\"$namespace\"}, pod)",
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
-        },
-        "hide": 2,
-        "includeAll": true,
-        "multi": true,
-        "refresh": 2,
-        "sort": 1
       }
     ]
   },
@@ -218,14 +197,14 @@
       "id": 10,
       "type": "timeseries",
       "title": "Container CPU Usage",
-      "description": "cAdvisor series carry no job label, so this is selected by pod name rather than by job. It still follows the Component variable, via a hidden helper that resolves Component to its pod names — but it deliberately ignores the Pod picker, because cAdvisor keeps reporting pods that have already churned out of the scrape target list.",
+      "description": "cAdvisor series carry no job label, so this is selected by pod name rather than by job — which means it covers both components and deliberately ignores the Component and Pod pickers. That is the point: it keeps reporting pods that have already churned out of the scrape target list, so container history survives a scale-to-zero. Content pods are identifiable by the -content segment in the series name.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 12, "x": 0, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "percentunit" } },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*postgresql-connector.*\", pod=~\"$component_pod\", container!=\"\", container!=\"POD\"}[5m]))",
+          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*postgresql-connector.*\", container!=\"\", container!=\"POD\"}[5m]))",
           "legendFormat": "{{pod}}"
         }
       ]
@@ -234,14 +213,14 @@
       "id": 11,
       "type": "timeseries",
       "title": "Container Memory (working set)",
-      "description": "cAdvisor series carry no job label, so this is selected by pod name rather than by job. It still follows the Component variable, via a hidden helper that resolves Component to its pod names — but it deliberately ignores the Pod picker, because cAdvisor keeps reporting pods that have already churned out of the scrape target list. This is the number the OOM killer watches, not process RSS.",
+      "description": "cAdvisor series carry no job label, so this is selected by pod name rather than by job — which means it covers both components and deliberately ignores the Component and Pod pickers. That is the point: it keeps reporting pods that have already churned out of the scrape target list, so container history survives a scale-to-zero. Content pods are identifiable by the -content segment in the series name. This is the number the OOM killer watches, not process RSS.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 12, "x": 12, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "bytes" } },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*postgresql-connector.*\", pod=~\"$component_pod\", container!=\"\", container!=\"POD\"})",
+          "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*postgresql-connector.*\", container!=\"\", container!=\"POD\"})",
           "legendFormat": "{{pod}}"
         }
       ]

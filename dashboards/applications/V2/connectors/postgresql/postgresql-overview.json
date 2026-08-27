@@ -150,6 +150,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
       "fieldConfig": {
         "defaults": {
+          "noValue": "0",
           "unit": "short",
           "thresholds": {
             "mode": "absolute",
@@ -178,7 +179,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(up{job=~\".*postgresql-connector-be-go\", namespace=\"$namespace\", pod=~\"$pod\"})"
+          "expr": "sum(up{job=~\".*postgresql-connector-be-go\", namespace=\"$namespace\", pod=~\"$pod\"}) or vector(0)"
         }
       ]
     },
@@ -254,8 +255,8 @@
     {
       "id": 5,
       "type": "stat",
-      "title": "Scan p95 (5m)",
-      "description": "Buckets are ExponentialBuckets(1, 2, 12) — 1s to ~2048s. A p95 pinned at the top of that range means scans are overflowing the last bucket, not that they take exactly 2048s.",
+      "title": "Fan-out p95 (5m)",
+      "description": "The scanner fan-out only: connect, list databases, publish the per-database work items. Not an end-to-end scan duration — the per-schema and per-table work runs in other handler invocations, on other pods, and is not timed today. Buckets are ExponentialBuckets(0.05, 2, 12) — 50ms to ~102s.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "s", "decimals": 1 } },
@@ -316,7 +317,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) + sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+          "expr": "(sum(rate(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) or vector(0)) + (sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) or vector(0))"
         }
       ]
     },
@@ -358,7 +359,7 @@
     {
       "id": 11,
       "type": "timeseries",
-      "title": "Scan Duration — p50 / p95 / p99",
+      "title": "Fan-out Duration — p50 / p95 / p99",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
       "fieldConfig": { "defaults": { "unit": "s" } },
@@ -396,6 +397,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 14 },
       "fieldConfig": {
         "defaults": {
+          "noValue": "0",
           "unit": "short",
           "thresholds": {
             "mode": "absolute",
@@ -424,7 +426,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(up{job=~\".*postgresql-connector-be-go-content\", namespace=\"$namespace\", pod=~\"$pod\"})"
+          "expr": "sum(up{job=~\".*postgresql-connector-be-go-content\", namespace=\"$namespace\", pod=~\"$pod\"}) or vector(0)"
         }
       ]
     },

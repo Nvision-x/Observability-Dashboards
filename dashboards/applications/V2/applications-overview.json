@@ -831,6 +831,7 @@
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 46 },
       "fieldConfig": {
         "defaults": {
+          "noValue": "0",
           "unit": "short",
           "thresholds": { "mode": "absolute", "steps": [
             { "color": "red", "value": null },
@@ -844,7 +845,7 @@
       },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
-        { "refId": "A", "expr": "sum(up{job=~\".*postgresql-connector-be-go\", namespace=\"$namespace\"})" }
+        { "refId": "A", "expr": "sum(up{job=~\".*postgresql-connector-be-go\", namespace=\"$namespace\"}) or vector(0)" }
       ]
     },
     {
@@ -862,8 +863,8 @@
     {
       "id": 39,
       "type": "stat",
-      "title": "Scan p95",
-      "description": "ScanStart discovery + fan-out phase, on a 1s–2048s ladder. Not whole-scan duration.",
+      "title": "Fan-out p95",
+      "description": "ScanStart discovery + fan-out phase, on a 50ms–~102s ladder. Not whole-scan duration.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 46 },
       "fieldConfig": { "defaults": { "unit": "s", "decimals": 1 } },
@@ -891,7 +892,7 @@
       },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(postgresql_connector_database_errors_total{namespace=\"$namespace\"}[5m])) + sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\"}[5m]))" }
+        { "refId": "A", "expr": "(sum(rate(postgresql_connector_database_errors_total{namespace=\"$namespace\"}[5m])) or vector(0)) + (sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\"}[5m])) or vector(0))" }
       ]
     },
     {
@@ -910,6 +911,7 @@
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 51 },
       "fieldConfig": {
         "defaults": {
+          "noValue": "0",
           "unit": "short",
           "thresholds": { "mode": "absolute", "steps": [
             { "color": "red", "value": null },
@@ -923,7 +925,7 @@
       },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
-        { "refId": "A", "expr": "sum(up{job=~\".*postgresql-connector-be-go-content\", namespace=\"$namespace\"})" }
+        { "refId": "A", "expr": "sum(up{job=~\".*postgresql-connector-be-go-content\", namespace=\"$namespace\"}) or vector(0)" }
       ]
     },
     {

@@ -207,7 +207,7 @@
       "id": 3,
       "type": "timeseries",
       "title": "Items Sent (rate)",
-      "description": "Items accepted by ItemBatchSender.UpsertItem. This is the connector's actual output — everything above it is discovery.",
+      "description": "Items accepted by ItemBatchSender.UpsertItem, against batches actually published to NATS. UpsertItem only appends to the current batch, so items/s counts items queued; batches/s is incremented after a successful publish. A sustained items/s with batches/s flat is a failing Flush() — items counted but never published. connector_batches_sent_total comes from pipeline-lib-go and is not connector-prefixed, so it is scoped by job here; every connector writes to the same series.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
@@ -219,8 +219,8 @@
         },
         {
           "refId": "B",
-          "expr": "sum by (pod) (rate(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "{{pod}}"
+          "expr": "sum(rate(connector_batches_sent_total{job=~\".*postgresql-connector-be-go\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "batches/s"
         }
       ]
     },
@@ -235,8 +235,8 @@
     {
       "id": 10,
       "type": "timeseries",
-      "title": "Scan Duration — p50 / p95 / p99",
-      "description": "The ScanStart discovery + fan-out phase only, on a 1s-to-~2048s ladder. It ends when the DatabaseFork work items are published, so it does not measure how long the whole crawl takes.",
+      "title": "Fan-out Duration — p50 / p95 / p99",
+      "description": "The ScanStart discovery + fan-out phase only: connect, list databases, publish the DatabaseFork work items. It is not an end-to-end scan duration — the per-schema and per-table work runs in separate handler invocations, on other pods, and is not timed anywhere today.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 12, "x": 0, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "s" } },
@@ -281,11 +281,6 @@
           "refId": "B",
           "expr": "sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "table errors"
-        },
-        {
-          "refId": "C",
-          "expr": "sum by (pod) (rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "table errors — {{pod}}"
         }
       ]
     },
@@ -499,11 +494,6 @@
           "refId": "A",
           "expr": "sum(rate(postgresql_connector_content_cache_write_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "total"
-        },
-        {
-          "refId": "B",
-          "expr": "sum by (pod) (rate(postgresql_connector_content_cache_write_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "{{pod}}"
         }
       ]
     },
