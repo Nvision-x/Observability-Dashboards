@@ -446,7 +446,7 @@
       "title": "Fetches (5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 4, "x": 4, "y": 14 },
-      "fieldConfig": { "defaults": { "unit": "ops", "decimals": 2 } },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -459,7 +459,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+          "expr": "sum(increase(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
         }
       ]
     },

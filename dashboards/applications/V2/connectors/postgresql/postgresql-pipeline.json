@@ -430,7 +430,7 @@
       "id": 32,
       "type": "timeseries",
       "title": "Content Errors by error_code (count, 5m)",
-      "description": "The distinction that matters here is transport versus reply. NAK_UNMARSHAL, NAK_PROCESSING, NAK_MARSHAL_COMPLETED and NAK_PUBLISH_COMPLETED mean the message was NAKed and will be redelivered with no reply sent — a requester waiting on that reply sees a timeout, not an error. The FETCH_ERROR_* codes were answered: INVALID_URN, CREDENTIAL_FAILURE, CONNECTION_FAILED, NOT_FOUND, TOO_LARGE, CACHE_WRITE_FAILED and INTERNAL.",
+      "description": "The distinction that matters here is transport versus reply. NAK_UNMARSHAL, NAK_PROCESSING, NAK_MARSHAL_COMPLETED and NAK_PUBLISH_COMPLETED mean the message was NAKed and will be redelivered with no reply sent — a requester waiting on that reply sees a timeout, not an error. The FETCH_ERROR_* codes were answered. Raised by the handler before the query: INVALID_URN, CREDENTIAL_FAILURE, TOO_LARGE and CACHE_WRITE_FAILED. Classified from the driver error: TIMEOUT and READ_ERROR (retryable), CONNECTION_FAILED (SQLSTATE class 08, retryable), NOT_FOUND (42P01/42703), PERMISSION_DENIED (42501), and INTERNAL as the catch-all. PERMISSION_DENIED is the one to watch — it means the content role lost a grant the scanner still has, so items keep shipping while their content never resolves. UNSPECIFIED should never appear; if it does, a nil error reached the classifier.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 27 },
       "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } },
