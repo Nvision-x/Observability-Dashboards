@@ -317,7 +317,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(rate(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) or vector(0)) + (sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) or vector(0))"
+          "expr": "(sum(rate(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) or vector(0)) + (sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) or vector(0)) + (sum(rate(postgresql_connector_columns_failed_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) or vector(0))"
         }
       ]
     },
@@ -353,6 +353,16 @@
           "refId": "E",
           "expr": "sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "table errors"
+        },
+        {
+          "refId": "F",
+          "expr": "sum(rate(postgresql_connector_columns_failed_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "columns failed"
+        },
+        {
+          "refId": "G",
+          "expr": "sum(rate(postgresql_connector_permissions_failed_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "permissions failed"
         }
       ]
     },

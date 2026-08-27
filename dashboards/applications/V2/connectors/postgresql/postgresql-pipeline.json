@@ -238,7 +238,7 @@
       "title": "Fan-out Duration — p50 / p95 / p99",
       "description": "The ScanStart discovery + fan-out phase only: connect, list databases, publish the DatabaseFork work items. It is not an end-to-end scan duration — the per-schema and per-table work runs in separate handler invocations, on other pods, and is not timed anywhere today.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 9 },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "s" } },
       "targets": [
         {
@@ -267,9 +267,9 @@
       "id": 11,
       "type": "timeseries",
       "title": "Scanner Errors (rate)",
-      "description": "database_errors_total is raised when listing a database's schemas fails; table_errors_total when a table's scan or publish fails. Both are source-database faults — a credential, a grant, a timeout — not connector bugs.",
+      "description": "Four different failure shapes, deliberately kept apart. database_errors_total: connect, list-databases or list-schemas failed — the scan is dead. table_errors_total: a table query failed, or a bulk schema query took a whole schema down. columns_failed_total: individual columns were dropped while the scan otherwise succeeded (bulk mode's per-column anypb/URN/upsert failures) — a non-zero line here with a flat items/s is silent data loss. permissions_failed_total: a table's grants could not be read, so its items shipped with empty permissions — the data is published but degraded, which is why it is not folded into the Error Rate stat.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 9 },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
       "targets": [
         {
@@ -281,6 +281,37 @@
           "refId": "B",
           "expr": "sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "table errors"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(rate(postgresql_connector_columns_failed_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "columns failed"
+        },
+        {
+          "refId": "D",
+          "expr": "sum(rate(postgresql_connector_permissions_failed_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "permissions failed"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Tables In Flight vs Pool Size",
+      "description": "Occupancy of the per-pod table worker pool, against its configured size. The pool is per-pod (POSTGRESQL_POOL_WORKERS, 10 in the Helm values), so the series is broken out by pod rather than summed — a sum across pods would sit above the limit line and mean nothing. A pod pegged at the line is the back-pressure signal: tables are waiting on workers, not on PostgreSQL. Only table mode fills the pool; bulk mode walks a schema's tables sequentially and tops out at 1. The limit line is hard-coded from the Helm default and does not follow an override.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (postgresql_connector_tables_in_flight{namespace=\"$namespace\", pod=~\"$pod\"})",
+          "legendFormat": "{{pod}}"
+        },
+        {
+          "refId": "B",
+          "expr": "vector(10)",
+          "legendFormat": "pool size (POSTGRESQL_POOL_WORKERS)"
         }
       ]
     },
@@ -317,7 +348,7 @@
       "id": 21,
       "type": "timeseries",
       "title": "Query p95 by query_type",
-      "description": "query_type values are the six labelled call sites: list_databases and list_schemas (enumeration), tables_in_schema, bulk_tables and bulk_columns (the batched crawl path), and list_columns (the per-table fallback). A rising list_columns share means the bulk path is falling back more often.",
+      "description": "query_type values are the eight labelled call sites: list_databases and list_schemas (enumeration), count_schema_columns (auto mode's scan-mode decision, once per schema), tables_in_schema, bulk_tables and bulk_columns (the batched crawl path), list_columns (the per-table fallback), and table_permissions — which runs once per table and is normally the dominant query in a scan. A rising list_columns share means the bulk path is falling back more often. This panel also doubles as the scan-mode signal: bulk_tables/bulk_columns traffic means auto chose bulk for that schema, tables_in_schema/list_columns means it chose table mode.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 9, "w": 8, "x": 8, "y": 17 },
       "fieldConfig": { "defaults": { "unit": "s" } },
@@ -333,7 +364,7 @@
       "id": 22,
       "type": "timeseries",
       "title": "Query Rate by query_type",
-      "description": "Observations per second per call site, from the histogram's _count series. This is how many queries the connector is issuing, as opposed to how long they take.",
+      "description": "Observations per second per call site, from the histogram's _count series. This is how many queries the connector is issuing, as opposed to how long they take. Expect table_permissions to dominate — it is one query per table — and expect the bulk_* pair to trade off against tables_in_schema/list_columns as auto mode picks a path per schema.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 9, "w": 8, "x": 16, "y": 17 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
