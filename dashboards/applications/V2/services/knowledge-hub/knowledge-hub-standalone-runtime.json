@@ -1,0 +1,593 @@
+{
+  "uid": "apps-v2-knowledge-hub-standalone-runtime",
+  "title": "Knowledge Hub (standalone) \u2014 Runtime",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "service:knowledge-hub",
+    "deployment:standalone",
+    "runtime"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-knowledge-hub-folder",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "Knowledge Hub (standalone) \u2014 Overview",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-hub-standalone-overview?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Knowledge Hub (sidecar) \u2014 Ingestion",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-hub-sidecar-ingest?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Knowledge Hub (sidecar) \u2014 Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-hub-sidecar-runtime?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 \u2014 Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*knowledge-hub-be-go\"}, namespace)",
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "description": "Applies only to the per-pod panels. Aggregate and container panels deliberately ignore it so pod churn does not gap the graphs.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}, pod)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Process \u2014 CPU & Memory",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Process CPU (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(process_cpu_seconds_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- This dashboard covers the STANDALONE deployment only. Container series are selected on `pod=~\".*knowledge-hub-be-go-.*\"`, which does not match `...-knowledge-service-be-go-...` and therefore excludes the sidecar copy of this image.\n- Cores consumed serving the Connect API. This pod does not ingest, so CPU should track query volume and chat synthesis, not document size."
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Process Resident Memory",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "process_resident_memory_bytes{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- Physical memory held by the process, per pod.\n- Measured flat at 149.4 MiB across an 80-minute window during the sidecar memory investigation \u2014 unchanged to one decimal place while the sidecar copy of the same image climbed steadily.\n- **A climb here would be significant**: it would mean the growth is not specific to the upload path, which is currently the leading hypothesis."
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Container Memory (working set)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*knowledge-hub-be-go-.*\", container=\"knowledge-hub-be-go\"})",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- What the kubelet counts against the limit and what triggers an OOM kill. This, not resident memory, is the number to compare against a limit.\n- The standalone Deployment sets no memory limit today; the sidecar copy is capped at 1Gi."
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Python Runtime",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "panels": []
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "GC Pause p95 by Generation",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, generation) (rate(knowledge_hub_runtime_gc_pause_seconds_bucket{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "gen {{generation}}"
+        }
+      ],
+      "description": "- Stop-the-world collection time. On this pod the heap is dominated by cached query results and ontology cards rather than by document structures, so gen-2 pauses should be short and rare.\n- Read with Event Loop Lag: lag with matching gen-2 pauses is memory pressure; lag without them is blocking code on the loop."
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "GC Collections (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (generation) (rate(python_gc_collections_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "gen {{generation}}"
+        }
+      ],
+      "description": "- From the standard `python_gc_collections_total` collector, registered for free by prometheus_client."
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Objects Collected (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (generation) (rate(python_gc_objects_collected_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "gen {{generation}}"
+        }
+      ],
+      "description": "- Objects reclaimed per second. Many collections reclaiming few objects is the signature of a growing live set."
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Uncollectable Objects (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (generation) (rate(python_gc_objects_uncollectable_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "gen {{generation}}"
+        }
+      ],
+      "description": "- Should be zero. Non-zero means reference cycles the collector cannot free."
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "Event Loop & Concurrency",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "panels": []
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Event Loop Lag \u2014 p95 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 17
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_hub_runtime_event_loop_lag_seconds_bucket{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(knowledge_hub_runtime_event_loop_lag_seconds_bucket{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "description": "- One asyncio loop serves every RPC on this pod, including the chat stream. Anything CPU-bound that runs ON the loop delays every in-flight call at once, and no individual operation looks slow when it happens.\n- This pod is more exposed to it than the sidecar: its callers are people waiting on a UI, not a retrying worker."
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "OS Threads",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 17
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "knowledge_hub_runtime_threads{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- Each streaming RPC builds its own single-worker ThreadPoolExecutor, so this rises and falls with concurrent streams.\n- A monotonic climb surviving idle periods is an executor that is not being shut down."
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Asyncio Tasks",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 17
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "knowledge_hub_runtime_asyncio_tasks{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- Tasks alive on the loop. Should track RPCs in flight; growing without them is leaked tasks."
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "RPCs In Flight",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 17
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(knowledge_hub_rpc_requests_in_flight{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"})",
+          "legendFormat": "in flight"
+        }
+      ],
+      "description": "- Present here so the two panels beside it can be read against real concurrency rather than against uptime."
+    },
+    {
+      "type": "row",
+      "id": 400,
+      "title": "File Descriptors, Uptime & Restarts",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "panels": []
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Open vs Max File Descriptors",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 25
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "process_open_fds{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "open {{pod}}"
+        },
+        {
+          "refId": "B",
+          "expr": "process_max_fds{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "max {{pod}}"
+        }
+      ],
+      "description": "- Connections to PostgreSQL, the vector store, Neptune and Bedrock all consume descriptors. A climb tracking uptime rather than concurrency is a leak."
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Process Uptime",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 25
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - process_start_time_seconds{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- Time since the process started. A reset without a deploy means a crash or an OOM kill \u2014 cross-check restarts."
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Container Restarts (1h increase)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 25
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod, container) (increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\".*knowledge-hub-be-go-.*\"}[1h]))",
+          "legendFormat": "{{pod}}/{{container}}"
+        }
+      ],
+      "description": "- Any non-zero outside a deploy needs a reason: OOM kill, probe failure, or an import-time configuration failure.\n- The last of those is worth knowing about: `build_app` validates deployment config at import, so a misconfigured pod exits non-zero at startup rather than serving traffic in a degraded state."
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Container CPU Usage",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 25
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*knowledge-hub-be-go-.*\", container=\"knowledge-hub-be-go\"}[5m]))",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- The cgroup figure, as opposed to the process figure at the top. A gap between them means other processes in the container."
+    }
+  ]
+}

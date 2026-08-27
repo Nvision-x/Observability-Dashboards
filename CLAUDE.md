@@ -185,8 +185,41 @@ Match on the **PodMonitor name suffix**, not the pod label. Current suffixes:
 | NFS | **none — no PodMonitor exists**, so NFS is not scraped at all (not even runtime metrics) |
 | Registration Service | `-registration-service` (note: no `-be-go`) |
 | Request Service | `-request-service` (note: no `-be-go`) |
+| Knowledge Service | `-knowledge-service-be-go` |
+| Knowledge Hub — standalone | `-knowledge-hub-be-go` |
+| Knowledge Hub — sidecar | `-knowledge-hub-be-go-sidecar` |
 
 Two things to note: the service suffixes drop the `-be-go` that the repo names carry, and CIFS/SharePoint do have content PodMonitors (an earlier version of this table said they didn't).
+
+### Knowledge Hub runs twice, and the two are not interchangeable
+
+The `knowledge-hub-be-go` image runs in two places, doing completely different work:
+
+| Instance | Where | Container port | PodMonitor | What it does |
+|---|---|---|---|---|
+| standalone | its own Deployment, `applications-knowledge-hub-be-go-*` | `http` | `-knowledge-hub-be-go` | serves the Connect API behind Kong; near-idle |
+| sidecar | a native sidecar (initContainer, `restartPolicy: Always`) inside `applications-knowledge-service-be-go-*`, dialled on `127.0.0.1:8080` | `ingestor` | `-knowledge-hub-be-go-sidecar` | ingests every document; all the real work |
+
+Same image, same ConfigMap, same metric names. Only the `job` label tells them
+apart, so **every Knowledge Hub panel must pin one of the two** — an aggregate
+over both mixes an idle API server into the ingestion numbers.
+
+```
+job=~".*knowledge-hub-be-go"          standalone only (fully-anchored: no trailing .*)
+job=~".*knowledge-hub-be-go-sidecar"  sidecar only
+job=~".*knowledge-hub-be-go.*"        both — almost never what you want
+```
+
+Two consequences worth remembering:
+
+- **The sidecar's container metrics live under knowledge-service pod names.** `container_memory_working_set_bytes` and friends carry no `job` label, so sidecar container panels select `pod=~".*knowledge-service-be-go.*", container="knowledge-hub-be-go"`. Conversely `pod=~".*knowledge-hub-be-go-.*"` is the standalone one and does not match the knowledge-service pods.
+- **A pod-level memory total is misleading here.** The hub sidecar has been ~92% of the knowledge-service pod's memory, which is what made a hub memory climb read as a knowledge-service leak. Limits are per container (knowledge-service 512Mi, hub sidecar 1Gi), so always split by `container`.
+
+Knowledge Hub also breaks the two-dashboards-per-service rule for the same
+reason: it has four, a `{overview|ingest}` plus `runtime` pair per instance,
+tagged `deployment:standalone` / `deployment:sidecar`. A single dashboard with a
+mode variable was rejected because the two share almost no panels — the
+standalone one is an API server and the sidecar one is a pipeline.
 
 Confirm the real values against a live Prometheus before trusting any of the above:
 

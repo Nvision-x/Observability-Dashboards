@@ -1,0 +1,798 @@
+{
+  "uid": "apps-v2-knowledge-hub-standalone-overview",
+  "title": "Knowledge Hub (standalone) \u2014 Overview",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "service:knowledge-hub",
+    "deployment:standalone",
+    "overview"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-knowledge-hub-folder",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "Knowledge Hub (standalone) \u2014 Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-hub-standalone-runtime?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Knowledge Hub (sidecar) \u2014 Ingestion",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-hub-sidecar-ingest?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Knowledge Hub (sidecar) \u2014 Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-hub-sidecar-runtime?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 \u2014 Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*knowledge-hub-be-go\"}, namespace)",
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "description": "Applies only to the per-pod panels. Aggregate panels deliberately ignore it so pod churn does not gap the graphs.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}, pod)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Service Health",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"})"
+        }
+      ],
+      "description": "- This dashboard covers the STANDALONE deployment only: `applications-knowledge-hub-be-go-*`, the pod serving the Connect API behind Kong.\n- The selector `job=~\".*knowledge-hub-be-go\"` has no trailing `.*`, and Prometheus matchers are fully anchored, so it deliberately EXCLUDES `...-knowledge-hub-be-go-sidecar`.\n- The same image also runs as an ingestor sidecar inside the knowledge-service pod. That instance does completely different work and has its own two dashboards.",
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "RPC Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_hub_rpc_requests_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m]))"
+        }
+      ],
+      "description": "All Connect procedures across the four mounted services.",
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "RPC p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_hub_rpc_request_duration_seconds_bucket{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])))"
+        }
+      ],
+      "description": "All procedures pooled. Split by procedure below \u2014 a chat stream and a metadata list do not belong in one number.",
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "RPC Error Ratio",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 3
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_hub_rpc_requests_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\", code!=\"ok\"}[5m])) / clamp_min(sum(rate(knowledge_hub_rpc_requests_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])), 0.0001)"
+        }
+      ],
+      "description": "- Share of calls ending in a Connect code other than `ok`.\n- This is the WIRE outcome. A document that failed to ingest but whose stream completed cleanly is `ok` here; that verdict lives on the ingestion dashboard.",
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "RPC \u2014 Per Procedure",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Request Rate by Procedure",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (procedure) (rate(knowledge_hub_rpc_requests_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{procedure}}"
+        }
+      ],
+      "description": "- One series per fully qualified `service/method`.\n- The label set is closed \u2014 it comes from the generated method descriptor \u2014 so it cannot grow with traffic."
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "p95 by Procedure",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, procedure) (rate(knowledge_hub_rpc_request_duration_seconds_bucket{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "{{procedure}}"
+        }
+      ],
+      "description": "- Where user-facing latency actually is. Chat synthesis and knowledge-graph traversal dominate; metadata reads should be milliseconds.\n- Buckets run 5ms to 1800s, so a chat stream held open for minutes is still resolvable rather than piling into `+Inf`."
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Connect Codes (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (code) (rate(knowledge_hub_rpc_requests_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\", code!=\"ok\"}[5m]))",
+          "legendFormat": "{{code}}"
+        }
+      ],
+      "description": "- `ok` is excluded so a low error rate is still legible.\n- `unauthenticated` / `permission_denied` are the auth interceptor. `invalid_argument` is usually a client schema mistake, reclassified from a protobuf decode error by ProtoDecodeErrorMiddleware.\n- `unknown` is the one to chase: it means an exception escaped a handler."
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "In Flight by Procedure",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (procedure) (knowledge_hub_rpc_requests_in_flight{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"})",
+          "legendFormat": "{{procedure}}"
+        }
+      ],
+      "description": "- Calls currently executing. This is what separates STALLED from IDLE: a wedged dependency observes no durations at all, so the histograms go quiet and the two look identical.\n- A procedure pinned above zero with no completions is the shape to alert on."
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "Query Path \u2014 Stores",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Vector Search p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 14
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, backend) (rate(knowledge_hub_vector_operation_duration_seconds_bucket{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\", operation=\"search\"}[5m])))",
+          "legendFormat": "{{backend}}"
+        }
+      ],
+      "description": "- `operation=\"search\"` only: the read path behind chat and document search. Writes happen on the sidecar, not here.\n- `backend` is whichever of chromadb / pinecone / s3vectors this deployment resolved to at startup."
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Graph Operation p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 14
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(knowledge_hub_graph_operation_duration_seconds_bucket{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "description": "- Knowledge-graph reads serving entity context and citation grounding.\n- On Neptune, read against Neptune Round Trip next door: a slow operation with fast round trips means we are making too many of them, which is a query-shape problem rather than a Neptune one."
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Neptune Round Trip p95 & Retries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 14
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, status) (rate(knowledge_hub_graph_request_duration_seconds_bucket{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p95 {{status}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(knowledge_hub_graph_request_retries_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "retries/s"
+        }
+      ],
+      "description": "- One signed openCypher HTTP round trip, timed including retries and backoff sleeps because that is what the caller waits for.\n- Retries are counted separately: one slow response and three fast failures with two backoffs are indistinguishable on the duration alone.\n- Absent entirely when GRAPH_STORE_BACKEND is the local NetworkX store."
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Document Database p95 by Operation",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 14
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(knowledge_hub_database_operation_duration_seconds_bucket{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "description": "- `query` is the SQL-expert path answering analytical questions; `get_schema` feeds the prompt that writes those queries.\n- `store_document` should sit near zero here \u2014 ingestion runs on the sidecar."
+    },
+    {
+      "type": "row",
+      "id": 400,
+      "title": "LLM \u2014 Latency & Cost",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "panels": []
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Model Call Rate by Status",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 22
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (model, status) (rate(knowledge_hub_llm_calls_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{model}} {{status}}"
+        }
+      ],
+      "description": "- Chat synthesis, entity canonicalization and the agent tools all land here.\n- `error` counts a call that raised, including a throttle that exhausted botocore's adaptive retries."
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Model Call p95 by Model",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 22
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, model) (rate(knowledge_hub_llm_call_duration_seconds_bucket{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "{{model}}"
+        }
+      ],
+      "description": "- Three model ids at most: the default (Maverick), the fast one (Scout), and the synthesis model (Claude Sonnet), which is pinned in code rather than by env var.\n- Synthesis is one call per query on the critical final answer, so its p95 is most of the user's wait."
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Tokens per Second",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 22
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (model, direction) (rate(knowledge_hub_llm_tokens_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{model}} {{direction}}"
+        }
+      ],
+      "description": "- The cost metric: spend is tokens x per-model rate, and the model label is what makes that computable from the series alone.\n- Output tokens bill several times higher than input on every model here, so watch the two separately."
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Tokens per Call",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 22
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_hub_llm_tokens_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\", direction=\"input\"}[5m])) / clamp_min(sum(rate(knowledge_hub_llm_calls_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])), 0.0001)",
+          "legendFormat": "input"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(knowledge_hub_llm_tokens_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\", direction=\"output\"}[5m])) / clamp_min(sum(rate(knowledge_hub_llm_calls_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])), 0.0001)",
+          "legendFormat": "output"
+        }
+      ],
+      "description": "- Mean tokens per invocation \u2014 prompt size rather than volume.\n- A step change here with a flat call rate means the prompt got bigger, usually more retrieved context rather than more traffic."
+    },
+    {
+      "type": "row",
+      "id": 500,
+      "title": "Ingestion On This Pod \u2014 Expected To Be Idle",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 29
+      },
+      "panels": []
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Ingest Outcomes (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 30
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (rate(knowledge_hub_ingest_documents_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "description": "- **This should be flat at zero.** knowledge-service dials the ingestor sidecar over loopback, so no document should reach the standalone pod.\n- Non-zero means something is calling `content.v1.ContentService` through the Service or Kong. Worth knowing: this pod shares no admission budget with the sidecars, and INGEST_MAX_CONCURRENT was sized against the coordinator pool on the assumption it is idle.\n- If it is legitimately non-zero, the sidecar Ingestion dashboard's panels all work against this job too \u2014 change the selector."
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Documents In Processing",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 30
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(knowledge_hub_processing_documents_in_flight{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"})",
+          "legendFormat": "in processing"
+        }
+      ],
+      "description": "- DocumentProcessor concurrency on this pod. Same expectation as the panel beside it: flat at zero."
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Event Loop Lag p95 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 30
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_hub_runtime_event_loop_lag_seconds_bucket{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(knowledge_hub_runtime_event_loop_lag_seconds_bucket{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "description": "- One asyncio loop serves every RPC on this pod, so anything CPU-bound that runs ON the loop delays every in-flight call at once \u2014 and no individual operation looks slow when it does.\n- Sustained lag alongside healthy dependency latencies means blocking code, not a slow backend. Check GC pauses on the Runtime dashboard before concluding either."
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Resident Memory by Pod",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 30
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "process_resident_memory_bytes{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- On the overview because it is half of an open question: the sidecar instance of this same image grows monotonically under real ingest while this one has sat flat (149.4 MiB over an 80-minute window, unchanged to one decimal).\n- A climb HERE would break that asymmetry and would be the strongest available clue about the cause. Full breakdown on the Runtime dashboard."
+    }
+  ]
+}
