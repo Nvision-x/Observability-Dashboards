@@ -7,7 +7,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Content Service",
+      "tooltip": "The main content-service dashboard: requests, cache, extraction and dedup",
+      "type": "link",
+      "url": "/d/content-service"
+    }
+  ],
   "liveNow": false,
   "panels": [
     {
@@ -675,12 +688,70 @@
       ]
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "id": 15,
+      "title": "Failures by extension and status (selected range)",
+      "description": "Which file types are failing, and how, over the dashboard range. The per-parser panels above say WHICH BACKEND is unhealthy; this one says WHICH CONTENT is, which is the question a routing change actually raises.\n\nstatus is the extraction outcome vocabulary (unsupported_type, empty_content, corrupted, timeout, error), NOT the caller-facing error code from docs/error-codes.md \u2014 no metric carries error_code and extension on the same series today.\n\nsuccess and skipped are both excluded, matching Failure rate by parser_kind: skipped is a document extraction was never attempted on, not a failure. Pair with Extension \u2192 parser_kind above to see which backend produced the failures for a given extension.\n\nextension is bounded by EXTRACTION_COMPARISON_EXTENSION_WHITELIST; anything off that list shows as 'other', and a file with no extension as 'unknown'.",
+      "type": "table",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        }
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Value"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "format": "table",
+          "instant": true,
+          "expr": "sum by (extension, status) (increase(content_extraction_total{namespace=\"$namespace\", job=\"$job\", status!=\"success\", status!=\"skipped\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ]
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 53
       },
       "id": 400,
       "panels": [],
@@ -700,7 +771,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 45
+        "y": 54
       },
       "fieldConfig": {
         "defaults": {
@@ -756,7 +827,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 45
+        "y": 54
       },
       "fieldConfig": {
         "defaults": {
@@ -812,7 +883,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 53
+        "y": 62
       },
       "fieldConfig": {
         "defaults": {
@@ -889,7 +960,7 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "definition": "label_values(content_extraction_total, job)",
+        "definition": "label_values(up{job=~\".*content-service.*\"}, job)",
         "hide": 0,
         "includeAll": false,
         "label": "Job",
@@ -897,10 +968,10 @@
         "name": "job",
         "options": [],
         "query": {
-          "query": "label_values(content_extraction_total, job)",
+          "query": "label_values(up{job=~\".*content-service.*\"}, job)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
@@ -912,7 +983,7 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "definition": "label_values(content_extraction_total{job=\"$job\"}, namespace)",
+        "definition": "label_values(up{job=\"$job\"}, namespace)",
         "hide": 0,
         "includeAll": false,
         "label": "Namespace",
@@ -920,10 +991,10 @@
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "label_values(content_extraction_total{job=\"$job\"}, namespace)",
+          "query": "label_values(up{job=\"$job\"}, namespace)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,

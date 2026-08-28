@@ -20,7 +20,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Extraction Routing",
+      "tooltip": "Which extractor served each extension, and why a routed one did not run",
+      "type": "link",
+      "url": "/d/content-service-extraction-routing"
+    }
+  ],
   "liveNow": false,
   "panels": [
     {
@@ -3472,22 +3485,23 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Successfully extracted documents per second, split by the extractor's detected mime_type (normalized — charset and other parameters stripped; \"unknown\" means the extractor reported no type at all, or reported one that couldn't be parsed). Counted once per successful parse, so with EXTRACTION_COMPARISON_ENABLED on, a sampled document contributes to both a kreuzberg and a tika series — this panel does not split by parser_kind; see the Tika comparison dashboard for that breakdown. A shift in mix (e.g. \"unknown\" growing) usually means upstream content-type detection regressed, not that the corpus changed. Pair with Extraction outcomes: this panel only counts successes, so a mime_type dropping out here while overall extraction volume holds steady points at that type failing outright, not disappearing from the corpus.",
+      "description": "Successfully extracted documents counted per bucket, split by the extractor's detected mime_type (normalized — charset and other parameters stripped; \"unknown\" means the extractor reported no type at all, or reported one that couldn't be parsed). Stacked, so the top of each bar is every document extracted in that bucket and each band is one mime_type's share of it. Counted once per successful parse, so with EXTRACTION_COMPARISON_ENABLED on, a sampled document contributes to both a kreuzberg and a tika series — this panel does not split by parser_kind; see the Tika comparison dashboard for that breakdown. A shift in mix (e.g. \"unknown\" growing) usually means upstream content-type detection regressed, not that the corpus changed. Pair with Extraction outcomes: this panel only counts successes, so a mime_type dropping out here while overall extraction volume holds steady points at that type failing outright, not disappearing from the corpus.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic-by-name"
           },
           "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 40,
-            "lineWidth": 2,
+            "drawStyle": "bars",
+            "fillOpacity": 90,
+            "lineWidth": 0,
             "showPoints": "never",
             "stacking": {
               "mode": "normal"
-            }
+            },
+            "barAlignment": 0
           },
-          "unit": "ops"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -3500,8 +3514,12 @@
       "id": 901,
       "options": {
         "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "sum",
+            "max"
+          ]
         },
         "tooltip": {
           "mode": "multi"
@@ -3513,7 +3531,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (mime_type) (rate(content_extraction_files_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "expr": "sum by (mime_type) (increase(content_extraction_files_total{namespace=\"$namespace\", job=\"$job\"}[$__interval]))",
           "legendFormat": "{{mime_type}}",
           "refId": "A"
         }
@@ -3865,7 +3883,7 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "definition": "label_values(content_requests_total, job)",
+        "definition": "label_values(up{job=~\".*content-service.*\"}, job)",
         "hide": 0,
         "includeAll": false,
         "label": "Job",
@@ -3873,10 +3891,10 @@
         "name": "job",
         "options": [],
         "query": {
-          "query": "label_values(content_requests_total, job)",
+          "query": "label_values(up{job=~\".*content-service.*\"}, job)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
@@ -3899,7 +3917,7 @@
           "query": "label_values(up{job=\"$job\"}, namespace)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
@@ -3911,7 +3929,7 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "definition": "label_values(content_requests_total{namespace=\"$namespace\", job=\"$job\"}, pod)",
+        "definition": "label_values(up{namespace=\"$namespace\", job=\"$job\"}, pod)",
         "description": "Only affects the two panels with a per-pod breakdown — 'In-flight requests (global vs stream)' and 'Upload streams in flight' — where it filters which {{pod}} lines are drawn alongside the total. Every other panel below queries by namespace/job only and ignores this variable by design, so historical data survives pod churn (restarts, scale-downs, recycled pod names) instead of silently dropping out when a pod leaves the current option list.",
         "hide": 0,
         "includeAll": true,
@@ -3920,10 +3938,10 @@
         "name": "pod",
         "options": [],
         "query": {
-          "query": "label_values(content_requests_total{namespace=\"$namespace\", job=\"$job\"}, pod)",
+          "query": "label_values(up{namespace=\"$namespace\", job=\"$job\"}, pod)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
