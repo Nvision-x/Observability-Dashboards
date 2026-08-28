@@ -267,7 +267,7 @@
       "id": 11,
       "type": "timeseries",
       "title": "Scanner Errors (rate)",
-      "description": "Four different failure shapes, deliberately kept apart. database_errors_total: connect, list-databases or list-schemas failed — the scan is dead. table_errors_total: a table query failed, or a bulk schema query took a whole schema down. columns_failed_total: individual columns were dropped while the scan otherwise succeeded (bulk mode's per-column anypb/URN/upsert failures) — a non-zero line here with a flat items/s is silent data loss. permissions_failed_total: a table's grants could not be read, so its items shipped with empty permissions — the data is published but degraded, which is why it is not folded into the Error Rate stat.",
+      "description": "Four different failure shapes, deliberately kept apart. database_errors_total: seven increment sites that do not all mean the same thing. Three abort the run outright (maintenance-pool connect, connection verify, list-databases); one takes down a single database's branch (list-schemas); three more fire on per-database pool acquisition, and of those, one falls back to table mode and keeps scanning rather than returning. So a non-zero line here is not proof the scan stopped — read it against Items Sent before treating it as fatal. table_errors_total: a table query failed, or a bulk schema query took a whole schema down. columns_failed_total: individual columns were dropped while the scan otherwise succeeded (bulk mode's per-column anypb/URN/upsert failures) — a non-zero line here with a flat items/s is silent data loss. permissions_failed_total: a table's grants could not be read, so its items shipped with empty permissions — the data is published but degraded, which is why it is not folded into the Error Rate stat.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
@@ -443,11 +443,49 @@
       ]
     },
     {
+      "id": 43,
+      "type": "timeseries",
+      "title": "Fetches per Pod (rate)",
+      "description": "Per-pod content fetch rate. A single pod carrying the whole load while others sit idle points at the consumer's work distribution rather than at the connector.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 34 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "{{pod}}"
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "type": "timeseries",
+      "title": "Fetch Success Ratio",
+      "description": "Successful fetches as a fraction of all fetches over 5 minutes. Flat 1 with no traffic is an artefact of the division, so read it alongside Fetches per Pod rather than on its own.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 34 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"true\"}[5m])) / sum(rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "success ratio"
+        }
+      ]
+    },
+    {
       "type": "row",
       "id": 500,
       "title": "Content — Payload & Sampling",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 41 },
       "panels": []
     },
     {
@@ -456,7 +494,7 @@
       "title": "Document Size — p50 / p95 / p99",
       "description": "Bytes per content document produced, including what is written to the raw-content-cache. Ladder runs 1KiB to 256MiB (ExponentialBuckets(1024, 4, 10)), so a percentile sitting on the top boundary means the tail is in +Inf and its real size is unknown.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 35 },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 42 },
       "fieldConfig": { "defaults": { "unit": "bytes" } },
       "targets": [
         {
@@ -487,7 +525,7 @@
       "title": "Sample Rows per Document — p50 / p95 / p99",
       "description": "Rows serialised into each sampled document, on a 10-to-~20k ladder. Read it against Document Size: rows flat while bytes climb means wider rows, not more of them.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 35 },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 42 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "targets": [
         {
@@ -518,51 +556,13 @@
       "title": "Cache Write Throughput (bytes/s)",
       "description": "Bytes per second this connector pushes into the raw-content-cache, from the cumulative counter. Only the success path adds to it, so it should track the success line on Content Requests by Outcome.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 35 },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 42 },
       "fieldConfig": { "defaults": { "unit": "Bps" } },
       "targets": [
         {
           "refId": "A",
           "expr": "sum(rate(postgresql_connector_content_cache_write_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "total"
-        }
-      ]
-    },
-    {
-      "id": 43,
-      "type": "timeseries",
-      "title": "Fetches per Pod (rate)",
-      "description": "Per-pod content fetch rate. A single pod carrying the whole load while others sit idle points at the consumer's work distribution rather than at the connector.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 42 },
-      "fieldConfig": { "defaults": { "unit": "ops" } },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (pod) (rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "{{pod}}"
-        }
-      ]
-    },
-    {
-      "id": 44,
-      "type": "timeseries",
-      "title": "Fetch Success Ratio",
-      "description": "Successful fetches as a fraction of all fetches over 5 minutes. Flat 1 with no traffic is an artefact of the division, so read it alongside Fetches per Pod rather than on its own.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 42 },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"true\"}[5m])) / sum(rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "success ratio"
         }
       ]
     }

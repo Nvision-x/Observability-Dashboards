@@ -21,11 +21,7 @@
         "type": "datasource",
         "label": "Datasource",
         "query": "prometheus",
-        "current": {
-          "selected": false,
-          "text": "Prometheus",
-          "value": "prometheus-nx"
-        },
+        "current": { "selected": false, "text": "Prometheus", "value": "prometheus-nx" },
         "hide": 0,
         "refresh": 1
       },
@@ -62,30 +58,19 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
-            ]
-          },
-          "links": [
-            {
-              "title": "Open Snowflake Overview",
-              "url": "/d/apps-v2-snowflake-overview?${namespace:queryparam}"
-            }
-          ]
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "green", "value": 1 }
+          ]},
+          "links": [{
+            "title": "Open Snowflake Overview",
+            "url": "/d/apps-v2-snowflake-overview?${namespace:queryparam}"
+          }]
         }
       },
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "background"
-      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(up{job=~\".*snowflake-connector-be-go\", namespace=\"$namespace\"})"
-        }
+        { "refId": "A", "expr": "sum(up{job=~\".*snowflake-connector-be-go\", namespace=\"$namespace\"})" }
       ]
     },
     {
@@ -95,16 +80,9 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "ops", "decimals": 2 } },
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "value",
-        "graphMode": "area"
-      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
       "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(rate(snowflake_scanner_items_sent_total{namespace=\"$namespace\"}[5m]))"
-        }
+        { "refId": "A", "expr": "sum(rate(snowflake_scanner_items_sent_total{namespace=\"$namespace\"}[5m]))" }
       ]
     },
     {
@@ -114,16 +92,9 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "s", "decimals": 1 } },
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "value",
-        "graphMode": "area"
-      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
       "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(snowflake_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\"}[5m])))"
-        }
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(snowflake_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\"}[5m])))" }
       ]
     },
     {
@@ -134,27 +105,17 @@
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
-          "decimals": 3,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.01 },
-              { "color": "red", "value": 0.1 }
-            ]
-          }
+          "unit": "ops", "decimals": 3,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.01 },
+            { "color": "red", "value": 0.1 }
+          ]}
         }
       },
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "background"
-      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(rate(snowflake_scanner_database_errors_total{namespace=\"$namespace\"}[5m])) + sum(rate(snowflake_scanner_table_errors_total{namespace=\"$namespace\"}[5m]))"
-        }
+        { "refId": "A", "expr": "sum(rate(snowflake_scanner_database_errors_total{namespace=\"$namespace\"}[5m])) + sum(rate(snowflake_scanner_table_errors_total{namespace=\"$namespace\"}[5m]))" }
       ]
     },
     {
@@ -174,30 +135,19 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
-            ]
-          },
-          "links": [
-            {
-              "title": "Open Snowflake Overview",
-              "url": "/d/apps-v2-snowflake-overview?${namespace:queryparam}"
-            }
-          ]
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "green", "value": 1 }
+          ]},
+          "links": [{
+            "title": "Open Snowflake Overview",
+            "url": "/d/apps-v2-snowflake-overview?${namespace:queryparam}"
+          }]
         }
       },
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "background"
-      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(up{job=~\".*snowflake-connector-be-go-content\", namespace=\"$namespace\"})"
-        }
+        { "refId": "A", "expr": "sum(up{job=~\".*snowflake-connector-be-go-content\", namespace=\"$namespace\"})" }
       ]
     },
     {
@@ -207,16 +157,9 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 6 },
       "fieldConfig": { "defaults": { "unit": "ops", "decimals": 2 } },
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "value",
-        "graphMode": "area"
-      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
       "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(rate(snowflake_content_requests_total{namespace=\"$namespace\"}[5m]))"
-        }
+        { "refId": "A", "expr": "sum(rate(snowflake_content_requests_total{namespace=\"$namespace\"}[5m]))" }
       ]
     },
     {
@@ -226,16 +169,9 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 6 },
       "fieldConfig": { "defaults": { "unit": "s", "decimals": 1 } },
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "value",
-        "graphMode": "area"
-      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
       "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(snowflake_content_duration_seconds_bucket{namespace=\"$namespace\", outcome=\"success\"}[5m])))"
-        }
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(snowflake_content_duration_seconds_bucket{namespace=\"$namespace\", outcome=\"success\"}[5m])))" }
       ]
     },
     {
@@ -246,27 +182,17 @@
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 6 },
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
-          "decimals": 3,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.01 },
-              { "color": "red", "value": 0.1 }
-            ]
-          }
+          "unit": "ops", "decimals": 3,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.01 },
+            { "color": "red", "value": 0.1 }
+          ]}
         }
       },
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "background"
-      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(rate(snowflake_content_requests_total{namespace=\"$namespace\", outcome=\"error\"}[5m]))"
-        }
+        { "refId": "A", "expr": "sum(rate(snowflake_content_requests_total{namespace=\"$namespace\", outcome=\"error\"}[5m]))" }
       ]
     },
     {
