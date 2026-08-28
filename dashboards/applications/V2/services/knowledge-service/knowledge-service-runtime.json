@@ -88,6 +88,7 @@
       "id": 1,
       "type": "timeseries",
       "title": "Process CPU (rate)",
+      "description": "- CPU seconds per second per pod. 1.0 is one full core.\n- This service is I/O-bound — it waits on content-service and the ingester — so CPU should stay low even with the pool full.\n- High CPU with low throughput points at marshalling or logging cost, not document work.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "percentunit" } },
@@ -99,6 +100,7 @@
       "id": 2,
       "type": "timeseries",
       "title": "Process Resident Memory",
+      "description": "- Physical memory held by the process, per pod.\n- Should track batch size times document size, not uptime. A monotonic climb across batches is a leak.\n- The container limit is enforced against working set, not this — see Container Memory below.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "bytes" } },
@@ -110,6 +112,7 @@
       "id": 3,
       "type": "timeseries",
       "title": "Process Virtual Memory",
+      "description": "- Address space reserved per pod, most of it never resident.\n- Go reserves large arenas, so a big number here is normal and not a problem on its own.\n- Useful only to confirm that a resident-memory climb is real allocation rather than reservation.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "bytes" } },
@@ -129,22 +132,24 @@
       "id": 10,
       "type": "timeseries",
       "title": "Container CPU Usage",
+      "description": "- The same work as Process CPU but measured by the kubelet, and split per container.\n- One series per container in the pod, including sidecars. `knowledge-service-be-go` is the series that corresponds to the Process CPU panel; everything else is a co-tenant.\n- The CPU limit is per container, not per pod — compare each series against its own container's limit.\n- Approaching a limit causes throttling, which surfaces as latency everywhere else rather than as an error.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 12, "x": 0, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "percentunit" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\", container!=\"\", container!=\"POD\"}[5m]))", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "sum by (pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\", container!=\"\", container!=\"POD\"}[5m]))", "legendFormat": "{{pod}}/{{container}}" }
       ]
     },
     {
       "id": 11,
       "type": "timeseries",
       "title": "Container Memory (working set)",
+      "description": "- What the kubelet counts against the memory limit, and what triggers an OOM kill. This, not resident memory, is the number to compare against a limit.\n- One series per container in the pod, including sidecars. `knowledge-hub-be-go` runs here as a native sidecar (the ingester on 127.0.0.1:8080) and normally uses an order of magnitude more memory than the service itself.\n- Limits are per container: knowledge-service 512Mi, the knowledge-hub sidecar 1Gi. A summed figure compares against neither.\n- A step up that never comes back down after a large batch is the shape to watch — on whichever series shows it.\n- An OOM kill shows up as a restart on the panel below, not as a spike here.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 12, "x": 12, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "bytes" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\", container!=\"\", container!=\"POD\"})", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "sum by (pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\", container!=\"\", container!=\"POD\"})", "legendFormat": "{{pod}}/{{container}}" }
       ]
     },
     {
@@ -159,7 +164,7 @@
       "id": 20,
       "type": "timeseries",
       "title": "Goroutines",
-      "description": "This service fans work out to one goroutine per document, so goroutine count tracks concurrency. A climb that does not come back down alongside a flat documents_in_flight is a leak, not load.",
+      "description": "- Concurrency is bounded by the worker pool, not by document count: expect roughly WORKER_POOL_SIZE plus the JobEngine handlers plus NATS and runtime goroutines.\n- Should be flat and boring. A climb that does not come back down alongside a flat documents_in_flight is a leak, not load.\n- A step change at a deploy is a config change (pool size, NATS workers), not a leak.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 0, "y": 17 },
       "fieldConfig": { "defaults": { "unit": "short" } },
@@ -171,6 +176,7 @@
       "id": 21,
       "type": "timeseries",
       "title": "Heap In-Use",
+      "description": "- Bytes in in-use heap spans, per pod. A sawtooth between GC cycles is normal.\n- The FLOOR of the sawtooth is the real working set — a rising floor is the leak signal, not the peaks.\n- Correlate a rising floor with Goroutines to tell a goroutine leak from a data leak.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 17 },
       "fieldConfig": { "defaults": { "unit": "bytes" } },
@@ -182,7 +188,7 @@
       "id": 22,
       "type": "timeseries",
       "title": "GC Pause (max)",
-      "description": "Longest stop-the-world GC pause per pod. go_gc_duration_seconds is a Prometheus summary, not a histogram: there is no _bucket series, so histogram_quantile cannot be used here. The Go collector exposes quantiles 0, 0.25, 0.5, 0.75 and 1 only — there is no 0.99. quantile=\"1\" is the max pause over the runtime's buffer of recent GC cycles, so it reports the worst recent pause rather than a windowed percentile.",
+      "description": "- Longest stop-the-world GC pause per pod.\n- `go_gc_duration_seconds` is a Prometheus summary, not a histogram: there is no `_bucket` series, so `histogram_quantile` cannot be used here. The Go collector exposes quantiles 0, 0.25, 0.5, 0.75 and 1 only — there is no 0.99.\n- `quantile=\"1\"` is the max pause over the runtime's buffer of recent GC cycles, so it reports the worst recent pause rather than a windowed percentile.\n- Milliseconds are normal. This is not what makes this service slow — look at the dependency panels first.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 17 },
       "fieldConfig": { "defaults": { "unit": "s" } },
@@ -202,6 +208,7 @@
       "id": 30,
       "type": "timeseries",
       "title": "Open vs Max FDs",
+      "description": "- `open` is descriptors held; `max` is the process limit.\n- Each NATS connection, gRPC connection and upload stream costs descriptors.\n- `open` climbing toward `max` means connections are not being closed; hitting the limit is abrupt and looks like a dependency outage.\n- A flat open count well below max is the expected shape.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 12, "x": 0, "y": 25 },
       "fieldConfig": { "defaults": { "unit": "short" } },
@@ -214,6 +221,7 @@
       "id": 31,
       "type": "timeseries",
       "title": "OS Threads",
+      "description": "- OS threads the Go runtime is holding.\n- Grows with blocking syscalls, not with goroutines, so a bounded pool should keep this flat.\n- A climb into the hundreds means something is blocking in syscalls or cgo — the runtime never releases threads once created.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 12, "x": 12, "y": 25 },
       "fieldConfig": { "defaults": { "unit": "short" } },
@@ -233,6 +241,7 @@
       "id": 40,
       "type": "timeseries",
       "title": "Process Uptime",
+      "description": "- Seconds since process start, per pod.\n- A sawtooth back to zero is a restart — cross-check Container Restarts below for the cause.\n- Uptime shorter than typical batch duration means pods are cycled faster than batches can finish; expect Batches Abandoned to be non-zero.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 12, "x": 0, "y": 33 },
       "fieldConfig": { "defaults": { "unit": "s" } },
@@ -244,11 +253,12 @@
       "id": 41,
       "type": "timeseries",
       "title": "Container Restarts (1h increase)",
+      "description": "- Restarts over the trailing hour, split per container so a sidecar restart is not read as a service restart.\n- Any non-zero outside a deploy needs a reason: OOM kill, liveness probe failure, or a panic.\n- A `knowledge-service-be-go` restart returns that pod's in-flight batches to JetStream for redelivery — correlate with Batches Abandoned on the Pipeline dashboard.\n- A `knowledge-hub-be-go` sidecar restart instead breaks in-flight uploads: expect INGESTER_UPLOAD_FAILED retries rather than abandoned batches.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 12, "x": 12, "y": 33 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\"}[1h]))", "legendFormat": "{{pod}}" }
+        { "refId": "A", "expr": "sum by (pod, container) (increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\"}[1h]))", "legendFormat": "{{pod}}/{{container}}" }
       ]
     }
   ]

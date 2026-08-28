@@ -1,0 +1,1015 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "description": "Where content-service sends each document for text extraction, and why.\n\nExtraction is routed by file extension: SPREADSHEET_EXTENSIONS goes to xlsxparser over gRPC, TIKA_EXTENSIONS to a dedicated Tika 4.x instance (processing-systems tikaContent), and everything else to xberg. The lists may overlap \u2014 an extension goes to the first backend that both claims it and could be built \u2014 so a document silently changing backend is a normal failure mode, and the fallback row is how you see it.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Content Service",
+      "tooltip": "The main content-service dashboard: requests, cache, extraction and dedup",
+      "type": "link",
+      "url": "/d/content-service"
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "panels": [],
+      "title": "Where documents are processed",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Which backend actually parsed each document, per second.\n\n- kreuzberg \u2014 xberg, the default extractor: everything no route claims.\n- tika_routed \u2014 Tika as a routed extractor (TIKA_EXTENSIONS), the foreground parse.\n- spreadsheet \u2014 xlsxparser over gRPC (SPREADSHEET_EXTENSIONS).\n- tika \u2014 the SAMPLED COMPARISON second parse only, not a routing destination. It appears here so it is not mistaken for routed traffic; it is zero unless EXTRACTION_COMPARISON_ENABLED is on.\n\nA routed series at zero while its extensions are being requested is the thing to chase \u2014 see the fallback row below for why.",
+      "id": 1,
+      "title": "Extractions by parser_kind",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "unit": "reqps"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (parser_kind) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{parser_kind}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "The same data as a proportion, so a routing change is visible as a shift rather than as a change in absolute volume. Sums to 1 while comparison is off; above 1 when it is on, because a sampled document is parsed twice.",
+      "id": 2,
+      "title": "Share of documents by parser_kind",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "unit": "percentunit"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (parser_kind) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\"}[5m]))\n  / scalar(sum(rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\"}[5m])))",
+          "legendFormat": "{{parser_kind}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "id": 3,
+      "title": "Extension \u2192 parser_kind (selected range)",
+      "description": "Which backend served each file type over the dashboard range. This is the panel that answers 'are spreadsheets actually going where I configured them'. An extension appearing under kreuzberg that you expected under spreadsheet or tika_routed means it fell back \u2014 the reason is in the row below.\n\nextension is bounded by EXTRACTION_COMPARISON_EXTENSION_WHITELIST; anything off that list shows as 'other', and a file with no extension as 'unknown'.",
+      "type": "table",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        }
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Value"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "format": "table",
+          "instant": true,
+          "expr": "sum by (extension, parser_kind) (increase(content_extraction_total{namespace=\"$namespace\", job=\"$job\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 200,
+      "panels": [],
+      "title": "Routed fallbacks \u2014 why a routed extractor did not run",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Requests that were MEANT for a routed extractor and took the default one instead.\n\n- not_registered \u2014 the extractor could not be built at startup: no address, no client in this image, or an unreachable backend. A FAULT. Sustained non-zero means a backend is down and its documents are quietly being parsed by xberg.\n- not_applicable \u2014 the extractor is routed for that extension but cannot serve that request, today meaning an output format it does not produce (xlsxparser is markdown-only, Tika has no djot). Expected traffic, not a fault \u2014 this is what explains a quiet routed extractor when callers are asking for a format it cannot make.\n\nThe document is still extracted either way; only the backend differs.",
+      "id": 4,
+      "title": "Fallbacks by extractor and reason",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "unit": "reqps"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (extractor, reason) (rate(content_extraction_routed_fallback_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{extractor}} \u2014 {{reason}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Should be ZERO. Non-zero means a routed extractor is configured but was not built at startup, so its file types are silently taking the default extractor. Check the content-service startup log for 'routed extractor unavailable', and whether the backend Service exists and is reachable.",
+      "id": 5,
+      "title": "not_registered fallbacks",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 19
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.0001
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum (rate(content_extraction_routed_fallback_total{namespace=\"$namespace\", job=\"$job\", reason=\"not_registered\"}[5m]))",
+          "legendFormat": "not_registered",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Expected, not a fault. A steady rate here with a routed extractor at zero throughput means callers are asking for an output format that extractor cannot produce, so the default extractor is serving them correctly.",
+      "id": 6,
+      "title": "not_applicable fallbacks",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 19
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum (rate(content_extraction_routed_fallback_total{namespace=\"$namespace\", job=\"$job\", reason=\"not_applicable\"}[5m]))",
+          "legendFormat": "not_applicable",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Fraction of extractions served by a routed backend rather than the default one. Drops to zero when routing is off, or when every routed extractor fell back.",
+      "id": 7,
+      "title": "Routed share of extractions",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\", parser_kind=~\"spreadsheet|tika_routed\"}[5m]))\n  /\nsum (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\", parser_kind!=\"tika\"}[5m]))",
+          "legendFormat": "routed share",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 300,
+      "panels": [],
+      "title": "Per-extractor health",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Non-success extractions per second, split by backend and classified status.\n\nStatus values come from the caller-facing taxonomy in docs/error-codes.md \u2014 corrupted, timeout, service_unavailable, file_too_large, unsupported_type, empty_content, canceled.\n\nfile_too_large on tika_routed specifically may mean the Tika write limit (tikaContent output-limits.writeLimit) truncated a document and content-service refused the partial result rather than caching it.",
+      "id": 8,
+      "title": "Failure rate by parser_kind",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "unit": "reqps"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (parser_kind, status) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\", status!=\"success\", status!=\"skipped\"}[5m]))",
+          "legendFormat": "{{parser_kind}} \u2014 {{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Failures as a fraction of that backend's own attempts, so a low-volume routed extractor with a high failure rate is as visible as a busy one. Compare backends here rather than on the absolute panel to the left.",
+      "id": 9,
+      "title": "Failure ratio by parser_kind",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "unit": "percentunit"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (parser_kind) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\", status!=\"success\", status!=\"skipped\"}[5m]))\n  /\nsum by (parser_kind) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{parser_kind}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Time in the extractor itself, per backend.\n\nDo not read tika and tika_routed as the same workload: tika is a background sample of a document xberg also parsed, tika_routed is a foreground parse that is the only one that ran. They were deliberately given different label values so these lines stay separable.\n\nSuccesses only, matching the Tika vs Kreuzberg dashboard: a timed-out extraction would otherwise enter the quantile as its own timeout value and flatten the real distribution.",
+      "id": 10,
+      "title": "p95 extraction latency by parser_kind",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "unit": "s"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, parser_kind) (rate(content_extraction_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", status=\"success\"}[5m])))",
+          "legendFormat": "p95 \u2014 {{parser_kind}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "The tail. Spreadsheet backends are the ones to watch here: a large workbook is a single long parse, unlike a document corpus where the tail is usually a stuck request.\n\nSuccesses only, matching the Tika vs Kreuzberg dashboard: a timed-out extraction would otherwise enter the quantile as its own timeout value and flatten the real distribution.",
+      "id": 11,
+      "title": "p99 extraction latency by parser_kind",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "unit": "s"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, parser_kind) (rate(content_extraction_duration_seconds_bucket{namespace=\"$namespace\", job=\"$job\", status=\"success\"}[5m])))",
+          "legendFormat": "p99 \u2014 {{parser_kind}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "id": 15,
+      "title": "Failures by extension and status (selected range)",
+      "description": "Which file types are failing, and how, over the dashboard range. The per-parser panels above say WHICH BACKEND is unhealthy; this one says WHICH CONTENT is, which is the question a routing change actually raises.\n\nstatus is the extraction outcome vocabulary (unsupported_type, empty_content, corrupted, timeout, error), NOT the caller-facing error code from docs/error-codes.md \u2014 no metric carries error_code and extension on the same series today.\n\nsuccess and skipped are both excluded, matching Failure rate by parser_kind: skipped is a document extraction was never attempted on, not a failure. Pair with Extension \u2192 parser_kind above to see which backend produced the failures for a given extension.\n\nextension is bounded by EXTRACTION_COMPARISON_EXTENSION_WHITELIST; anything off that list shows as 'other', and a file with no extension as 'unknown'.",
+      "type": "table",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        }
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Value"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "format": "table",
+          "instant": true,
+          "expr": "sum by (extension, status) (increase(content_extraction_total{namespace=\"$namespace\", job=\"$job\", status!=\"success\", status!=\"skipped\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 53
+      },
+      "id": 400,
+      "panels": [],
+      "title": "Volume through each extractor",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Document bytes shipped to each backend. For spreadsheet routes this is the compressed workbook, which is far smaller than what comes back.",
+      "id": 12,
+      "title": "Bytes sent to each extractor",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 54
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "unit": "Bps"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (parser_kind) (rate(content_extraction_bytes_sent_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{parser_kind}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Extracted text returned, per backend. Watch this against bytes sent for spreadsheets: a measured 5.2MB xlsx expanded to 17.3MB of markdown, and that expansion is what tikaContent's writeLimit bounds. A ratio climbing toward the limit is the early warning before file_too_large starts appearing on the failure panel.",
+      "id": 13,
+      "title": "Bytes received from each extractor",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 54
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "unit": "Bps"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (parser_kind) (rate(content_extraction_bytes_received_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{parser_kind}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Bytes returned divided by bytes sent. A spreadsheet backend sits well above 1 because a compressed workbook expands into markdown text. A sudden climb means documents are producing more text than they used to, which is what fills the text cache and what the write limit eventually stops.",
+      "id": 14,
+      "title": "Output expansion ratio by parser_kind",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "unit": "none"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (parser_kind) (rate(content_extraction_bytes_received_total{namespace=\"$namespace\", job=\"$job\"}[5m]))\n  /\nsum by (parser_kind) (rate(content_extraction_bytes_sent_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "legendFormat": "{{parser_kind}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "content-service",
+    "pipeline",
+    "git-sync"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "Prometheus"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{job=~\".*content-service.*\"}, job)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Job",
+        "multi": false,
+        "name": "job",
+        "options": [],
+        "query": {
+          "query": "label_values(up{job=~\".*content-service.*\"}, job)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{job=\"$job\"}, namespace)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Namespace",
+        "multi": false,
+        "name": "namespace",
+        "options": [],
+        "query": {
+          "query": "label_values(up{job=\"$job\"}, namespace)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Content Service \u2014 Extraction Routing",
+  "uid": "content-service-extraction-routing",
+  "version": 1,
+  "weekStart": ""
+}

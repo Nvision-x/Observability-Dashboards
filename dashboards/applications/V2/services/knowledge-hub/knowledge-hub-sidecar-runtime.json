@@ -1,0 +1,756 @@
+{
+  "uid": "apps-v2-knowledge-hub-sidecar-runtime",
+  "title": "Knowledge Hub (sidecar) \u2014 Runtime",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "service:knowledge-hub",
+    "deployment:sidecar",
+    "runtime"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-knowledge-hub-folder",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "Knowledge Hub (standalone) \u2014 Overview",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-hub-standalone-overview?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Knowledge Hub (standalone) \u2014 Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-hub-standalone-runtime?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Knowledge Hub (sidecar) \u2014 Ingestion",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-hub-sidecar-ingest?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 \u2014 Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*knowledge-hub-be-go-sidecar\"}, namespace)",
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "description": "Applies only to the per-pod panels. Aggregate and container panels deliberately ignore it so pod churn does not gap the graphs.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}, pod)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Memory \u2014 The Open Question",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Container Memory (working set) per Pod",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\", container=\"knowledge-hub-be-go\"})",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- This dashboard covers the SIDECAR: the hub image running inside `applications-knowledge-service-be-go-*` as an initContainer with `restartPolicy: Always`. Container series are selected by pod name + `container=\"knowledge-hub-be-go\"` because cAdvisor metrics carry no `job` label.\n- **This is what the kubelet counts against the 1Gi limit and what triggers an OOM kill.**\n- Open issue: every incarnation since ~2026-08-26 starts near 150-200 MiB and climbs monotonically for as long as it lives (peak observed 368.8 MiB). No incarnation has lived long enough to show a plateau \u2014 they are all cut short by deploys \u2014 so leak vs working set is still undecided.\n- Watch ONE incarnation. The growth is invisible across pod restarts, which is exactly why it went unnoticed."
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Growth Rate (MiB/min)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (deriv(container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\", container=\"knowledge-hub-be-go\"}[1h])) * 60 / 1048576",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- `deriv` over the trailing hour. The measured figure during the open investigation was **+1.125 MiB/min** for this container against +0.019 for the knowledge-service worker beside it.\n- Sustained positive with a flat document rate is the leak shape. Positive only while throughput rises is a working set.\n- Needs an hour of one incarnation to mean anything; it reads as noise right after a deploy."
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Retained Bytes per Completed Upload",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (deriv(process_resident_memory_bytes{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", pod=~\"$pod\"}[1h])) / clamp_min(sum by (pod) (rate(knowledge_hub_ingest_documents_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", outcome=\"succeeded\", pod=~\"$pod\"}[1h])), 0.0001)",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- Memory growth divided by the rate of `outcome=\"succeeded\"` ingestions: **how much this process keeps for every document it finishes.**\n- Crude arithmetic during the investigation put it at ~63 KiB per completed upload. That number sizes the search; it is not a claim about where it goes.\n- This is the panel that decides the question. A figure that FALLS as throughput rises is a working set. A flat, non-zero figure is a per-document leak.\n- Meaningless when the success rate is near zero \u2014 the denominator collapses. Read it against the Ingestion dashboard's outcome panel."
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Process Resident Memory vs Working Set",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "process_resident_memory_bytes{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "rss {{pod}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\", container=\"knowledge-hub-be-go\"})",
+          "legendFormat": "working set {{pod}}"
+        }
+      ],
+      "description": "- RSS is what the Python process holds; working set is what the kubelet bills. They should track; a widening gap is page cache, not the interpreter.\n- RSS is newly available for this container \u2014 before the metrics endpoint was exposed on the sidecar port there was no `process_*` or `python_*` series for it at all, and the cgroup number was the only thing graphable."
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Sidecar vs Worker \u2014 Shared Pod Budget",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Memory by Container",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod, container) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\", container!=\"\", container!=\"POD\"})",
+          "legendFormat": "{{pod}}/{{container}}"
+        }
+      ],
+      "description": "- Both containers in the knowledge-service pod. The sidecar has been ~92% of the pod total, which is what made a hub memory climb read as a knowledge-service leak.\n- Limits are PER CONTAINER \u2014 knowledge-service 512Mi, the hub sidecar 1Gi \u2014 so a summed pod figure compares against neither."
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "CPU by Container",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\", container!=\"\", container!=\"POD\"}[5m]))",
+          "legendFormat": "{{pod}}/{{container}}"
+        }
+      ],
+      "description": "- Cores. The hub sidecar is the CPU-heavy one: parsing, chunking and embedding are all synchronous Python on executor threads.\n- Throttling shows up as stage durations rising with no change in document size \u2014 cross-check the Ingestion dashboard's stage panel."
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Restarts by Container (1h increase)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod, container) (increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\".*knowledge-service-be-go.*\"}[1h]))",
+          "legendFormat": "{{pod}}/{{container}}"
+        }
+      ],
+      "description": "- Zero over 24h for this container throughout the memory investigation, which is the main evidence the growth has not yet reached an OOM.\n- A sidecar restart breaks in-flight uploads: expect INGESTER_UPLOAD_FAILED retries on knowledge-service rather than abandoned batches.\n- Because it is a native sidecar, the worker does not start until this container has Started and is not terminated until the worker exits."
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Incarnation Age",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - process_start_time_seconds{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- Time since this process started. **Read every memory panel against it**: the growth is only visible within a single incarnation, and every incarnation so far has been replaced by a deploy inside about two hours.\n- Deciding leak vs working set needs one of these to run for several hours under load."
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "Python Runtime",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "GC Pause p95 by Generation",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 26
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, generation) (rate(knowledge_hub_runtime_gc_pause_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "gen {{generation}}"
+        }
+      ],
+      "description": "- Ingestion allocates heavily and in bursts \u2014 parsed record structures, chunk lists, triple objects \u2014 and a gen-2 collection over that heap stalls the event loop exactly like a blocking call, but attributed to nothing.\n- Read with Event Loop Lag below: lag WITH matching gen-2 pauses is memory pressure; lag WITHOUT them is blocking code on the loop."
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "GC Collections (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 26
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (generation) (rate(python_gc_collections_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "gen {{generation}}"
+        }
+      ],
+      "description": "- Collections per second per generation, from the standard `python_gc_collections_total` collector.\n- A rising gen-2 rate alongside rising memory means the collector is running and NOT reclaiming \u2014 the strongest available hint that something holds references rather than that allocation simply increased."
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Objects Collected (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 26
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (generation) (rate(python_gc_objects_collected_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "gen {{generation}}"
+        }
+      ],
+      "description": "- Objects reclaimed per second. Compare with the collection rate: many collections reclaiming few objects is the signature of a growing live set."
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Uncollectable Objects (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 26
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (generation) (rate(python_gc_objects_uncollectable_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "gen {{generation}}"
+        }
+      ],
+      "description": "- Objects the collector could not free. Should be zero. Non-zero means reference cycles involving objects it cannot reclaim, which would be a direct explanation for the growth."
+    },
+    {
+      "type": "row",
+      "id": 400,
+      "title": "Event Loop & Concurrency",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "panels": []
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Event Loop Lag \u2014 p95 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 34
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_hub_runtime_event_loop_lag_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(knowledge_hub_runtime_event_loop_lag_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "description": "- One asyncio loop serves every upload stream on this sidecar while ingestion runs synchronously on executor threads. Anything CPU-bound that lands ON the loop delays every in-flight upload at once.\n- No individual operation looks slow when this happens: the work still completes, just after the loop is handed back. This is the only series that shows it.\n- A scrape of `/metrics` queues behind the loop too, so sustained lag also shows up as scrape timeouts."
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "OS Threads",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 34
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "knowledge_hub_runtime_threads{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- Each streaming ingestion RPC builds its own single-worker ThreadPoolExecutor, so this rises and falls with concurrent uploads.\n- **A monotonic climb that survives idle periods is an executor that is not being shut down** \u2014 and would be a candidate explanation for the memory growth, since each thread carries a stack."
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Asyncio Tasks",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 34
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "knowledge_hub_runtime_asyncio_tasks{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- Tasks alive on the loop, which is the streaming layer's own queue depth: RPCs in flight plus the progress-drain machinery behind them.\n- Should track ingestions in flight. Growing without them is leaked tasks."
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Ingest Slots \u2014 In Flight vs Queued",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 34
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(knowledge_hub_ingest_in_flight{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"})",
+          "legendFormat": "in flight"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(knowledge_hub_ingest_queued{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"})",
+          "legendFormat": "queued"
+        }
+      ],
+      "description": "- Repeated from the Ingestion dashboard because memory is expected to scale with CONCURRENT documents, not with cumulative ones.\n- Memory rising while this stays flat is the observation that makes a working-set explanation hard to sustain."
+    },
+    {
+      "type": "row",
+      "id": 500,
+      "title": "CPU & File Descriptors",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      },
+      "panels": []
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Process CPU (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 42
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(process_cpu_seconds_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- Cores consumed by the hub process itself, as opposed to the cgroup figure above."
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Open vs Max File Descriptors",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 42
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "process_open_fds{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "open {{pod}}"
+        },
+        {
+          "refId": "B",
+          "expr": "process_max_fds{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "max {{pod}}"
+        }
+      ],
+      "description": "- Each in-flight upload holds an S3 connection and a coordinator connection. A climb tracking uptime rather than concurrency is a descriptor leak."
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Ingestion Throughput (context)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 42
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (rate(knowledge_hub_ingest_documents_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "description": "- Present so every memory panel above can be read against load. The regime change in the open investigation coincided with the SUCCESS path starting to run at volume \u2014 request volume actually FELL across the transition."
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Cumulative Documents This Incarnation",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 42
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (increase(knowledge_hub_ingest_documents_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", outcome=\"succeeded\", pod=~\"$pod\"}[$__range]))",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "- Documents completed since this process started. The investigation's per-upload arithmetic used ~1,870 completed uploads against +115 MiB.\n- Plot against working set: a straight line through the origin is a per-document leak, a curve that flattens is a working set reaching steady state."
+    }
+  ]
+}

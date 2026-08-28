@@ -1,0 +1,1120 @@
+{
+  "uid": "apps-v2-knowledge-hub-sidecar-ingest",
+  "title": "Knowledge Hub (sidecar) \u2014 Ingestion",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "service:knowledge-hub",
+    "deployment:sidecar",
+    "pipeline"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-knowledge-hub-folder",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "Knowledge Hub (standalone) \u2014 Overview",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-hub-standalone-overview?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Knowledge Hub (standalone) \u2014 Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-hub-standalone-runtime?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Knowledge Hub (sidecar) \u2014 Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-knowledge-hub-sidecar-runtime?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 \u2014 Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*knowledge-hub-be-go-sidecar\"}, namespace)",
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "description": "Applies only to the per-pod panels. Aggregate panels deliberately ignore it so pod churn does not gap the graphs.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}, pod)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Throughput & Outcomes",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Documents by Outcome (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (rate(knowledge_hub_ingest_documents_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "description": "- This dashboard covers the SIDECAR only: the hub image running as a native sidecar inside `applications-knowledge-service-be-go-*`, reached over loopback. It does every document this platform ingests.\n- `succeeded` is the only outcome that wrote a document. `reused` short-circuited on same source_url + same checksum and cost one lock acquisition.\n- Read `reused` as saved work, not throughput: leaving it in the same series as `succeeded` would make a redelivery storm look like a capacity increase.\n- `cancelled` means the caller disconnected at a checkpoint \u2014 knowledge-service giving up, usually its own timeout."
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Ingest Duration \u2014 p50 / p95 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(knowledge_hub_ingest_duration_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_hub_ingest_duration_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(knowledge_hub_ingest_duration_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "description": "- Admission to terminal outcome, per document.\n- Shares a bucket ladder with `knowledge_service_pipeline_ingester_request_duration_seconds` on purpose. Compare them bucket-for-bucket: the GAP is queue and transport, not this service.\n- `reused` documents land near zero and pull the p50 down, so read this with the outcome split beside it."
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Failure Error Codes (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (error_code) (rate(knowledge_hub_ingest_documents_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", outcome=\"failed\"}[5m]))",
+          "legendFormat": "{{error_code}}"
+        }
+      ],
+      "description": "- The classification the caller was handed. Retryability is a property of the class, never of whether the client happened to disconnect.\n- `db_unavailable` and `coordination_timeout` are retryable and self-correcting at low rates; a sustained rate means the coordinator pool is the ceiling.\n- `malformed_content`, `checksum_mismatch` and `object_too_large` are terminal \u2014 retrying those burns the caller's delivery budget for nothing."
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Reuse & Success Share",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_hub_ingest_documents_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", outcome=\"succeeded\"}[5m])) / clamp_min(sum(rate(knowledge_hub_ingest_documents_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])), 0.0001)",
+          "legendFormat": "succeeded"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(knowledge_hub_ingest_documents_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", outcome=\"reused\"}[5m])) / clamp_min(sum(rate(knowledge_hub_ingest_documents_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])), 0.0001)",
+          "legendFormat": "reused"
+        }
+      ],
+      "description": "- `reused` share rising is redelivery: the same document arriving again with an unchanged checksum. Cheap, but it means work upstream is being repeated.\n- `succeeded` share falling while total rate holds is the shape that preceded the 2026-08-26 incident, when the ingester answered `success=false, retryable=false` at 60-550 docs/min and did no real work at all."
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Admission Control & Locking",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "In Flight vs Queued",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(knowledge_hub_ingest_in_flight{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"})",
+          "legendFormat": "in flight"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(knowledge_hub_ingest_queued{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"})",
+          "legendFormat": "queued"
+        }
+      ],
+      "description": "- `in_flight` is bounded above by INGEST_MAX_CONCURRENT (10 deployed). `queued` is documents blocked on the admission semaphore.\n- In flight pinned at the limit with nothing queued is a busy but healthy sidecar. A rising QUEUE is the point at which raising INGEST_MAX_CONCURRENT \u2014 and INGEST_COORDINATOR_POOL_MAX with it \u2014 is the remedy rather than more replicas.\n- The two never overlap: a document is counted in exactly one of them."
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Admission Wait p95 by Result",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(knowledge_hub_ingest_admission_wait_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "{{result}}"
+        }
+      ],
+      "description": "- Waiting is deliberate backpressure, not an error: past the coordinator pool ceiling psycopg raises PoolError, which classifies as a RETRYABLE db_unavailable, so the caller re-sends and adds load to a system already at its limit. Blocking converts that into a queue.\n- A `timeout` sample never touched a store \u2014 nothing retracted, no ledger row \u2014 so it is safe to retry immediately.\n- The ladder starts at a 0 bucket so an uncontended admission is distinguishable from one that waited a tenth of a second."
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Document Lock Wait p95 by Result",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(knowledge_hub_ingest_lock_wait_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "{{result}}"
+        }
+      ],
+      "description": "- Do NOT read this as capacity. Waiting here means the SAME document is being ingested concurrently \u2014 usually a redelivery racing its own original \u2014 which is exactly what the per-document coordinator lease exists to serialize.\n- Admission and this share ONE budget (INGEST_LOCK_WAIT_SECONDS), so a queued request cannot spend the full budget twice.\n- `error` means try_acquire itself raised: pool exhaustion or a lost connection, not contention."
+    },
+    {
+      "id": 8,
+      "type": "heatmap",
+      "title": "Ingest Duration Heatmap",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (le) (rate(knowledge_hub_ingest_duration_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{le}}",
+          "format": "heatmap"
+        }
+      ],
+      "description": "- The distribution the percentiles flatten. Two bands usually means two populations \u2014 `reused` short-circuits against real ingestions \u2014 rather than a bimodal latency problem.",
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "yAxis": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "What Failures Cost",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Failures by Mutation Phase (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 17
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (phase) (rate(knowledge_hub_ingest_failures_by_phase_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{phase}}"
+        }
+      ],
+      "description": "- The metric that says whether a failure was EXPENSIVE.\n- `pre_mutation`, `acquire`, `acquire_timeout`, `admission_timeout` touched no store: the prior document is intact and a retry is free.\n- `prior_retraction_started` / `new_writes_started` mean prior state was already deleted. The document was retrievable before the attempt and is not now \u2014 a retry has to rebuild it.\n- `ledger_pending` means the new document is written and READY and only the bookkeeping failed."
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Rollbacks of Partial Writes (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 17
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (trigger) (rate(knowledge_hub_ingest_cleanups_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{trigger}}"
+        }
+      ],
+      "description": "- Every sample is a document that was mutated and then cleaned up.\n- `failed` rising is a dependency problem. `cancelled` rising is callers giving up on us mid-write \u2014 check knowledge-service's own timeout before assuming this side is at fault."
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Ledger Write Failures (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 17
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (op) (rate(knowledge_hub_ingest_ledger_write_failures_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{op}}"
+        }
+      ],
+      "description": "- `op=\"success\"` is the costly one: the document is fully written and READY but the ledger does not say so, so the caller is handed a retryable failure and the WHOLE document is re-ingested to reconcile one row.\n- Non-zero here means real work is being redone. It is also invisible everywhere else \u2014 the ingestion looks like a failure to the caller and like a success in the stores."
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Destructive-Phase Failure Share",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 17
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_hub_ingest_failures_by_phase_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", phase=~\"prior_retraction_started|new_writes_started\"}[5m])) / clamp_min(sum(rate(knowledge_hub_ingest_failures_by_phase_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])), 0.0001)",
+          "legendFormat": "destructive share"
+        }
+      ],
+      "description": "- Share of failures that had already deleted prior state. This is the number to alert on rather than the raw failure rate: a service failing 5% pre-mutation is annoying, a service failing 5% mid-write is losing documents that used to be retrievable."
+    },
+    {
+      "type": "row",
+      "id": 400,
+      "title": "Document Size & Cache Reads",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "panels": []
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Cached Object Size \u2014 p50 / p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 25
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(knowledge_hub_cache_object_stored_bytes_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "stored p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_hub_cache_object_stored_bytes_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "stored p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(knowledge_hub_cache_object_decoded_bytes_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "decoded p50"
+        },
+        {
+          "refId": "D",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_hub_cache_object_decoded_bytes_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "decoded p95"
+        }
+      ],
+      "description": "- `stored` is what S3 billed and transferred; `decoded` is what the rest of ingestion actually chews through.\n- content-service zstd-compresses the text bucket unconditionally at 10-40x, so without the split the two populations would share one distribution and neither would read.\n- A cluster of stored samples against 25 MiB is rejection pressure (INGEST_S3_MAX_OBJECT_BYTES), not a size distribution."
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Achieved Compression Ratio",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 25
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_hub_cache_object_decoded_bytes_sum{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])) / clamp_min(sum(rate(knowledge_hub_cache_object_stored_bytes_sum{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])), 0.0001)",
+          "legendFormat": "decoded / stored"
+        }
+      ],
+      "description": "- decoded bytes / stored bytes, aggregated. Expect roughly 10-40x on text.\n- A ratio collapsing toward 1 means objects are arriving uncompressed \u2014 legacy objects with no `codec` metadata key, which is legal but means content-service wrote them by an older path."
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Cache Read p95 & Error Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 25
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, status) (rate(knowledge_hub_cache_read_duration_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p95 {{status}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (error_code) (rate(knowledge_hub_cache_read_errors_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{error_code}}/s"
+        }
+      ],
+      "description": "- Covers the whole read: GET, streaming, checksum compare and zstd decode. Splitting further would need timers around code paths that mostly raise.\n- `undecodable_content` at volume is the 2026-08-26 signature: a reader that does not dispatch on the `codec` user-metadata key gets raw zstd bytes and fails every object terminally."
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Document Bytes Handed to Processing",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 25
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le, source) (rate(knowledge_hub_processing_document_bytes_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p50 {{source}}"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le, source) (rate(knowledge_hub_processing_document_bytes_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p95 {{source}}"
+        }
+      ],
+      "description": "- `source=\"cached\"` is the V2 path (decoded S3 text); `source=\"upload\"` is a direct upload, which should not occur on the sidecar.\n- **Read every stage duration against this.** A slow embedding stage on a 90 MiB document is arithmetic, not a regression."
+    },
+    {
+      "type": "row",
+      "id": 500,
+      "title": "Pipeline Stages",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "panels": []
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Stage Duration p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 33
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, stage) (rate(knowledge_hub_processing_stage_duration_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "{{stage}}"
+        }
+      ],
+      "description": "- **Start here when ingestion is slow.** This breakdown exists nowhere else: the caller sees one streaming RPC whose progress frames carry a percentage, not a duration.\n- Stages in pipeline order: `parse`, `ontology_infer`, `db_store`, `chunking`, `embedding`, `triple_extraction`, `kg_post`, `finalize`.\n- `triple_extraction` normally dominates; descend into the Extraction row below to see whether that is the primary pass or the optional verify/discovery passes, which are the two that can be switched off."
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Stage Share of Wall Time",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 33
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (stage) (rate(knowledge_hub_processing_stage_duration_seconds_sum{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{stage}}"
+        }
+      ],
+      "description": "- Seconds of work per second, per stage \u2014 i.e. how much of the sidecar's concurrent capacity each stage is consuming right now.\n- Unlike the p95 next door this is weighted by volume, so a slow stage that runs rarely stays small. It is the panel that answers \"what would I optimise\", where p95 answers \"what is slow\".\n- The total across stages approximates documents in flight."
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Processing Duration p95 by Outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 41
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, outcome) (rate(knowledge_hub_processing_duration_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "description": "- DocumentProcessor only, excluding admission, lock and S3 fetch. The gap between this and Ingest Duration on the top row is everything the coordinator does.\n- `error` far below `ready` is the healthy shape: failures should be cheap."
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Records / Chunks / Triples per Document",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 41
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(knowledge_hub_processing_records_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "records p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(knowledge_hub_processing_chunks_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "chunks p50"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_hub_processing_chunks_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "chunks p95"
+        },
+        {
+          "refId": "D",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(knowledge_hub_processing_triples_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "triples p50"
+        }
+      ],
+      "description": "- What each document actually produced, p50 and p95.\n- **A 0-chunk document is not retrievable.** In strict (V2) mode that is a terminal MalformedContentError, so a rise in the p50 sitting at 0 means content is arriving that we cannot chunk.\n- Triples at 0 with chunks healthy means extraction found nothing \u2014 check the Extraction row rather than assuming failure."
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Documents In Processing vs Completion Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 41
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(knowledge_hub_processing_documents_in_flight{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"})",
+          "legendFormat": "in processing"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(knowledge_hub_processing_documents_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "completions/s"
+        }
+      ],
+      "description": "- Stall detection. A flat non-zero in-flight with a completion rate at zero is wedged, not busy \u2014 and every histogram goes quiet in that state, so nothing else shows it.\n- In-flight is taken inside the per-filename lock, so documents blocked behind a same-filename upload are not counted here."
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Processing Outcomes (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 41
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (rate(knowledge_hub_processing_documents_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "description": "- `ready` vs `error` leaving DocumentProcessor. Counts documents, not attempts.\n- Compare with Documents by Outcome at the top: a document can process to READY and still fail the ingestion at the ledger step."
+    },
+    {
+      "type": "row",
+      "id": 600,
+      "title": "Stores \u2014 Writes",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "panels": []
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Vector Operation p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 49
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, operation, status) (rate(knowledge_hub_vector_operation_duration_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "{{operation}} {{status}}"
+        }
+      ],
+      "description": "- `add_chunks` is the whole embed-and-write stage; `upsert` / `put_vectors` is the write alone, instrumented separately because the Pinecone and S3 Vectors stores LOG AND SWALLOW their write failures.\n- That is why `status=\"error\"` on the write operation matters more than it looks: `add_chunks` returns normally in that case and reports success."
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Chunks Written vs Chunks Produced",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 49
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_hub_processing_chunks_sum{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "produced"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (backend) (rate(knowledge_hub_vector_chunks_written_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "written {{backend}}"
+        }
+      ],
+      "description": "- **The silent-data-loss check.** `produced` is what chunking made; `written` is what the vector store acknowledged.\n- These should track each other exactly. A persistent gap means writes are being dropped by the swallow described next door, and the documents involved are indexed as READY while being unsearchable."
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Embedding Batches (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 49
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (backend) (rate(knowledge_hub_vector_embedding_batches_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{backend}}"
+        }
+      ],
+      "description": "- The embedding stage is one long call from the outside. This is the only evidence a large document is ADVANCING through it rather than hanging.\n- A flat rate with `embedding` rising on the stage p95 is a stalled embedding provider."
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Graph & Database Write p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 49
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(knowledge_hub_graph_operation_duration_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "graph {{operation}}"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(knowledge_hub_database_operation_duration_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "db {{operation}}"
+        }
+      ],
+      "description": "- Triple writes and the per-document record store. `add_triples` on Neptune fans out into many round trips; see the Neptune panel on the standalone Overview for the per-request view.\n- `store_document` slow with a healthy `query` usually means the shared PostgreSQL is write-saturated by concurrent sidecars, not that this document is unusual."
+    },
+    {
+      "type": "row",
+      "id": 700,
+      "title": "Extraction & LLM Cost",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      },
+      "panels": []
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Extraction Phase p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 57
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, phase) (rate(knowledge_hub_extraction_phase_duration_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "{{phase}}"
+        }
+      ],
+      "description": "- The breakdown behind `stage=\"triple_extraction\"`, which is usually the dominant stage.\n- `pass1` is the primary guided/dynamic extraction. `pass2` (discovery), `verify` and `tabular` are optional passes \u2014 if they dominate, they are the levers."
+    },
+    {
+      "id": 28,
+      "type": "timeseries",
+      "title": "Model Calls by Status (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 57
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (model, status) (rate(knowledge_hub_llm_calls_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{model}} {{status}}"
+        }
+      ],
+      "description": "- Extraction fires many short prompts per document, so this rate is roughly records-per-second, not documents-per-second.\n- `error` includes a throttle that exhausted botocore's adaptive retries; a rise here with rising stage p95 is Bedrock quota, not model latency."
+    },
+    {
+      "id": 29,
+      "type": "timeseries",
+      "title": "Tokens per Second",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 57
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (model, direction) (rate(knowledge_hub_llm_tokens_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{model}} {{direction}}"
+        }
+      ],
+      "description": "- Ingestion token spend. Multiply by the per-model rate for cost; the model label is what makes that computable from the series alone."
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Prompt Cache Hit Ratio",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 57
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_hub_llm_prompt_cache_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", result=\"hit\"}[5m])) / clamp_min(sum(rate(knowledge_hub_llm_prompt_cache_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])), 0.0001)",
+          "legendFormat": "hit ratio"
+        }
+      ],
+      "description": "- Process-local cache keyed by sha256(model_id + prompt), 2048 entries, FIFO.\n- Expected to be LOW: the same record rarely repeats within one ingestion. A high ratio means the corpus is repetitive; a ratio near zero is normal and not a fault.\n- Note the cache is per pod, so it resets on every sidecar restart."
+    }
+  ]
+}

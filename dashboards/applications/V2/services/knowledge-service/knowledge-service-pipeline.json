@@ -116,7 +116,7 @@
       "id": 1,
       "type": "timeseries",
       "title": "Batches Received by Kind (rate)",
-      "description": "A batch is the unit of work and is processed in place — this service no longer fans out. multi and single are both upstream batches and differ only in size; empty is ACKed without work. Every received batch should be matched by a forwarded one, eventually.",
+      "description": "- `multi` and `single` are both upstream batches and differ only in size; `empty` is ACKed without work.\n- A batch is the unit of work and is processed to completion in place — this service does not fan out.\n- Every non-empty batch should eventually be matched by a forwarded one.\n- Batch size is chosen by the producer (the extractor), not here — see the pipeline step's `config`.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -144,7 +144,7 @@
       "id": 2,
       "type": "timeseries",
       "title": "Batches Forwarded vs Received (rate)",
-      "description": "A batch is forwarded only once every document in it is terminal, so forwarded lagging received is the normal shape while batches are in flight — a persistent and widening gap is not, and means batches are being held. status=error is a PublishToNext failure, which fails the whole batch and returns it to JobEngine for redelivery.",
+      "description": "- `received (non-empty)` — batches taken off JetStream.\n- `forwarded success` — every document in the batch reached a terminal outcome and the batch was published on.\n- `forwarded error` — PublishToNext failed, which fails the whole batch and returns it to JobEngine for redelivery.\n- Forwarded lagging received is the normal shape while batches are in flight. A persistent, widening gap means batches are being held — check Retry Queue Depth and Worker Pool.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -177,7 +177,7 @@
       "id": 3,
       "type": "timeseries",
       "title": "Batch Duration — p50 / p95 / p99",
-      "description": "Receipt to forwarding. Gated by the slowest document in the batch, because nothing is forwarded until everything is terminal — so this tracks the tail of document latency, not its middle. Explicit exponential boundaries, 1s to ~2.3h.",
+      "description": "- Receipt to forwarding, per batch. Buckets 1s to 8192s (~2.3h).\n- Gated by the slowest document in the batch, because nothing is forwarded until everything is terminal — so this tracks the tail of document latency, not its middle.\n- Large batches make this worse mechanically: halving the producer's batch size roughly halves this without changing per-document latency.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -215,7 +215,7 @@
       "id": 4,
       "type": "timeseries",
       "title": "Batches Abandoned on Shutdown (rate)",
-      "description": "A batch leaves the handler exactly three ways — forwarded, forward-failed, or abandoned — and this is the third. It increments when the pod was shutting down with documents still retryable, so the ItemBatch returns to JetStream for another pod. Nothing is lost: content-service serves the redone work from cache and the ingester dedupes on content_sha256. Expect a burst on every deploy. A steady non-zero rate OUTSIDE a deploy is the real signal — it means batches routinely outlive the pods running them, so either documents are slower than the pod lifetime or pods are being cycled too aggressively. This is also the term that makes the batch counts reconcile: received = forwarded(success) + forwarded(error) + abandoned + still in flight.",
+      "description": "- The pod was shutting down with documents still retryable, so the ItemBatch goes back to JetStream for another pod.\n- Nothing is lost — content-service serves the redone work from cache and the ingester dedupes on content_sha256.\n- Expect a burst on every deploy. A steady non-zero rate OUTSIDE a deploy is the real signal: batches routinely outlive the pods running them, so either documents are slower than the pod lifetime or pods are being cycled too aggressively.\n- This is the term that makes the counts reconcile: received = forwarded(success) + forwarded(error) + abandoned + still in flight.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -256,7 +256,7 @@
       "id": 5,
       "type": "timeseries",
       "title": "Retry Queue Depth by Phase",
-      "description": "Documents currently waiting on a retry, summed across every batch in flight on every pod. THIS IS THE LIVENESS SIGNAL FOR AN UNBOUNDED LOOP: the retry loop has no attempt cap and no deadline by design, so depth returning to zero is the only evidence that batches converge. A floor that never reaches zero means at least one document is stuck and is holding its whole batch — check the phase to see which dependency.",
+      "description": "- Documents waiting on a retry, summed across every batch in flight on every pod.\n- THE LIVENESS SIGNAL FOR AN UNBOUNDED LOOP: the retry loop has no attempt cap and no deadline by design, so depth returning to zero is the only evidence that batches converge.\n- A floor that never reaches zero means at least one document is stuck and is holding its whole batch open.\n- The phase names which dependency to go and look at.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -275,8 +275,58 @@
               "mode": "normal"
             },
             "fillOpacity": 40
+          },
+          "color": {
+            "mode": "palette-classic-by-name"
           }
-        }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "content"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "knowledge_processing"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "done"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          }
+        ]
       },
       "targets": [
         {
@@ -290,7 +340,7 @@
       "id": 6,
       "type": "timeseries",
       "title": "Retry Passes by Phase (rate)",
-      "description": "content means content-service said it has not finished with the document (or our own call timed out, which usually means the same thing). knowledge_processing means content resolved and the ingester has not finished — those retries resume at the ingester and do not re-resolve content. A high content rate with normal completions is ordinary cache-warming on slow extractions; a high rate with no completions is not.",
+      "description": "- `content` — content-service has not finished with the document, or our own call timed out, which usually means the same thing.\n- `knowledge_processing` — content resolved and the ingester has not finished. These resume at the ingester and do not re-resolve content.\n- A high content rate with normal completions is ordinary cache-warming on slow extractions.\n- A high rate with no completions is not — go to Convergence below.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -318,7 +368,7 @@
       "id": 7,
       "type": "timeseries",
       "title": "Convergence — Retries vs Completions",
-      "description": "The non-convergence detector, and the panel to look at first when a scan seems stalled. Retries rising while completions stay flat means the loop is spinning on documents it will never finish — no document is being dropped (that is the design), but nothing is progressing either, and every affected batch is held open along with its JetStream message and its worker.",
+      "description": "- `retries/s` — retry passes. `completions/s` — documents reaching a terminal outcome. `queued for retry` — current depth.\n- The non-convergence detector, and the first panel to look at when a scan seems stalled.\n- Retries rising while completions stay flat means the loop is spinning on documents it will never finish. Nothing is dropped — that is the design — but nothing progresses either, and every affected batch holds its JetStream message and its workers.\n- Healthy shape: retries and completions move together and depth oscillates back to zero.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -356,7 +406,7 @@
       "id": 8,
       "type": "timeseries",
       "title": "Batch Iterations — p50 / p95",
-      "description": "Retry passes performed per batch. A batch whose documents all succeed first time records 0. Rising p95 with stable batch duration means many cheap passes; rising together means slow ones.",
+      "description": "- Retry passes performed per batch. A batch whose documents all succeed first time records 0. Buckets are 0, then 1 to 512.\n- Rising p95 with stable batch duration means many cheap passes; rising together means slow ones.\n- Observed only when a batch finishes, so no data while batches are being received means no batch has completed yet.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -386,17 +436,50 @@
       ]
     },
     {
-      "id": 9,
+      "id": 13,
       "type": "timeseries",
-      "title": "Retry Reasons by Phase and Error Code (rate)",
-      "description": "Why the retry loop is turning. The phase alone does not say: the content phase retries on four codes that call for four different responses. CONTENT_TIMEOUT is content-service not answering inside our window — usually a slow extraction, and ordinary cache-warming. GET_CONTENT_FAILED is the NATS path itself, so a spike there is transport, not documents. CONTENT_ERROR_RETRYABLE and EXTRACTION_ERROR_RETRYABLE are content-service reporting on the document and not having given up on it. INGESTER_UPLOAD_FAILED and INGEST_UNSUCCESSFUL_RETRYABLE are the ingester, and those resume at the ingester without re-resolving content. An EMPTY error_code is not a dependency failure at all — it means the worker pool refused the submission, which only happens while the pod is draining, so expect it alongside batches_abandoned_total and nowhere else.",
+      "title": "Content Rounds per Batch — p50 / p95",
+      "description": "- Passes per batch that made content-service calls. The seed pass asks content about every item, so the minimum is 1, never 0.\n- Counted per pass, not per call: one round means \"this pass asked content about at least one document\", however many that was.\n- Read against Batch Iterations above. Equal values mean the batch went back to content on every pass — a cold corpus where cache-warming is not converging. Iterations well above rounds mean content resolved early and the extra passes belong to the ingester.\n- Rising here alongside CONTENT_TIMEOUT on Retry Reasons is the cache-warming loop working; what it needs is time, not configuration.\n- Observed only when a batch finishes, so no data while batches are being received means no batch has completed yet.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "h": 7,
-        "w": 24,
+        "w": 6,
+        "x": 18,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(knowledge_service_pipeline_batch_content_rounds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_service_pipeline_batch_content_rounds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Retry Reasons by Phase and Error Code (rate)",
+      "description": "- Why the loop is turning. The phase alone does not say — the content phase retries on four codes calling for four different responses.\n- `CONTENT_TIMEOUT` — content-service did not answer inside our window; usually a slow extraction and ordinary cache-warming.\n- `GET_CONTENT_FAILED` — the NATS path itself, so a spike is transport, not documents.\n- `CONTENT_ERROR_RETRYABLE` / `EXTRACTION_ERROR_RETRYABLE` — content-service reporting on the document and not having given up on it.\n- `INGESTER_UPLOAD_FAILED` / `INGEST_UNSUCCESSFUL_RETRYABLE` — the ingester; these resume at the ingester without re-resolving content.\n- An EMPTY error_code is not a dependency failure at all: the worker pool refused the submission, which only happens while the pod is draining. Expect it alongside Batches Abandoned and nowhere else.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 18,
         "x": 0,
         "y": 16
       },
@@ -430,7 +513,7 @@
       "id": 10,
       "type": "timeseries",
       "title": "Documents by Outcome (rate)",
-      "description": "One sample per document, not per attempt: retries happen in-process and are counted on document_retries_total instead, so this is a true document rate. forwarded is ingested. forwarded_not_ingested is the ingester's own terminal verdict. failed_permanent is this service giving up — the document is still forwarded, carrying its failure in knowledge_hub, so none of these three is a loss.",
+      "description": "- `forwarded` = ingested. `forwarded_not_ingested` = the ingester's own terminal verdict. `failed_permanent` = this service giving up.\n- One sample per document, not per attempt — retries are counted on `document_retries_total` — so this is a true document rate.\n- The document is forwarded in all three cases, carrying its failure in `knowledge_hub`, so none of them is a loss.\n- Compare the sum against intake above to see whether documents are finishing as fast as they arrive.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -449,8 +532,58 @@
               "mode": "normal"
             },
             "fillOpacity": 40
+          },
+          "color": {
+            "mode": "palette-classic-by-name"
           }
-        }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "forwarded"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "forwarded_not_ingested"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed_permanent"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
       },
       "targets": [
         {
@@ -464,7 +597,7 @@
       "id": 11,
       "type": "timeseries",
       "title": "Error Codes by Outcome (rate)",
-      "description": "The failure recorded on each document, which is also what downstream reads out of knowledge_hub.msg. The empty code is filtered out here; it is the normal case for a clean success. These are NOT ItemErrors — every code here rides downstream on the document instead.",
+      "description": "- The failure recorded on each document, which is also what downstream reads out of `knowledge_hub.msg`.\n- The empty code is filtered out here; it is the normal case for a clean success.\n- These are NOT ItemErrors — every code here rides downstream on the document instead.\n- The outcome/code pairing is what carries the meaning: the same code under an unexpected outcome is worth chasing.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -492,7 +625,7 @@
       "id": 12,
       "type": "timeseries",
       "title": "Unrecorded Failures (rate)",
-      "description": "SHOULD SIT AT ZERO. These are documents whose verdict could not be written onto the document itself because the payload could not be unmarshalled or re-marshalled — the carrier is the thing that is broken — so they were published as ItemErrors instead. This is the only path in the service that still writes to the job's item-errors hash. Anything above zero means malformed payloads are arriving from upstream.",
+      "description": "- SHOULD SIT AT ZERO.\n- Documents whose verdict could not be written onto the document itself because the payload could not be unmarshalled or re-marshalled — the carrier is the thing that is broken — so they were published as ItemErrors instead.\n- The only path in this service that still writes to the job's item-errors hash.\n- Anything above zero means malformed payloads are arriving from upstream. Fix the producer; there is nothing to tune here.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -549,7 +682,7 @@
       "id": 20,
       "type": "heatmap",
       "title": "Document Duration Heatmap",
-      "description": "Per document from first submission to terminal outcome, so it spans every retry pass the document took rather than only its last. Explicit exponential boundaries, 0.05s to 102.4s — a document needing many content retries will land in the top bucket.",
+      "description": "- Per document, first submission to terminal outcome, spanning every retry pass rather than only the last. Buckets 0.1s to 3600s.\n- Colour is documents per second landing in each band.\n- A bimodal picture is normal: cache hits low, first-time extractions higher.\n- Weight collecting in the top band means documents are looping, not working — cross-check Convergence.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -580,6 +713,7 @@
       "id": 21,
       "type": "timeseries",
       "title": "Document Duration — p50 / p95 / p99",
+      "description": "- The same measure as the heatmap above, as quantiles.\n- p50 is the common path; p99 is documents waiting on a dependency.\n- p50 and p99 diverging means a slow minority. All three rising means a dependency is slow for everything.\n- Batch Duration is gated by the worst document here, so the two panels should move together.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -617,6 +751,7 @@
       "id": 22,
       "type": "timeseries",
       "title": "Document p95 by Outcome",
+      "description": "- Split by outcome because outcomes fail at different speeds.\n- `failed_permanent` usually fails fast and drags a combined quantile down, so `forwarded` alone is the number to watch.\n- `forwarded_not_ingested` slower than `forwarded` means the ingester is doing real work before saying no.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -657,7 +792,7 @@
       "id": 30,
       "type": "timeseries",
       "title": "Content GetContent — p50 / p95 / p99 (success)",
-      "description": "status is success only when the call returned a usable cache location. A transport failure, an application error, and a missing cache location are all error. Note this measures OUR call, not content-service's work: our per-call timeout is well below its extraction budget, so a slow document appears here as a timed-out error call and then as a fast success on a later retry once the result is cached.",
+      "description": "- `status` is success only when the call returned a usable cache location. A transport failure, an application error and a missing cache location are all error.\n- This measures OUR call, not content-service's work: our per-call timeout sits below its extraction budget.\n- So a slow document appears here as a timed-out error call and then as a fast success on a later retry once the result is cached.\n- p95 approaching CONTENT_GET_TIMEOUT (120s) means we are re-asking rather than getting answers — check Retry Reasons for CONTENT_TIMEOUT.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -695,7 +830,7 @@
       "id": 31,
       "type": "timeseries",
       "title": "Ingester Upload — p50 / p95 / p99 (success)",
-      "description": "status here reflects only whether the streaming call completed. A terminal frame reporting success == false is still a success on this histogram — that result is carried by the forwarded_not_ingested outcome instead.",
+      "description": "- `status` here reflects only whether the streaming call completed.\n- A terminal frame reporting success == false is still a success on this histogram — that result is carried by the `forwarded_not_ingested` outcome instead.\n- Buckets run to 900s, above INGESTER_UPLOAD_TIMEOUT (600s), so a timeout is separable from a slow upload.\n- This is usually the dominant term in document duration: if p50 is tens of seconds, the worker pool will saturate.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -733,7 +868,7 @@
       "id": 32,
       "type": "timeseries",
       "title": "Dependency Call Rate by Status",
-      "description": "Call volume from the histograms' _count series, split by dependency and status. Content calls exceed document count whenever documents are retrying; ingester calls exceed it for the same reason on the knowledge phase.",
+      "description": "- Call volume from each histogram's `_count`, split by dependency and status.\n- Content calls exceed document count whenever documents are retrying; ingester calls do the same on the knowledge phase.\n- A rising error share on one dependency with the other flat localizes the fault.\n- Content success count against the document rate shows how much of the work is repeat asking rather than progress.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -779,7 +914,7 @@
       "id": 40,
       "type": "timeseries",
       "title": "Ingester Stream — Progress Frames vs In Flight",
-      "description": "The service's own stall signal, and the reason progress frames are counted at all: the frames are otherwise discarded. A flat frame rate together with a non-zero ingester in-flight count is a stalled upload stream. Either one alone is normal — no in-flight means idle, and frames without in-flight cannot happen.",
+      "description": "- `progress frames/s` — mid-upload frames received. `ingester in flight` — concurrent uploads.\n- The service's own stall signal, and the reason progress frames are counted at all: the frames are otherwise discarded.\n- A flat frame rate together with a non-zero in-flight count is a stalled upload stream.\n- Either one alone is normal — no in-flight means idle, and frames without in-flight cannot happen.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -812,7 +947,7 @@
       "id": 41,
       "type": "timeseries",
       "title": "Documents In Flight vs Completion Rate",
-      "description": "In flight counts documents inside a worker right now, so a document that retries is counted once per pass. In flight with no completions and no retries is genuinely stuck inside a dependency call; in flight with retries climbing is the loop working — that case belongs to the Convergence panel above. Both at zero is idle.",
+      "description": "- `documents in flight` — documents inside a worker right now. `completions/s` — documents reaching a terminal outcome. `{{dependency}} in flight` — which dependency they are sitting in.\n- In flight with no completions and no retries is genuinely stuck inside a dependency call, and the dependency line names which one.\n- In flight with retries climbing is the loop working — that case belongs to Convergence above.\n- Both at zero is idle.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -850,7 +985,7 @@
       "id": 42,
       "type": "timeseries",
       "title": "Worker Pool — Queued vs Executing",
-      "description": "The two halves of what used to be one gauge. in_flight is documents a worker is executing, capped at WORKER_POOL_SIZE; queued is documents submitted but not started, capped at WORKER_QUEUE_DEPTH. Sustained queueing means the POOL is the bottleneck and WORKER_POOL_SIZE is what to raise. in_flight pinned at the pool size with little queued means the DEPENDENCIES are slow and a bigger pool would only add pressure to them. A document is briefly counted in both during handoff, never in neither, so the sum is the honest submitted figure and should never dip through a handoff.",
+      "description": "- One pool per pod, shared by every batch that pod is handling. Both series are pod-wide, not per batch.\n- `executing` — documents a worker is running right now. Hard ceiling: WORKER_POOL_SIZE.\n- `queued` — documents submitted but not yet started. Ceiling: WORKER_QUEUE_DEPTH, plus one more for each handler blocked trying to submit (up to NATS_WORKERS).\n- A document is counted in both for an instant during handoff and never in neither, so the sum is the honest submitted-and-unfinished figure and should never dip.\n- `executing` pinned at WORKER_POOL_SIZE with little queued: the DEPENDENCIES are slow. A bigger pool would only add pressure to them.\n- Sustained queueing while executing sits below its ceiling: the POOL is the bottleneck. WORKER_POOL_SIZE is what to raise.\n- `queued` pinned at WORKER_QUEUE_DEPTH + NATS_WORKERS: every handler is blocked in Submit. A batch submits all of its documents before collecting any result, so in this state no batch reaches its accounting stage — terminal-outcome, retry and forward metrics stop appearing across both dashboards even though uploads are still completing. Reduce the producer's batch size or raise the queue.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
