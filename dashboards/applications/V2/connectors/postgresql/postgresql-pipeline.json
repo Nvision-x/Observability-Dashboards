@@ -267,7 +267,7 @@
       "id": 11,
       "type": "timeseries",
       "title": "Scanner Errors (rate)",
-      "description": "Four different failure shapes, deliberately kept apart. database_errors_total: seven increment sites that do not all mean the same thing. Three abort the run outright (maintenance-pool connect, connection verify, list-databases); one takes down a single database's branch (list-schemas); three more fire on per-database pool acquisition, and of those, one falls back to table mode and keeps scanning rather than returning. So a non-zero line here is not proof the scan stopped — read it against Items Sent before treating it as fatal. table_errors_total: a table query failed, or a bulk schema query took a whole schema down. columns_failed_total: individual columns were dropped while the scan otherwise succeeded (bulk mode's per-column anypb/URN/upsert failures) — a non-zero line here with a flat items/s is silent data loss. permissions_failed_total: a table's grants could not be read, so its items shipped with empty permissions — the data is published but degraded, which is why it is not folded into the Error Rate stat.",
+      "description": "Four different failure shapes, deliberately kept apart. database_errors_total: seven increment sites that do not all mean the same thing. Three abort the run outright (maintenance-pool connect, connection verify, list-databases); one takes down a single database's branch (list-schemas); three more fire on per-database pool acquisition, and of those, one falls back to table mode and keeps scanning rather than returning. So a non-zero line here is not proof the scan stopped — read it against Items Sent before treating it as fatal. table_errors_total: a table query failed, or a bulk schema query took a whole schema down. columns_failed_total: individual columns were dropped while the scan otherwise succeeded (per-column anypb/URN/upsert failures) — a non-zero line here with a flat items/s is silent data loss. permissions_failed_total: a table's grants could not be read, so its items shipped with empty permissions — the data is published but degraded, which is why it is not folded into the Error Rate stat.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
@@ -462,7 +462,7 @@
       "id": 44,
       "type": "timeseries",
       "title": "Fetch Success Ratio",
-      "description": "Successful fetches as a fraction of all fetches over 5 minutes. Flat 1 with no traffic is an artefact of the division, so read it alongside Fetches per Pod rather than on its own.",
+      "description": "Successful fetches as a fraction of all fetches over 5 minutes. With no traffic both sides of the division are zero, so the panel draws a gap rather than a value — it never renders 1 out of thin air. A flat 1 is the opposite reading: every fetch in the window succeeded. Pair it with Fetches per Pod to tell \"no failures\" apart from \"no work\".",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 12, "x": 12, "y": 34 },
       "fieldConfig": {
