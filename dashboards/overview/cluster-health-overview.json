@@ -1,5 +1,5 @@
 {
-  "__comment": "NVisionX Cluster Health Overview (all clusters, per-environment via $datasource). Sourced entirely from kube-state-metrics and node-exporter - both always-on cluster components, not app-specific business metrics - so every panel here should show real data regardless of which services are currently idle/scaled to zero.",
+  "__comment": "NVisionX Cluster Health Overview (all clusters, per-environment via $datasource). Sourced entirely from kube-state-metrics and node-exporter - both always-on cluster components, not app-specific business metrics - so every panel here should show real data regardless of which services are currently idle/scaled to zero. | 2026-08-28: added a plain-English status banner, a \"What's Wrong Right Now\" section with always-visible detail tables (crash-looping pods with reason+restarts, Failed-phase pods, not-ready nodes with condition, pending pods with age), and click-through drill-down links from the Nodes Not Ready / Pods Failed / Pods Pending / Restarts KPI tiles to their matching detail table, per manager request for the dashboard to be self-explanatory to non-engineers.",
   "annotations": {
     "list": [
       {
@@ -16,7 +16,7 @@
       }
     ]
   },
-  "description": "Complete cluster health at a glance: nodes, pods (running/failed/pending), restarts, and jobs, filterable by namespace.",
+  "description": "Complete cluster health at a glance, in plain language: one status banner up top, then a KPI strip you can click through to see exactly which pod or node is the problem and why.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -24,6 +24,96 @@
   "links": [],
   "liveNow": false,
   "panels": [
+    {
+      "id": 90,
+      "type": "stat",
+      "title": "",
+      "description": "Green = every check below is clean. Red = at least one node, pod, or job needs attention right now — scroll to \"What's Wrong Right Now\" for specifics.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": 0,
+                "to": 0,
+                "result": {
+                  "text": "✅  ALL SYSTEMS HEALTHY"
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1,
+                "to": 1000000,
+                "result": {
+                  "text": "⚠️  ATTENTION NEEDED — see \"What's Wrong Right Now\" below"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "text": {
+          "valueSize": 32
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(count(kube_node_status_condition{condition=\"Ready\", status=\"false\"} == 1) OR on() vector(0)) + (count(kube_pod_status_phase{namespace=~\"$namespace\", phase=\"Failed\"} == 1) OR on() vector(0)) + (sum(kube_job_status_failed{namespace=~\"$namespace\"}) OR on() vector(0))",
+          "legendFormat": "",
+          "refId": "A",
+          "editorMode": "code",
+          "range": true
+        }
+      ]
+    },
     {
       "id": 100,
       "type": "row",
@@ -33,7 +123,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 3
       },
       "panels": []
     },
@@ -50,7 +140,7 @@
         "h": 5,
         "w": 3,
         "x": 0,
-        "y": 1
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -112,7 +202,7 @@
         "h": 5,
         "w": 3,
         "x": 3,
-        "y": 1
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -178,7 +268,7 @@
         "h": 5,
         "w": 3,
         "x": 6,
-        "y": 1
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -199,7 +289,14 @@
               }
             ]
           },
-          "decimals": 0
+          "decimals": 0,
+          "links": [
+            {
+              "title": "See which node & why",
+              "url": "/d/nx-cluster-health-overview?viewPanel=603&${namespace:queryparam}&${datasource:queryparam}",
+              "targetBlank": false
+            }
+          ]
         },
         "overrides": []
       },
@@ -244,7 +341,7 @@
         "h": 5,
         "w": 3,
         "x": 9,
-        "y": 1
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -306,7 +403,7 @@
         "h": 5,
         "w": 3,
         "x": 12,
-        "y": 1
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -368,7 +465,7 @@
         "h": 5,
         "w": 3,
         "x": 15,
-        "y": 1
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -389,7 +486,14 @@
               }
             ]
           },
-          "decimals": 0
+          "decimals": 0,
+          "links": [
+            {
+              "title": "See which pod & why",
+              "url": "/d/nx-cluster-health-overview?viewPanel=601&${namespace:queryparam}&${datasource:queryparam}",
+              "targetBlank": false
+            }
+          ]
         },
         "overrides": []
       },
@@ -434,7 +538,7 @@
         "h": 5,
         "w": 3,
         "x": 18,
-        "y": 1
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -459,7 +563,14 @@
               }
             ]
           },
-          "decimals": 0
+          "decimals": 0,
+          "links": [
+            {
+              "title": "See which pod & how long",
+              "url": "/d/nx-cluster-health-overview?viewPanel=604&${namespace:queryparam}&${datasource:queryparam}",
+              "targetBlank": false
+            }
+          ]
         },
         "overrides": []
       },
@@ -504,7 +615,7 @@
         "h": 5,
         "w": 3,
         "x": 21,
-        "y": 1
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -529,7 +640,14 @@
               }
             ]
           },
-          "decimals": 0
+          "decimals": 0,
+          "links": [
+            {
+              "title": "See which pods are restarting",
+              "url": "/d/nx-cluster-health-overview?viewPanel=203&${namespace:queryparam}&${datasource:queryparam}",
+              "targetBlank": false
+            }
+          ]
         },
         "overrides": []
       },
@@ -562,6 +680,397 @@
       ]
     },
     {
+      "id": 600,
+      "type": "row",
+      "title": "🔍 What's Wrong Right Now",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "panels": []
+    },
+    {
+      "id": 601,
+      "type": "table",
+      "title": "Pods Crash-Looping / Erroring (why + restart count)",
+      "description": "Every pod currently stuck in a bad waiting state, with the real Kubernetes reason and how many times it's restarted. Restart count is the best available proxy for \"how long\" — kube-state-metrics doesn't expose an exact failure-start timestamp; for the precise duration, check `kubectl describe pod` or cluster Events.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "color-background"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Restarts"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reason"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "empty",
+                      "result": {
+                        "text": "—"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Restarts",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "kube_pod_container_status_waiting_reason{namespace=~\"$namespace\", reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|InvalidImageName\"} == 1",
+          "legendFormat": "",
+          "refId": "A",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (namespace, pod, container) (kube_pod_container_status_restarts_total{namespace=~\"$namespace\"})",
+          "legendFormat": "",
+          "refId": "B",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "instance": true,
+              "otel_scope_name": true,
+              "otel_scope_version": true,
+              "Value #A": true
+            },
+            "renameByName": {
+              "reason": "Reason",
+              "Value #B": "Restarts"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 602,
+      "type": "table",
+      "title": "Pods in Failed Phase",
+      "description": "Pods Kubernetes has marked Failed outright (distinct from crash-looping — these have stopped retrying, usually a one-shot Job pod that errored with restartPolicy: Never).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "kube_pod_status_phase{namespace=~\"$namespace\", phase=\"Failed\"} == 1",
+          "legendFormat": "",
+          "refId": "A",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "instance": true,
+              "phase": true,
+              "Value": true,
+              "otel_scope_name": true,
+              "otel_scope_version": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 603,
+      "type": "table",
+      "title": "Nodes Not Ready — Why",
+      "description": "Any node currently reporting a real problem condition (memory/disk/PID pressure, or network unavailable). If a node is Not Ready but shows nothing here, check kubelet/network connectivity directly — not every NotReady cause has its own condition.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "color-text"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "kube_node_status_condition{status=\"true\", condition!=\"Ready\"} == 1",
+          "legendFormat": "",
+          "refId": "A",
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "instance": true,
+              "status": true,
+              "Value": true,
+              "otel_scope_name": true,
+              "otel_scope_version": true
+            },
+            "renameByName": {
+              "condition": "Problem Condition"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 604,
+      "type": "table",
+      "title": "Pods Pending — How Long",
+      "description": "Pods stuck in Pending, with minutes since creation. kube-state-metrics doesn't expose the scheduler's reason (insufficient resources, no matching node, etc.) — for that, check `kubectl describe pod` or cluster Events.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          },
+          "unit": "m"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Pending Pod"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Pending (min)",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "kube_pod_status_phase{namespace=~\"$namespace\", phase=\"Pending\"} == 1",
+          "legendFormat": "",
+          "refId": "A",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(time() - kube_pod_created{namespace=~\"$namespace\"}) / 60",
+          "legendFormat": "",
+          "refId": "B",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "instance": true,
+              "phase": true,
+              "Value #A": true,
+              "otel_scope_name": true,
+              "otel_scope_version": true
+            },
+            "renameByName": {
+              "Value #B": "Pending (min)"
+            }
+          }
+        }
+      ]
+    },
+    {
       "id": 200,
       "type": "row",
       "title": "🥧 Pod Health Breakdown",
@@ -570,7 +1079,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 26
       },
       "panels": []
     },
@@ -587,7 +1096,7 @@
         "h": 9,
         "w": 8,
         "x": 0,
-        "y": 7
+        "y": 27
       },
       "fieldConfig": {
         "defaults": {
@@ -726,7 +1235,7 @@
         "h": 9,
         "w": 8,
         "x": 8,
-        "y": 7
+        "y": 27
       },
       "fieldConfig": {
         "defaults": {
@@ -793,7 +1302,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 7
+        "y": 27
       },
       "fieldConfig": {
         "defaults": {
@@ -863,7 +1372,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 36
       },
       "panels": []
     },
@@ -880,7 +1389,7 @@
         "h": 9,
         "w": 8,
         "x": 0,
-        "y": 17
+        "y": 37
       },
       "fieldConfig": {
         "defaults": {
@@ -954,7 +1463,7 @@
         "h": 9,
         "w": 8,
         "x": 8,
-        "y": 17
+        "y": 37
       },
       "fieldConfig": {
         "defaults": {
@@ -1021,7 +1530,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 17
+        "y": 37
       },
       "fieldConfig": {
         "defaults": {
@@ -1084,7 +1593,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 46
       },
       "panels": []
     },
@@ -1101,7 +1610,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 27
+        "y": 47
       },
       "fieldConfig": {
         "defaults": {
@@ -1163,7 +1672,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 27
+        "y": 47
       },
       "fieldConfig": {
         "defaults": {
@@ -1229,7 +1738,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 27
+        "y": 47
       },
       "fieldConfig": {
         "defaults": {
@@ -1291,7 +1800,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 33
+        "y": 53
       },
       "fieldConfig": {
         "defaults": {
@@ -1361,7 +1870,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 41
+        "y": 61
       },
       "panels": []
     },
@@ -1378,7 +1887,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 62
       },
       "fieldConfig": {
         "defaults": {
