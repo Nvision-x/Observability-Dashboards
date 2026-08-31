@@ -1,5 +1,5 @@
 {
-  "__comment": "NVisionX Cluster Health Overview (all clusters, per-environment via $datasource). Sourced entirely from kube-state-metrics and node-exporter - both always-on cluster components, not app-specific business metrics - so every panel here should show real data regardless of which services are currently idle/scaled to zero. | 2026-08-28: added a plain-English status banner, a \"What's Wrong Right Now\" section with always-visible detail tables (crash-looping pods with reason+restarts, Failed-phase pods, not-ready nodes with condition, pending pods with age), and click-through drill-down links from the Nodes Not Ready / Pods Failed / Pods Pending / Restarts KPI tiles to their matching detail table, per manager request for the dashboard to be self-explanatory to non-engineers.",
+  "__comment": "NVisionX Cluster Health Overview (all clusters, per-environment via $datasource). Sourced entirely from kube-state-metrics and node-exporter - both always-on cluster components, not app-specific business metrics - so every panel here should show real data regardless of which services are currently idle/scaled to zero. | 2026-08-28: added a \"What's Wrong Right Now\" section with always-visible detail tables (crash-looping pods with reason+restarts, Failed-phase pods, not-ready nodes with condition, pending pods with age), and click-through drill-down links from the Nodes Not Ready / Pods Failed / Pods Pending / Restarts KPI tiles to their matching detail table, per manager request for the dashboard to be self-explanatory to non-engineers. The plain-English status banner was tried and then removed per feedback - the KPI strip's own red/green tiles already say what's wrong.",
   "annotations": {
     "list": [
       {
@@ -16,7 +16,7 @@
       }
     ]
   },
-  "description": "Complete cluster health at a glance, in plain language: one status banner up top, then a KPI strip you can click through to see exactly which pod or node is the problem and why.",
+  "description": "Complete cluster health at a glance: a KPI strip you can click through to see exactly which pod or node is the problem and why.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -24,96 +24,6 @@
   "links": [],
   "liveNow": false,
   "panels": [
-    {
-      "id": 90,
-      "type": "stat",
-      "title": "",
-      "description": "Green = every check below is clean. Red = at least one node, pod, or job needs attention right now — scroll to \"What's Wrong Right Now\" for specifics.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          },
-          "mappings": [
-            {
-              "type": "range",
-              "options": {
-                "from": 0,
-                "to": 0,
-                "result": {
-                  "text": "✅  ALL SYSTEMS HEALTHY"
-                }
-              }
-            },
-            {
-              "type": "range",
-              "options": {
-                "from": 1,
-                "to": 1000000,
-                "result": {
-                  "text": "⚠️  ATTENTION NEEDED"
-                }
-              }
-            }
-          ]
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "textMode": "value",
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "text": {
-          "valueSize": 32
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "(count(kube_node_status_condition{condition=\"Ready\", status=\"false\"} == 1) OR on() vector(0)) + (count(kube_pod_status_phase{namespace=~\"$namespace\", phase=\"Failed\"} == 1) OR on() vector(0)) + (sum(kube_job_status_failed{namespace=~\"$namespace\"}) OR on() vector(0))",
-          "legendFormat": "",
-          "refId": "A",
-          "editorMode": "code",
-          "range": true
-        }
-      ]
-    },
     {
       "id": 100,
       "type": "row",
@@ -123,7 +33,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 3
+        "y": 0
       },
       "panels": []
     },
@@ -140,7 +50,7 @@
         "h": 5,
         "w": 3,
         "x": 0,
-        "y": 4
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -202,7 +112,7 @@
         "h": 5,
         "w": 3,
         "x": 3,
-        "y": 4
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -268,7 +178,7 @@
         "h": 5,
         "w": 3,
         "x": 6,
-        "y": 4
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -341,7 +251,7 @@
         "h": 5,
         "w": 3,
         "x": 9,
-        "y": 4
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -403,7 +313,7 @@
         "h": 5,
         "w": 3,
         "x": 12,
-        "y": 4
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -465,7 +375,7 @@
         "h": 5,
         "w": 3,
         "x": 15,
-        "y": 4
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -538,7 +448,7 @@
         "h": 5,
         "w": 3,
         "x": 18,
-        "y": 4
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -615,7 +525,7 @@
         "h": 5,
         "w": 3,
         "x": 21,
-        "y": 4
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -688,7 +598,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 6
       },
       "panels": []
     },
@@ -705,7 +615,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 10
+        "y": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -852,7 +762,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -925,7 +835,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 15
       },
       "fieldConfig": {
         "defaults": {
@@ -1000,7 +910,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 18
+        "y": 15
       },
       "fieldConfig": {
         "defaults": {
@@ -1107,7 +1017,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 23
       },
       "panels": []
     },
@@ -1124,7 +1034,7 @@
         "h": 9,
         "w": 8,
         "x": 0,
-        "y": 27
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
@@ -1263,7 +1173,7 @@
         "h": 9,
         "w": 8,
         "x": 8,
-        "y": 27
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
@@ -1330,7 +1240,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 27
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
@@ -1400,7 +1310,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 33
       },
       "panels": []
     },
@@ -1417,7 +1327,7 @@
         "h": 9,
         "w": 8,
         "x": 0,
-        "y": 37
+        "y": 34
       },
       "fieldConfig": {
         "defaults": {
@@ -1491,7 +1401,7 @@
         "h": 9,
         "w": 8,
         "x": 8,
-        "y": 37
+        "y": 34
       },
       "fieldConfig": {
         "defaults": {
@@ -1558,7 +1468,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 37
+        "y": 34
       },
       "fieldConfig": {
         "defaults": {
@@ -1621,7 +1531,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 43
       },
       "panels": []
     },
@@ -1638,7 +1548,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 47
+        "y": 44
       },
       "fieldConfig": {
         "defaults": {
@@ -1700,7 +1610,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 47
+        "y": 44
       },
       "fieldConfig": {
         "defaults": {
@@ -1766,7 +1676,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 47
+        "y": 44
       },
       "fieldConfig": {
         "defaults": {
@@ -1828,7 +1738,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 53
+        "y": 50
       },
       "fieldConfig": {
         "defaults": {
@@ -1912,7 +1822,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 61
+        "y": 58
       },
       "panels": []
     },
@@ -1929,7 +1839,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 59
       },
       "fieldConfig": {
         "defaults": {
