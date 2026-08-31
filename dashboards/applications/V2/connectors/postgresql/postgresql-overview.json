@@ -1,0 +1,623 @@
+{
+  "uid": "apps-v2-postgresql-overview",
+  "title": "PostgreSQL Connector — Overview",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "connector:postgresql",
+    "overview"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-postgresql-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "PostgreSQL — Pipeline",
+      "type": "link",
+      "url": "/d/apps-v2-postgresql-pipeline?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "PostgreSQL — Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-postgresql-runtime?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*postgresql-connector-be-go.*\"}, namespace)",
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "component",
+        "type": "custom",
+        "label": "Component",
+        "description": "Pass-through only: this overview shows the scanner and content rows side by side, so it does not filter on component. Declared so the value survives the drill-down to and from the pipeline and runtime dashboards.",
+        "query": "All : .*postgresql-connector-be-go.*, Scanner : .*postgresql-connector-be-go, Content : .*postgresql-connector-be-go-content",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": ".*postgresql-connector-be-go.*"
+        },
+        "options": [
+          { "selected": true, "text": "All", "value": ".*postgresql-connector-be-go.*" },
+          { "selected": false, "text": "Scanner", "value": ".*postgresql-connector-be-go" },
+          { "selected": false, "text": "Content", "value": ".*postgresql-connector-be-go-content" }
+        ],
+        "hide": 2,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*postgresql-connector-be-go.*\", namespace=\"$namespace\"}, pod)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "enable": true,
+        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\".*postgresql-connector.*\"}[5m]) > 0",
+        "name": "Pod Restarts",
+        "tagKeys": "pod",
+        "titleFormat": "Pod Restart"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Scanner — postgresql-connector-be-go",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Pods Up",
+      "description": "Scanner pods only — the trailing anchor on the job matcher keeps the -content pods out.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0",
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*postgresql-connector-be-go\", namespace=\"$namespace\", pod=~\"$pod\"}) or vector(0)"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Databases Discovered (5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(postgresql_connector_databases_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Schemas Discovered (5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(postgresql_connector_schemas_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Items Sent (5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Fan-out p95 (5m)",
+      "description": "The scanner fan-out only: connect, list databases, publish the per-database work items. Not an end-to-end scan duration — the per-schema and per-table work runs in other handler invocations, on other pods, and is not timed today. Buckets are ExponentialBuckets(0.05, 2, 12) — 50ms to ~102s.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 1 } },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(postgresql_connector_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Error Rate (5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(rate(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) or vector(0)) + (sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) or vector(0)) + (sum(rate(postgresql_connector_columns_failed_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) or vector(0))"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Throughput & Errors (rate, 5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "items sent"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "tables scanned"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(rate(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "columns found"
+        },
+        {
+          "refId": "D",
+          "expr": "sum(rate(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "database errors"
+        },
+        {
+          "refId": "E",
+          "expr": "sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "table errors"
+        },
+        {
+          "refId": "F",
+          "expr": "sum(rate(postgresql_connector_columns_failed_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "columns failed"
+        },
+        {
+          "refId": "G",
+          "expr": "sum(rate(postgresql_connector_permissions_failed_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "permissions failed"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Fan-out Duration — p50 / p95 / p99",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(postgresql_connector_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(postgresql_connector_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(postgresql_connector_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Content — postgresql-connector-be-go-content",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 14 },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0",
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*postgresql-connector-be-go-content\", namespace=\"$namespace\", pod=~\"$pod\"}) or vector(0)"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "Fetches (5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 14 },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "stat",
+      "title": "Fetch p95 (5m)",
+      "description": "Success path only. ContentFetchDuration is labelled by success, and failures time out on a completely different scale, so folding them in would distort the percentile.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 14 },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 2 } },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", success=\"true\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "stat",
+      "title": "Errors (5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 14 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"false\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "stat",
+      "title": "Document Size p95 (5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 14 },
+      "fieldConfig": { "defaults": { "unit": "bytes", "decimals": 1 } },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "type": "stat",
+      "title": "Cache Write Throughput (5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 14 },
+      "fieldConfig": { "defaults": { "unit": "Bps", "decimals": 1 } },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(postgresql_connector_content_cache_write_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Content Requests by Outcome (rate, 5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (success, error_code) (rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "success={{success}} ({{error_code}})"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Content Fetch Duration — p50 / p95 / p99",
+      "description": "Success path only, for the same reason as the Fetch p95 stat.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", success=\"true\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", success=\"true\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", success=\"true\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    }
+  ]
+}
