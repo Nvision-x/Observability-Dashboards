@@ -1,5 +1,5 @@
 {
-  "__comment": "Combined per manager request: applications-monitor.json, nx-applications-dashboard.json, and nx-applications-monitoring.json all queried the same metric family (container_cpu/memory/network_*, kube_pod_container_status_ready/restarts) at three different granularities (fleet health / namespace-wide aggregate / per-service detail) - combined into one dashboard with those three as collapsible sections instead of three separate files, all sharing one $datasource + $namespace picker. BUGS FIXED while merging: (1) applications-monitor.json's Fleet Health panels queried an exact hardcoded snapshot of pod names including their ReplicaSet hash suffix (e.g. 'applications-archiver-789855dc6d-ngx9v') - those hashes change on every deploy, so this was already stale and would show 'Bad'/'No data' for current pods. Rebuilt as a dynamic label_values() query against $namespace, no hardcoded pod list. (2) nx-applications-dashboard.json's panels used gridPos w:30, exceeding Grafana's 24-column grid (always rendered clipped/overflowing), and its last two panels (Pod Count / Pod Restarts) overlapped by 2 grid units - re-tiled as a clean 2-column layout. (3) nx-applications-monitoring.json's 60 panels (15 services x 4 panels) had no row headers at all, just implicit grouping by title prefix - added one collapsible row divider per service for real navigability.",
+  "__comment": "Combined per manager request: applications-monitor.json, nx-applications-dashboard.json, and nx-applications-monitoring.json all queried the same metric family (container_cpu/memory/network_*, kube_pod_container_status_ready/restarts) at three different granularities (fleet health / namespace-wide aggregate / per-service detail) - combined into one dashboard with those three as collapsible sections instead of three separate files, all sharing one $datasource + $namespace picker. BUGS FIXED while merging: (1) applications-monitor.json's Fleet Health panels queried an exact hardcoded snapshot of pod names including their ReplicaSet hash suffix (e.g. 'applications-archiver-789855dc6d-ngx9v') - those hashes change on every deploy, so this was already stale and would show 'Bad'/'No data' for current pods. Rebuilt as a dynamic label_values() query against $namespace, no hardcoded pod list. (2) nx-applications-dashboard.json's panels used gridPos w:30, exceeding Grafana's 24-column grid (always rendered clipped/overflowing), and its last two panels (Pod Count / Pod Restarts) overlapped by 2 grid units - re-tiled as a clean 2-column layout. (3) nx-applications-monitoring.json's 60 panels (15 services x 4 panels) had no row headers at all, just implicit grouping by title prefix - added one collapsible row divider per service for real navigability. | Folded in the 4 genuinely new panels from Application Health Executive View (Request Rate, Request Latency p95, HTTP Success Rate, Services Down by name) as a new top row - its other panels (Services Up count, Overall Fleet Health %, CPU Usage by Pod, Hourly Request Volume) duplicated what Fleet Health Summary / All-Pods Resource Overview already cover here, so those were not re-added. application-health-executive.json deleted as a duplicate.",
   "annotations": {
     "list": []
   },
@@ -10,12 +10,325 @@
   "links": [],
   "panels": [
     {
+      "id": 9000,
+      "type": "row",
+      "title": "🚦 Request Golden Signals & Down Services (folded in from Application Health Executive View)",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 9001,
+      "type": "timeseries",
+      "title": "Request Rate by Service (rolling 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (job) (rate(http_requests_total{job=~\".*applications-.*\"}[5m]))",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 9002,
+      "type": "table",
+      "title": "Request Latency p95 by Service (where instrumented)",
+      "description": "http_request_duration_seconds is opt-in per service (pipeline-lib-go's shared HTTP metric set) - not every service installs it. Blank for a service means it hasn't wired up the shared HTTP metrics, not that it's slow.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Latency (ms)",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, job) (rate(http_request_duration_seconds_bucket{job=~\".*applications-.*\"}[5m]))) * 1000",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "instance": true,
+              "le": true
+            },
+            "renameByName": {
+              "Value": "Latency (ms)",
+              "job": "Service"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 9003,
+      "type": "table",
+      "title": "HTTP Success Rate by Service (non-5xx)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "color-background"
+            },
+            "filterable": true
+          },
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 95
+              },
+              {
+                "color": "green",
+                "value": 99.5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Success Rate (%)",
+            "desc": false
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (job) (rate(http_requests_total{job=~\".*applications-.*\", status!~\"5.*\"}[5m])) / sum by (job) (rate(http_requests_total{job=~\".*applications-.*\"}[5m])) * 100",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "instance": true
+            },
+            "renameByName": {
+              "Value": "Success Rate (%)",
+              "job": "Service"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 9004,
+      "type": "table",
+      "title": "Services Down (instant)",
+      "description": "Any service currently reporting up == 0, named by job. The Fleet Health Summary row below gives you counts; this names which one.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "color-background"
+            },
+            "filterable": true
+          },
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (job) (up{job=~\".*applications-.*\"} == 0)",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "instance": true
+            },
+            "renameByName": {
+              "Value": "Down",
+              "job": "Service"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
       },
       "id": 1,
       "panels": [],
@@ -34,7 +347,7 @@
         "h": 6,
         "w": 4,
         "x": 0,
-        "y": 1
+        "y": 18
       },
       "datasource": {
         "type": "prometheus",
@@ -107,7 +420,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 7
+        "y": 24
       },
       "datasource": {
         "type": "prometheus",
@@ -203,7 +516,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 7
+        "y": 24
       },
       "datasource": {
         "type": "prometheus",
@@ -276,7 +589,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 33
       },
       "id": 2,
       "panels": [],
@@ -289,7 +602,7 @@
       "id": 200,
       "gridPos": {
         "x": 0,
-        "y": 17,
+        "y": 34,
         "w": 12,
         "h": 8
       },
@@ -311,7 +624,7 @@
       "id": 201,
       "gridPos": {
         "x": 12,
-        "y": 17,
+        "y": 34,
         "w": 12,
         "h": 8
       },
@@ -333,7 +646,7 @@
       "id": 202,
       "gridPos": {
         "x": 0,
-        "y": 25,
+        "y": 42,
         "w": 12,
         "h": 8
       },
@@ -355,7 +668,7 @@
       "id": 203,
       "gridPos": {
         "x": 12,
-        "y": 25,
+        "y": 42,
         "w": 12,
         "h": 8
       },
@@ -377,7 +690,7 @@
       "id": 204,
       "gridPos": {
         "x": 0,
-        "y": 33,
+        "y": 50,
         "w": 12,
         "h": 6
       },
@@ -399,7 +712,7 @@
       "id": 205,
       "gridPos": {
         "x": 12,
-        "y": 33,
+        "y": 50,
         "w": 12,
         "h": 6
       },
@@ -421,7 +734,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 57
       },
       "id": 3,
       "panels": [],
@@ -434,7 +747,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 41
+        "y": 58
       },
       "id": 1000,
       "panels": [],
@@ -446,7 +759,7 @@
       "title": "ALERTS-API POD Status",
       "gridPos": {
         "x": 0,
-        "y": 42,
+        "y": 59,
         "w": 6,
         "h": 8
       },
@@ -495,7 +808,7 @@
       "title": "ALERTS-API POD Restarts",
       "gridPos": {
         "x": 6,
-        "y": 42,
+        "y": 59,
         "w": 6,
         "h": 8
       },
@@ -544,7 +857,7 @@
       "title": "ALERTS-API Resource Requests",
       "gridPos": {
         "x": 12,
-        "y": 42,
+        "y": 59,
         "w": 6,
         "h": 8
       },
@@ -593,7 +906,7 @@
       "title": "ALERTS-API Memory Usage",
       "gridPos": {
         "x": 18,
-        "y": 42,
+        "y": 59,
         "w": 6,
         "h": 8
       },
@@ -616,7 +929,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 67
       },
       "id": 1001,
       "panels": [],
@@ -628,7 +941,7 @@
       "title": "API POD Status",
       "gridPos": {
         "x": 0,
-        "y": 51,
+        "y": 68,
         "w": 6,
         "h": 8
       },
@@ -677,7 +990,7 @@
       "title": "api Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 51,
+        "y": 68,
         "w": 6,
         "h": 8
       },
@@ -699,7 +1012,7 @@
       "title": "api CPU Usage",
       "gridPos": {
         "x": 12,
-        "y": 51,
+        "y": 68,
         "w": 6,
         "h": 8
       },
@@ -721,7 +1034,7 @@
       "title": "api Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 51,
+        "y": 68,
         "w": 6,
         "h": 8
       },
@@ -744,7 +1057,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 59
+        "y": 76
       },
       "id": 1002,
       "panels": [],
@@ -756,7 +1069,7 @@
       "title": "archiver CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 60,
+        "y": 77,
         "w": 6,
         "h": 8
       },
@@ -778,7 +1091,7 @@
       "title": "archiver Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 60,
+        "y": 77,
         "w": 6,
         "h": 8
       },
@@ -800,7 +1113,7 @@
       "title": "archiver Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 60,
+        "y": 77,
         "w": 6,
         "h": 8
       },
@@ -822,7 +1135,7 @@
       "title": "archiver Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 60,
+        "y": 77,
         "w": 6,
         "h": 8
       },
@@ -845,7 +1158,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 68
+        "y": 85
       },
       "id": 1003,
       "panels": [],
@@ -857,7 +1170,7 @@
       "title": "classifier CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 69,
+        "y": 86,
         "w": 6,
         "h": 8
       },
@@ -879,7 +1192,7 @@
       "title": "classifier Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 69,
+        "y": 86,
         "w": 6,
         "h": 8
       },
@@ -901,7 +1214,7 @@
       "title": "classifier Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 69,
+        "y": 86,
         "w": 6,
         "h": 8
       },
@@ -923,7 +1236,7 @@
       "title": "classifier Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 69,
+        "y": 86,
         "w": 6,
         "h": 8
       },
@@ -946,7 +1259,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 77
+        "y": 94
       },
       "id": 1004,
       "panels": [],
@@ -958,7 +1271,7 @@
       "title": "cifs-connector CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 78,
+        "y": 95,
         "w": 6,
         "h": 8
       },
@@ -980,7 +1293,7 @@
       "title": "cifs-connector Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 78,
+        "y": 95,
         "w": 6,
         "h": 8
       },
@@ -1002,7 +1315,7 @@
       "title": "cifs-connector Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 78,
+        "y": 95,
         "w": 6,
         "h": 8
       },
@@ -1024,7 +1337,7 @@
       "title": "cifs-connector Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 78,
+        "y": 95,
         "w": 6,
         "h": 8
       },
@@ -1047,7 +1360,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 86
+        "y": 103
       },
       "id": 1005,
       "panels": [],
@@ -1059,7 +1372,7 @@
       "title": "cron-run CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 87,
+        "y": 104,
         "w": 6,
         "h": 8
       },
@@ -1081,7 +1394,7 @@
       "title": "cron-run Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 87,
+        "y": 104,
         "w": 6,
         "h": 8
       },
@@ -1103,7 +1416,7 @@
       "title": "cron-run Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 87,
+        "y": 104,
         "w": 6,
         "h": 8
       },
@@ -1125,7 +1438,7 @@
       "title": "cron-run Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 87,
+        "y": 104,
         "w": 6,
         "h": 8
       },
@@ -1148,7 +1461,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 95
+        "y": 112
       },
       "id": 1006,
       "panels": [],
@@ -1160,7 +1473,7 @@
       "title": "env-dumper CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 96,
+        "y": 113,
         "w": 6,
         "h": 8
       },
@@ -1182,7 +1495,7 @@
       "title": "env-dumper Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 96,
+        "y": 113,
         "w": 6,
         "h": 8
       },
@@ -1204,7 +1517,7 @@
       "title": "env-dumper Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 96,
+        "y": 113,
         "w": 6,
         "h": 8
       },
@@ -1226,7 +1539,7 @@
       "title": "env-dumper Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 96,
+        "y": 113,
         "w": 6,
         "h": 8
       },
@@ -1249,7 +1562,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 104
+        "y": 121
       },
       "id": 1007,
       "panels": [],
@@ -1261,7 +1574,7 @@
       "title": "job-engine CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 105,
+        "y": 122,
         "w": 6,
         "h": 8
       },
@@ -1283,7 +1596,7 @@
       "title": "job-engine Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 105,
+        "y": 122,
         "w": 6,
         "h": 8
       },
@@ -1305,7 +1618,7 @@
       "title": "job-engine Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 105,
+        "y": 122,
         "w": 6,
         "h": 8
       },
@@ -1327,7 +1640,7 @@
       "title": "job-engine Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 105,
+        "y": 122,
         "w": 6,
         "h": 8
       },
@@ -1350,7 +1663,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 113
+        "y": 130
       },
       "id": 1008,
       "panels": [],
@@ -1362,7 +1675,7 @@
       "title": "migration CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 114,
+        "y": 131,
         "w": 6,
         "h": 8
       },
@@ -1384,7 +1697,7 @@
       "title": "migration Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 114,
+        "y": 131,
         "w": 6,
         "h": 8
       },
@@ -1406,7 +1719,7 @@
       "title": "migration Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 114,
+        "y": 131,
         "w": 6,
         "h": 8
       },
@@ -1428,7 +1741,7 @@
       "title": "migration Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 114,
+        "y": 131,
         "w": 6,
         "h": 8
       },
@@ -1451,7 +1764,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 122
+        "y": 139
       },
       "id": 1009,
       "panels": [],
@@ -1463,7 +1776,7 @@
       "title": "nx-nginx CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 123,
+        "y": 140,
         "w": 6,
         "h": 8
       },
@@ -1485,7 +1798,7 @@
       "title": "nx-nginx Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 123,
+        "y": 140,
         "w": 6,
         "h": 8
       },
@@ -1507,7 +1820,7 @@
       "title": "nx-nginx Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 123,
+        "y": 140,
         "w": 6,
         "h": 8
       },
@@ -1529,7 +1842,7 @@
       "title": "nx-nginx Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 123,
+        "y": 140,
         "w": 6,
         "h": 8
       },
@@ -1552,7 +1865,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 131
+        "y": 148
       },
       "id": 1010,
       "panels": [],
@@ -1564,7 +1877,7 @@
       "title": "s3-consumer CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 132,
+        "y": 149,
         "w": 6,
         "h": 8
       },
@@ -1586,7 +1899,7 @@
       "title": "s3-consumer Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 132,
+        "y": 149,
         "w": 6,
         "h": 8
       },
@@ -1608,7 +1921,7 @@
       "title": "s3-consumer Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 132,
+        "y": 149,
         "w": 6,
         "h": 8
       },
@@ -1630,7 +1943,7 @@
       "title": "s3-consumer Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 132,
+        "y": 149,
         "w": 6,
         "h": 8
       },
@@ -1653,7 +1966,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 140
+        "y": 157
       },
       "id": 1011,
       "panels": [],
@@ -1665,7 +1978,7 @@
       "title": "s3-inventory-connector CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 141,
+        "y": 158,
         "w": 6,
         "h": 8
       },
@@ -1687,7 +2000,7 @@
       "title": "s3-inventory-connector Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 141,
+        "y": 158,
         "w": 6,
         "h": 8
       },
@@ -1709,7 +2022,7 @@
       "title": "s3-inventory-connector Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 141,
+        "y": 158,
         "w": 6,
         "h": 8
       },
@@ -1731,7 +2044,7 @@
       "title": "s3-inventory-connector Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 141,
+        "y": 158,
         "w": 6,
         "h": 8
       },
@@ -1754,7 +2067,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 149
+        "y": 166
       },
       "id": 1012,
       "panels": [],
@@ -1766,7 +2079,7 @@
       "title": "s3-producer CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 150,
+        "y": 167,
         "w": 6,
         "h": 8
       },
@@ -1788,7 +2101,7 @@
       "title": "s3-producer Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 150,
+        "y": 167,
         "w": 6,
         "h": 8
       },
@@ -1810,7 +2123,7 @@
       "title": "s3-producer Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 150,
+        "y": 167,
         "w": 6,
         "h": 8
       },
@@ -1832,7 +2145,7 @@
       "title": "s3-producer Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 150,
+        "y": 167,
         "w": 6,
         "h": 8
       },
@@ -1855,7 +2168,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 158
+        "y": 175
       },
       "id": 1013,
       "panels": [],
@@ -1867,7 +2180,7 @@
       "title": "sweeper CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 159,
+        "y": 176,
         "w": 6,
         "h": 8
       },
@@ -1889,7 +2202,7 @@
       "title": "sweeper Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 159,
+        "y": 176,
         "w": 6,
         "h": 8
       },
@@ -1911,7 +2224,7 @@
       "title": "sweeper Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 159,
+        "y": 176,
         "w": 6,
         "h": 8
       },
@@ -1933,7 +2246,7 @@
       "title": "sweeper Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 159,
+        "y": 176,
         "w": 6,
         "h": 8
       },
@@ -1956,7 +2269,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 167
+        "y": 184
       },
       "id": 1014,
       "panels": [],
@@ -1968,7 +2281,7 @@
       "title": "test-connection CPU Usage",
       "gridPos": {
         "x": 0,
-        "y": 168,
+        "y": 185,
         "w": 6,
         "h": 8
       },
@@ -1990,7 +2303,7 @@
       "title": "test-connection Memory Usage",
       "gridPos": {
         "x": 6,
-        "y": 168,
+        "y": 185,
         "w": 6,
         "h": 8
       },
@@ -2012,7 +2325,7 @@
       "title": "test-connection Network Inbound",
       "gridPos": {
         "x": 12,
-        "y": 168,
+        "y": 185,
         "w": 6,
         "h": 8
       },
@@ -2034,7 +2347,7 @@
       "title": "test-connection Network Outbound",
       "gridPos": {
         "x": 18,
-        "y": 168,
+        "y": 185,
         "w": 6,
         "h": 8
       },
