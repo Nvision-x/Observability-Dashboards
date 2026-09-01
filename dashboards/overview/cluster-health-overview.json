@@ -1,5 +1,5 @@
 {
-  "__comment": "NVisionX Cluster Health Overview (all clusters, per-environment via $datasource). Sourced entirely from kube-state-metrics and node-exporter - both always-on cluster components, not app-specific business metrics - so every panel here should show real data regardless of which services are currently idle/scaled to zero. | 2026-08-28: added a \"What's Wrong Right Now\" section with always-visible detail tables (crash-looping pods with reason+restarts, Failed-phase pods, not-ready nodes with condition, pending pods with age), and click-through drill-down links from the Nodes Not Ready / Pods Failed / Pods Pending / Restarts KPI tiles to their matching detail table, per manager request for the dashboard to be self-explanatory to non-engineers. The plain-English status banner was tried and then removed per feedback - the KPI strip's own red/green tiles already say what's wrong.",
+  "__comment": "NVisionX Cluster Health Overview (all clusters, per-environment via $datasource). Sourced entirely from kube-state-metrics and node-exporter - both always-on cluster components, not app-specific business metrics - so every panel here should show real data regardless of which services are currently idle/scaled to zero. | 2026-08-28: added a \"What's Wrong Right Now\" section with always-visible detail tables (crash-looping pods with reason+restarts, Failed-phase pods, not-ready nodes with condition, pending pods with age), and click-through drill-down links from the Nodes Not Ready / Pods Failed / Pods Pending / Restarts KPI tiles to their matching detail table, per manager request for the dashboard to be self-explanatory to non-engineers. The plain-English status banner was tried and then removed per feedback - the KPI strip's own red/green tiles already say what's wrong. | Folded in Infrastructure Overview's Network I/O and Storage Usage panels (the only two panels there not already covered here) and deleted that dashboard as a duplicate.",
   "annotations": {
     "list": [
       {
@@ -1556,6 +1556,152 @@
       ]
     },
     {
+      "id": 304,
+      "type": "timeseries",
+      "title": "Network I/O",
+      "description": "Node-level network throughput, from node-exporter. Folded in from the retired Infrastructure Overview dashboard.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 43
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "rate(node_network_receive_bytes_total{device!=\"lo\"}[5m]) * 8",
+          "legendFormat": "{{instance}} - {{device}} RX",
+          "refId": "A",
+          "editorMode": "code",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m]) * 8",
+          "legendFormat": "{{instance}} - {{device}} TX",
+          "refId": "B",
+          "editorMode": "code",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 305,
+      "type": "timeseries",
+      "title": "Storage Usage %",
+      "description": "Root filesystem usage per node, from node-exporter. Folded in from the retired Infrastructure Overview dashboard.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 43
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity"
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/\",fstype!=\"rootfs\"} / node_filesystem_size_bytes{mountpoint=\"/\",fstype!=\"rootfs\"}) * 100)",
+          "legendFormat": "{{instance}} - Root FS Usage %",
+          "refId": "A",
+          "editorMode": "code",
+          "range": true
+        }
+      ]
+    },
+    {
       "id": 400,
       "type": "row",
       "title": "⚙️ Jobs",
@@ -1564,7 +1710,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 51
       },
       "panels": []
     },
@@ -1581,7 +1727,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 44
+        "y": 52
       },
       "fieldConfig": {
         "defaults": {
@@ -1643,7 +1789,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 44
+        "y": 52
       },
       "fieldConfig": {
         "defaults": {
@@ -1709,7 +1855,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 44
+        "y": 52
       },
       "fieldConfig": {
         "defaults": {
@@ -1771,7 +1917,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
@@ -1855,7 +2001,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 66
       },
       "panels": []
     },
@@ -1872,7 +2018,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 59
+        "y": 67
       },
       "fieldConfig": {
         "defaults": {
