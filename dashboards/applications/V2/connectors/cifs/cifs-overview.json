@@ -115,10 +115,150 @@
   "panels": [
     {
       "type": "row",
+      "id": 80,
+      "title": "Totals in Window — what actually happened (survives the pod being asleep)",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "id": 81,
+      "type": "stat",
+      "title": "Files Discovered (total)",
+      "description": "A 0 means no work was recorded in this window. To tell idle from stuck, read it against the backlog rows: pending messages with a 0 total is the stale-connector signature. Total for the dashboard time range, not a rate. A scale-to-zero connector often finishes its work inside a single scrape interval, so the counter is born at its final value and rate() / increase() are exactly 0 - measured in dev: an 8-file scan took ~7ms and every sample of the counter read 8, so every rate panel showed 0.00 and the percentiles went blank. max_over_time recovers the final value per series precisely because the counter dies with the pod; summing across pods gives the work actually done in the window. Read this row first when the pod is asleep, and the rate panels below when it is under load.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(max_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+        }
+      ]
+    },
+    {
+      "id": 82,
+      "type": "stat",
+      "title": "Items Sent (total)",
+      "description": "A 0 means no work was recorded in this window. To tell idle from stuck, read it against the backlog rows: pending messages with a 0 total is the stale-connector signature. Total for the dashboard time range, not a rate. A scale-to-zero connector often finishes its work inside a single scrape interval, so the counter is born at its final value and rate() / increase() are exactly 0 - measured in dev: an 8-file scan took ~7ms and every sample of the counter read 8, so every rate panel showed 0.00 and the percentiles went blank. max_over_time recovers the final value per series precisely because the counter dies with the pod; summing across pods gives the work actually done in the window. Read this row first when the pod is asleep, and the rate panels below when it is under load.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(max_over_time(cifs_scanner_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+        }
+      ]
+    },
+    {
+      "id": 83,
+      "type": "stat",
+      "title": "Item Loss (total)",
+      "description": "Absolute loss between discovered and sent over the range. Should be 0. Neither counter carries datasource_id, so a loss cannot yet be attributed to a share. A 0 means no work was recorded in this window. To tell idle from stuck, read it against the backlog rows: pending messages with a 0 total is the stale-connector signature. Total for the dashboard time range, not a rate. A scale-to-zero connector often finishes its work inside a single scrape interval, so the counter is born at its final value and rate() / increase() are exactly 0 - measured in dev: an 8-file scan took ~7ms and every sample of the counter read 8, so every rate panel showed 0.00 and the percentiles went blank. max_over_time recovers the final value per series precisely because the counter dies with the pod; summing across pods gives the work actually done in the window. Read this row first when the pod is asleep, and the rate panels below when it is under load.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(max_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)) - (sum(max_over_time(cifs_scanner_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+        }
+      ]
+    },
+    {
+      "id": 84,
+      "type": "stat",
+      "title": "Directories Forked (total)",
+      "description": "A 0 means no work was recorded in this window. To tell idle from stuck, read it against the backlog rows: pending messages with a 0 total is the stale-connector signature. Total for the dashboard time range, not a rate. A scale-to-zero connector often finishes its work inside a single scrape interval, so the counter is born at its final value and rate() / increase() are exactly 0 - measured in dev: an 8-file scan took ~7ms and every sample of the counter read 8, so every rate panel showed 0.00 and the percentiles went blank. max_over_time recovers the final value per series precisely because the counter dies with the pod; summing across pods gives the work actually done in the window. Read this row first when the pod is asleep, and the rate panels below when it is under load.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(max_over_time(cifs_scanner_directories_forked_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+        }
+      ]
+    },
+    {
+      "id": 85,
+      "type": "stat",
+      "title": "Content Fetches (total)",
+      "description": "Counts every fetch outcome, success and failure - cifs_content_fetch_total is partitioned by error_code. A 0 means no work was recorded in this window. To tell idle from stuck, read it against the backlog rows: pending messages with a 0 total is the stale-connector signature. Total for the dashboard time range, not a rate. A scale-to-zero connector often finishes its work inside a single scrape interval, so the counter is born at its final value and rate() / increase() are exactly 0 - measured in dev: an 8-file scan took ~7ms and every sample of the counter read 8, so every rate panel showed 0.00 and the percentiles went blank. max_over_time recovers the final value per series precisely because the counter dies with the pod; summing across pods gives the work actually done in the window. Read this row first when the pod is asleep, and the rate panels below when it is under load.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(max_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+        }
+      ]
+    },
+    {
+      "id": 86,
+      "type": "stat",
+      "title": "Augmenter Items (total)",
+      "description": "All outcomes summed; the per-outcome breakdown is in the Augmenter row. A 0 means no work was recorded in this window. To tell idle from stuck, read it against the backlog rows: pending messages with a 0 total is the stale-connector signature. Total for the dashboard time range, not a rate. A scale-to-zero connector often finishes its work inside a single scrape interval, so the counter is born at its final value and rate() / increase() are exactly 0 - measured in dev: an 8-file scan took ~7ms and every sample of the counter read 8, so every rate panel showed 0.00 and the percentiles went blank. max_over_time recovers the final value per series precisely because the counter dies with the pod; summing across pods gives the work actually done in the window. Read this row first when the pod is asleep, and the rate panels below when it is under load.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(max_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+        }
+      ]
+    },
+    {
+      "type": "row",
       "id": 100,
       "title": "Scanner — cifs-connector-be-go",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
       "panels": []
     },
     {
@@ -126,7 +266,7 @@
       "type": "stat",
       "title": "Pods Up",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 6 },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -156,7 +296,7 @@
       "type": "stat",
       "title": "Restarts (1h)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 3, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 3, "y": 6 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -177,7 +317,7 @@
       "type": "stat",
       "title": "Mounts Active",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 6, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 6, "y": 6 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -198,7 +338,7 @@
       "type": "stat",
       "title": "Files Discovered (5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 9, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 9, "y": 6 },
       "fieldConfig": {
         "defaults": { "unit": "ops", "decimals": 2 }
       },
@@ -219,7 +359,7 @@
       "type": "stat",
       "title": "Files Processed (5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 12, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 12, "y": 6 },
       "fieldConfig": {
         "defaults": { "unit": "ops", "decimals": 2 }
       },
@@ -240,7 +380,7 @@
       "type": "stat",
       "title": "Items Sent (5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 15, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 15, "y": 6 },
       "fieldConfig": {
         "defaults": { "unit": "ops", "decimals": 2 }
       },
@@ -261,7 +401,7 @@
       "type": "stat",
       "title": "ACL Errors (5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 18, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 18, "y": 6 },
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
@@ -293,7 +433,7 @@
       "type": "stat",
       "title": "Scan p95 (5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 21, "y": 1 },
+      "gridPos": { "h": 4, "w": 3, "x": 21, "y": 6 },
       "fieldConfig": {
         "defaults": { "unit": "s" }
       },
@@ -315,7 +455,7 @@
       "title": "Scanner Throughput (rate, 5m)",
       "description": "discovered = files that reached processing; sent = items handed to the batch sender. files_processed_total and items_sent_total are incremented on adjacent lines in the same else-branch (cifsscan.go), so they are identical by construction and the real funnel is discovered to sent. Neither counter carries datasource_id, so a loss cannot yet be attributed to a share.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
       "fieldConfig": {
         "defaults": { "unit": "ops" }
       },
@@ -342,7 +482,7 @@
       "type": "timeseries",
       "title": "Errors by Source (rate, 5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
       "fieldConfig": {
         "defaults": { "unit": "ops" }
       },
@@ -374,7 +514,7 @@
       "type": "timeseries",
       "title": "Scan Duration — p50 / p95 / p99",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
       "fieldConfig": {
         "defaults": { "unit": "s" }
       },
@@ -401,7 +541,7 @@
       "type": "timeseries",
       "title": "Local Stack Depth (DFS backlog)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -423,16 +563,16 @@
       "id": 150,
       "title": "Scanner — Backlog & Autoscaling",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
       "panels": []
     },
     {
       "id": 50,
       "type": "stat",
-      "title": "Scanner Backlog",
+      "title": "NATS \u2014 Scanner Backlog",
       "description": "Messages waiting on the scanner durable - the answer to \"how backed up is it\". Scanner and augmenter run in the same deployment and share this one durable (cifs-scanner-v1): handleCifsForkJE and handleItemBatchJE are dispatched by message type off a single consumer. num_pending therefore blends CIFSFork and ItemBatch work, so augmenter backlog is not separable here and KEDA cannot tell them apart either. Server-side signal from the NATS exporter (no namespace/pod labels).",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 22 },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 27 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -451,10 +591,10 @@
     {
       "id": 51,
       "type": "stat",
-      "title": "In Flight (unacked)",
+      "title": "NATS \u2014 In Flight (unacked)",
       "description": "Delivered but not yet acked: work currently inside the pods. Also the signal KEDA's ack-capacity trigger scales on. Server-side signal from the NATS exporter (no namespace/pod labels).",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 22 },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 27 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -473,10 +613,10 @@
     {
       "id": 52,
       "type": "stat",
-      "title": "Redelivered",
+      "title": "NATS \u2014 Redelivered",
       "description": "Messages redelivered after an ack timeout. Sustained growth with a flat items_sent rate is the stalled-connector signature. Server-side signal from the NATS exporter (no namespace/pod labels).",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 22 },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 27 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -498,7 +638,7 @@
       "title": "Replicas",
       "description": "Current replicas of the scanner deployment, from the HPA KEDA manages. minReplicaCount is 0, so 0 replicas with an empty queue is normal.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 22 },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 27 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -520,7 +660,7 @@
       "title": "Max Replicas",
       "description": "Ceiling from the ScaledObject. Replicas pinned here while the backlog grows means the connector is capped, not idle.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 22 },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 27 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -539,10 +679,10 @@
     {
       "id": 55,
       "type": "stat",
-      "title": "Backlog Slope (2m)",
+      "title": "NATS \u2014 Backlog Slope (2m)",
       "description": "Per-second growth of the backlog, clamped at 0. Verbatim the query KEDA's trend-based trigger evaluates; above 0.5 it asks for more pods.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 22 },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 27 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -561,10 +701,10 @@
     {
       "id": 56,
       "type": "timeseries",
-      "title": "Scanner Consumer Backlog",
+      "title": "NATS \u2014 Scanner Consumer Backlog",
       "description": "Backlog on JE_CIFS/cifs-scanner-v1. Pending high while items_sent is flat means the connector is not draining. Scanner and augmenter run in the same deployment and share this one durable (cifs-scanner-v1): handleCifsForkJE and handleItemBatchJE are dispatched by message type off a single consumer. num_pending therefore blends CIFSFork and ItemBatch work, so augmenter backlog is not separable here and KEDA cannot tell them apart either. Server-side signal from the NATS exporter (no namespace/pod labels).",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 31 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -592,7 +732,7 @@
       "title": "KEDA — Replicas: current vs desired vs max",
       "description": "current below desired means scaling is in progress or blocked; current pinned at max means capped. Scale-down is deliberately slow (cooldown 900s, 600s stabilization window), so a flat line for ten minutes after a burst is configuration, not a stuck HPA.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 31 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -620,7 +760,7 @@
       "title": "KEDA — ack-capacity signal vs threshold",
       "description": "KEDA's ack-capacity trigger: replicas = ceil(ack_pending / 1000). The red line is that threshold; crossing it is what asks for another pod.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 34 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 39 },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -648,7 +788,7 @@
       "title": "KEDA — trend-based signal vs threshold",
       "description": "KEDA's trend-based trigger: slope of the backlog over 2m, clamped at 0 so only growth counts. Threshold 0.5, activation 0.1. The pipeline-full trigger is not rendered in dev (capacity is unset), so this plus ack-capacity and pending-wakeup is the whole scaling story.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 34 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 39 },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -675,7 +815,7 @@
       "id": 200,
       "title": "Augmenter — cifs-connector-be-go",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 42 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 47 },
       "panels": []
     },
     {
@@ -684,7 +824,7 @@
       "title": "Augmenter Items by Outcome (rate, 5m)",
       "description": "Terminal outcome per item the augmenter touched. The augmenter has no autoscaling of its own - it shares the scanner's deployment and durable, so its capacity and backlog are the scanner panels above. outcome=\"missing\" is also counted by items_skipped_not_found_total; both are incremented for the same event on adjacent lines, so never sum the two.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 43 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 48 },
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
@@ -894,7 +1034,7 @@
       "type": "timeseries",
       "title": "Skipped Not-Found (rate, 5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 43 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 48 },
       "fieldConfig": {
         "defaults": { "unit": "ops" }
       },
@@ -911,7 +1051,7 @@
       "type": "timeseries",
       "title": "Augmenter ACL Query Duration — p50 / p95 / p99",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 43 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 48 },
       "fieldConfig": {
         "defaults": { "unit": "s" }
       },
@@ -938,7 +1078,7 @@
       "id": 300,
       "title": "Content — cifs-connector-be-go-content",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 51 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 56 },
       "panels": []
     },
     {
@@ -947,7 +1087,7 @@
       "title": "Pods Up",
       "description": "Content pods scale 0↔N with KEDA — 0 pods with an empty queue is normal.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 52 },
+      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 57 },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -977,7 +1117,7 @@
       "type": "stat",
       "title": "Restarts (1h)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 3, "y": 52 },
+      "gridPos": { "h": 4, "w": 3, "x": 3, "y": 57 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -998,7 +1138,7 @@
       "type": "stat",
       "title": "Fetches (5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 6, "y": 52 },
+      "gridPos": { "h": 4, "w": 3, "x": 6, "y": 57 },
       "fieldConfig": {
         "defaults": { "unit": "ops", "decimals": 2 }
       },
@@ -1019,7 +1159,7 @@
       "type": "stat",
       "title": "Fetch p95 (5m)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 9, "y": 52 },
+      "gridPos": { "h": 4, "w": 3, "x": 9, "y": 57 },
       "fieldConfig": {
         "defaults": { "unit": "s", "decimals": 2 }
       },
@@ -1041,7 +1181,7 @@
       "title": "Errors (5m)",
       "description": "Number of content fetch requests that failed in the last 5 minutes. Counter increase on cifs_content_fetch_total{success=\"false\"}.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 12, "y": 52 },
+      "gridPos": { "h": 4, "w": 3, "x": 12, "y": 57 },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -1074,7 +1214,7 @@
       "title": "Upload Throughput",
       "description": "Bytes per second confirmed by the content transfer service (rate over cifs_content_uploaded_bytes_total).",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 15, "y": 52 },
+      "gridPos": { "h": 4, "w": 3, "x": 15, "y": 57 },
       "fieldConfig": {
         "defaults": { "unit": "Bps", "decimals": 2 }
       },
@@ -1096,7 +1236,7 @@
       "title": "Mount Acquire p95 (5m)",
       "description": "p95 of successful mount acquires on the content pod. Failed acquires are tracked separately (cifs_content_mount_acquire_failure_duration_seconds).",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 18, "y": 52 },
+      "gridPos": { "h": 4, "w": 3, "x": 18, "y": 57 },
       "fieldConfig": {
         "defaults": { "unit": "s", "decimals": 2 }
       },
@@ -1115,9 +1255,9 @@
     {
       "id": 37,
       "type": "stat",
-      "title": "Fetch Backlog",
+      "title": "NATS \u2014 Fetch Backlog",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 21, "y": 52 },
+      "gridPos": { "h": 4, "w": 3, "x": 21, "y": 57 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -1139,7 +1279,7 @@
       "title": "Content Fetches by error_code (rate, 5m)",
       "description": "error_code=\"NONE\" is the success path; NAK_* codes are infra-level failures.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 56 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 61 },
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
@@ -1184,7 +1324,7 @@
       "type": "timeseries",
       "title": "Uploaded Bytes (rate)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 56 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 61 },
       "fieldConfig": {
         "defaults": { "unit": "Bps" }
       },
@@ -1202,7 +1342,7 @@
       "title": "Content Requests In-Flight",
       "description": "Requests currently inside the handler — content-mode saturation signal (the counterpart of the scanner's worker_busy). Authoritative backlog (num_pending) lives on the NATS server.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 64 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 69 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -1217,9 +1357,9 @@
     {
       "id": 44,
       "type": "timeseries",
-      "title": "Content Consumer Backlog",
+      "title": "NATS \u2014 Content Consumer Backlog",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 64 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 69 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -1239,10 +1379,10 @@
     {
       "id": 43,
       "type": "timeseries",
-      "title": "Content Consumer Redelivery",
+      "title": "NATS \u2014 Content Consumer Redelivery",
       "description": "nats_consumer_num_redelivered for the content durable (content-fetch-cifs). Rising = fetch requests failing and being retried; sustained growth toward MaxDeliver=3 means messages are about to be dropped as poison. Server-side signal from the NATS exporter (no namespace/pod labels).",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 64 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 69 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -1260,7 +1400,7 @@
       "title": "KEDA — Content Replicas: current vs desired vs max",
       "description": "The content deployment scales independently of the scanner, off its own ScaledObject watching CONTENT_FETCH/content-fetch-cifs.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 72 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 77 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -1288,7 +1428,7 @@
       "title": "KEDA — Content Trigger Signals",
       "description": "Signals behind the content ScaledObject. The consumer_name regex covers both the batch durable and the interactive one used by See Content, which has its own interactive-wakeup trigger. Server-side signal from the NATS exporter (no namespace/pod labels).",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 72 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 77 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -1315,7 +1455,7 @@
       "id": 350,
       "title": "Data Quality — Files Gone",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 80 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 85 },
       "panels": []
     },
     {
@@ -1324,7 +1464,7 @@
       "title": "Files Gone (5m)",
       "description": "Files discovered by an earlier scan that were no longer on the share when the augmenter or the content fetcher went back for them. Caveat on the content series: FETCH_ERROR_NOT_FOUND is emitted from three places and only one is a vanished file - fs.ErrNotExist, an ELOOP on a symlink swapped in mid-open, and the not-a-regular-file rejection in handler.go, which fires for symlinks, devices, pipes and sockets. On a share with symlinks this over-counts. Splitting it needs a connector change (a distinct metric label behind the same wire code).",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 81 },
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 86 },
       "fieldConfig": {
         "defaults": { "unit": "short" }
       },
@@ -1346,19 +1486,19 @@
       "title": "Files Gone by stage (rate, 5m)",
       "description": "Two series on purpose: a file missing at augment time and one missing at content-fetch time are different moments in the pipeline and are diagnosed differently. Caveat on the content series: FETCH_ERROR_NOT_FOUND is emitted from three places and only one is a vanished file - fs.ErrNotExist, an ELOOP on a symlink swapped in mid-open, and the not-a-regular-file rejection in handler.go, which fires for symlinks, devices, pipes and sockets. On a share with symlinks this over-counts. Splitting it needs a connector change (a distinct metric label behind the same wire code).",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 81 },
+      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 86 },
       "fieldConfig": {
         "defaults": { "unit": "ops" }
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[5m]))",
+          "expr": "(sum(rate(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[5m])) or vector(0))",
           "legendFormat": "augment - no longer on share"
         },
         {
           "refId": "B",
-          "expr": "sum(rate(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[5m]))",
+          "expr": "(sum(rate(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[5m])) or vector(0))",
           "legendFormat": "content - NOT_FOUND (includes non-regular files)"
         }
       ]
