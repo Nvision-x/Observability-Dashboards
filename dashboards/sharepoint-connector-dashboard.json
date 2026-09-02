@@ -17,7 +17,7 @@
   "editable": true,
   "graphTooltip": 1,
   "schemaVersion": 39,
-  "version": 3,
+  "version": 4,
   "refresh": "1m",
   "time": {
     "from": "now-6h",
@@ -1431,14 +1431,14 @@
         "uid": "${datasource}"
       },
       "gridPos": {
-        "h": 7,
+        "h": 9,
         "w": 24,
         "x": 0,
         "y": 48
       },
       "options": {
         "mode": "markdown",
-        "content": "**Label sync runs in SCANNER mode only.** Set **Component = Scanner** (or leave it on All) \u2014 the `$job` and `$pod` variables on the rest of this dashboard are driven by `sharepoint_content_fetch_*`, which only the *content* pod emits, so they can never name the pod doing this work. That is why this row selects on `$component` instead.\n\n**Blank panels are the expected state until the feature is switched on.** The producer half is gated behind `LABELSYNC_PRODUCER_ENABLED`, which defaults to **false**. Left unset, a label-sync job finds no handler and vanishes with no error and no log line \u2014 blank panels here are the only signal that has happened. It also needs `ELASTICSEARCH_HOST` pointed at the real index: a client built against a host that answers nothing constructs fine, then fails every read.\n\n**Only `applied` costs money.** `skipped_already_correct` and the pre-flight rejections are free; `assignSensitivityLabel` is the one metered call in Graph, at **$0.00185** each. An `_cached` suffix on an outcome means the verdict came from the label cache rather than a fresh read \u2014 same meaning, no Graph call.\n\n**429s do not appear here.** Graph throttling shows up in the Throttling row at the top of this dashboard, and only for content mode. Scanner-side Graph traffic is on the *Microsoft Graph API* row, gated by `$job`."
+        "content": "**Label sync runs in SCANNER mode only.** Set **Component = Scanner** (or leave it on All) \u2014 the `$job` and `$pod` variables on the rest of this dashboard are driven by `sharepoint_content_fetch_*`, which only the *content* pod emits, so they can never name the pod doing this work. That is why this row selects on `$component` instead.\n\n**Blank panels are the expected state until the feature is switched on**, and they are the *only* outward signal that it is not. The producer half is gated behind `LABELSYNC_PRODUCER_ENABLED`, which defaults to false; left unset, a label-sync job finds no handler and vanishes with no error, no log line and no failed job. In Kubernetes the switch is the Helm value `sharepointConnectorBeGo.labelSync.producerEnabled` on the **scanner** deployment \u2014 content mode never registers the handlers. Check it before assuming the pipeline is broken:\n\n```\nkubectl get cm -o jsonpath='{.data.LABELSYNC_PRODUCER_ENABLED}' \\\n  <release>-applications-sharepoint-connector-be-go-config\n```\n\n**Only `applied` costs money.** `skipped_already_correct` and the pre-flight rejections are free; `assignSensitivityLabel` is the one metered call in Graph, at **$0.00185** each. An `_cached` suffix on an outcome means the verdict came from the label cache rather than a fresh read \u2014 same meaning, no Graph call.\n\n**429s do not appear here.** Graph throttling shows up in the Throttling row at the top of this dashboard, and only for content mode. Scanner-side Graph traffic is on the *Microsoft Graph API* row, gated by `$job`."
       }
     },
     {
@@ -1449,7 +1449,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 55
+        "y": 57
       },
       "panels": [],
       "id": 4
@@ -1520,7 +1520,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 56
+        "y": 58
       }
     },
     {
@@ -1538,7 +1538,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 56
+        "y": 58
       }
     },
     {
@@ -1549,7 +1549,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 64
+        "y": 66
       },
       "panels": [],
       "id": 5
@@ -1620,7 +1620,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 65
+        "y": 67
       }
     },
     {
@@ -1689,7 +1689,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 65
+        "y": 67
       }
     },
     {
@@ -1758,7 +1758,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 65
+        "y": 67
       }
     },
     {
@@ -1769,7 +1769,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 75
       },
       "panels": [],
       "id": 6
@@ -1789,7 +1789,7 @@
         "h": 14,
         "w": 24,
         "x": 0,
-        "y": 74
+        "y": 76
       }
     }
   ]
