@@ -43,8 +43,7 @@
       "datasource": { "type": "datasource", "uid": "-- Mixed --" },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] },
+          "color": { "mode": "fixed", "fixedColor": "blue" },
           "unit": "short",
           "decimals": 1,
           "mappings": []
@@ -59,7 +58,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "percentChangeColorMode": "standard",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
         "showPercentChange": false,
         "textMode": "auto",
         "wideLayout": true
@@ -76,9 +75,9 @@
       ],
       "title": "Files scanned (records)",
       "transformations": [
-        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "seriesToRows" } },
-        { "id": "groupBy", "options": { "fields": { "Field": { "aggregations": [], "operation": "groupby" }, "Total": { "aggregations": ["sum"], "operation": "aggregate" } } } },
-        { "id": "organize", "options": { "excludeByName": { "Field": true } } }
+        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "reduceFields" } },
+        { "id": "merge", "options": {} },
+        { "id": "calculateField", "options": { "mode": "reduceRow", "reduce": { "reducer": "sum" }, "replaceFields": true, "alias": "Total" } }
       ],
       "type": "stat"
     },
@@ -86,8 +85,7 @@
       "datasource": { "type": "datasource", "uid": "-- Mixed --" },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] },
+          "color": { "mode": "fixed", "fixedColor": "green" },
           "unit": "decbytes",
           "mappings": []
         },
@@ -101,7 +99,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "percentChangeColorMode": "standard",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
         "showPercentChange": false,
         "textMode": "auto",
         "wideLayout": true
@@ -118,9 +116,9 @@
       ],
       "title": "Total size of scanned files",
       "transformations": [
-        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "seriesToRows" } },
-        { "id": "groupBy", "options": { "fields": { "Field": { "aggregations": [], "operation": "groupby" }, "Total": { "aggregations": ["sum"], "operation": "aggregate" } } } },
-        { "id": "organize", "options": { "excludeByName": { "Field": true } } }
+        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "reduceFields" } },
+        { "id": "merge", "options": {} },
+        { "id": "calculateField", "options": { "mode": "reduceRow", "reduce": { "reducer": "sum" }, "replaceFields": true, "alias": "Total" } }
       ],
       "type": "stat"
     },
@@ -149,7 +147,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "percentChangeColorMode": "standard",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
         "showPercentChange": false,
         "textMode": "auto",
         "wideLayout": true
@@ -166,9 +164,9 @@
       ],
       "title": "Scans running NOW",
       "transformations": [
-        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "seriesToRows" } },
-        { "id": "groupBy", "options": { "fields": { "Field": { "aggregations": [], "operation": "groupby" }, "Total": { "aggregations": ["sum"], "operation": "aggregate" } } } },
-        { "id": "organize", "options": { "excludeByName": { "Field": true } } }
+        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "reduceFields" } },
+        { "id": "merge", "options": {} },
+        { "id": "calculateField", "options": { "mode": "reduceRow", "reduce": { "reducer": "sum" }, "replaceFields": true, "alias": "Total" } }
       ],
       "type": "stat"
     },
@@ -198,7 +196,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "percentChangeColorMode": "standard",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
         "showPercentChange": false,
         "textMode": "auto",
         "wideLayout": true
@@ -215,9 +213,9 @@
       ],
       "title": "Backlog (pending)",
       "transformations": [
-        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "seriesToRows" } },
-        { "id": "groupBy", "options": { "fields": { "Field": { "aggregations": [], "operation": "groupby" }, "Total": { "aggregations": ["sum"], "operation": "aggregate" } } } },
-        { "id": "organize", "options": { "excludeByName": { "Field": true } } }
+        { "id": "reduce", "options": { "reducers": ["sum"], "mode": "reduceFields" } },
+        { "id": "merge", "options": {} },
+        { "id": "calculateField", "options": { "mode": "reduceRow", "reduce": { "reducer": "sum" }, "replaceFields": true, "alias": "Total" } }
       ],
       "type": "stat"
     },
@@ -240,7 +238,7 @@
           "id": 200,
           "options": {
             "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto",
-            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true
+            "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true
           },
           "pluginVersion": "11.5.2",
           "targets": [ { "expr": "sum(nx_scan_files_total)", "instant": true, "refId": "A" } ],
@@ -257,7 +255,7 @@
           "id": 201,
           "options": {
             "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto",
-            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true
+            "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true
           },
           "pluginVersion": "11.5.2",
           "targets": [ { "expr": "sum(nx_scan_bytes_total)", "instant": true, "refId": "A" } ],
@@ -277,7 +275,7 @@
           "id": 202,
           "options": {
             "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto",
-            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true
+            "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true
           },
           "pluginVersion": "11.5.2",
           "targets": [ { "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "refId": "A" } ],
@@ -297,7 +295,7 @@
           "id": 203,
           "options": {
             "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto",
-            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true
+            "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true
           },
           "pluginVersion": "11.5.2",
           "targets": [ { "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"}))", "instant": true, "refId": "A" } ],
@@ -399,6 +397,6 @@
   "timezone": "",
   "title": "NVisionX — Scan Activity & OpenSearch Overview (ALL EKS CLIENTS)",
   "uid": "nx-scan-activity-all-clients",
-  "version": 3,
+  "version": 9,
   "weekStart": ""
 }
