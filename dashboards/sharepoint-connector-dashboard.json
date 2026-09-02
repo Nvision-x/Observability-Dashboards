@@ -1,20 +1,23 @@
 {
   "uid": "nx-sharepoint-connector",
   "title": "SharePoint Connector \u2014 Graph Fetch, Throttling & Leak Detection",
-  "description": "Built 2026-07-30 for NXE-2480. Covers the sharepoint_* and graph_* metric families, which no earlier dashboard touched. Read the reference panel at the bottom first \u2014 there is no 429 counter and a flat 5xx graph is misleading.",
+  "description": "Built 2026-07-30 for NXE-2480. Covers the sharepoint_* and graph_* metric families, which no earlier dashboard touched. Read the reference panel at the bottom first \u2014 there is no 429 counter and a flat 5xx graph is misleading. Extended 2026-09-02 for NXE-2102 with the Purview label-sync row (sharepoint_label_sync_*), which is scanner-side and selects on $component, not $job.",
   "tags": [
     "nvision-x",
     "sharepoint",
     "connector",
     "graph",
     "nxe-2480",
-    "git-sync"
+    "git-sync",
+    "purview",
+    "nxe-2102",
+    "labelsync"
   ],
   "timezone": "utc",
   "editable": true,
   "graphTooltip": 1,
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "1m",
   "time": {
     "from": "now-6h",
@@ -49,6 +52,20 @@
         "current": {},
         "options": [],
         "sort": 1
+      },
+      {
+        "name": "component",
+        "label": "Component",
+        "type": "custom",
+        "query": "All : .*sharepoint-connector-be-go.*,Scanner : .*sharepoint-connector-be-go,Content : .*sharepoint-connector-be-go-content",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": ".*sharepoint-connector-be-go.*"
+        },
+        "options": [],
+        "multi": false,
+        "includeAll": false
       },
       {
         "name": "namespace",
@@ -789,6 +806,642 @@
       }
     },
     {
+      "id": 200,
+      "type": "row",
+      "title": "PURVIEW LABEL SYNC (NXE-2102) \u2014 what we wrote back, and what it cost",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      }
+    },
+    {
+      "id": 201,
+      "type": "stat",
+      "title": "Billed spend (range)",
+      "description": "assignSensitivityLabel is the only metered call in Microsoft Graph, at $0.00185 USD each. This is billed calls over the selected time range \u00d7 that unit price \u2014 the real invoice line, not an estimate from outcome arithmetic.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[$__range])) * 0.00185",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 202,
+      "type": "stat",
+      "title": "Billed calls (range)",
+      "description": "Writes actually issued to Graph. Every other outcome is free. A run whose billed count is close to its item count means almost nothing was already correct \u2014 check the mapping before repeating it.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 203,
+      "type": "stat",
+      "title": "Applied (range)",
+      "description": "Label written and the Graph operation reached a terminal success state. This is the only outcome that changed a document.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"applied.*\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 204,
+      "type": "stat",
+      "title": "Skipped \u2014 already correct (range)",
+      "description": "The file already carried the target label, so no Graph call was made and nothing was billed. On a re-run of an unchanged corpus this should dominate; if it is near zero on a second pass, the apply is not sticking.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"skipped_already_correct.*\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 205,
+      "type": "stat",
+      "title": "Terminal rejections (range)",
+      "description": "Outcomes that will never succeed on retry: label_missing (an admin deleted it \u2014 the MAPPING is stale), unsupported_label, not_appliable (the target is a label group), file_locked (423 on a file SharePoint cannot decrypt), and failed. Non-zero means someone has to change something; re-running only costs money.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 25
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"rejected_label_missing.*|rejected_unsupported_label.*|rejected_not_appliable.*|rejected_file_locked.*|failed.*\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 206,
+      "type": "stat",
+      "title": "Pending unterminated (range)",
+      "description": "Graph accepted the write but the operation had not reached a terminal state before the poll window closed. NOT a failure \u2014 the apply may still land, and it was already billed. Re-issuing would double-bill and may double-apply, so treat a rising count as a reason to widen LABELSYNC_POLL_WINDOW, never as a reason to retry.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"pending_unterminated.*\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 207,
+      "type": "timeseries",
+      "title": "Label-sync outcomes",
+      "description": "Every document the label-sync handler resolved, by outcome. Stacked, so the total height is throughput. The split between the free outcomes (skipped_already_correct, the pre-flight rejections) and the billed one (applied) is the cost story.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 20,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (rate(sharepoint_label_sync_outcome_total{job=~\"$component\"}[5m]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 208,
+      "type": "timeseries",
+      "title": "Billed call rate and cost per hour",
+      "description": "Left axis is calls/sec; the second series projects the current rate to USD/hour at $0.00185 per call. Use it to sanity-check a large run before it finishes rather than after the invoice.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[5m]))",
+          "legendFormat": "billed calls/sec",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[5m])) * 3600 * 0.00185",
+          "legendFormat": "USD/hour at current rate",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 209,
+      "type": "timeseries",
+      "title": "Terminal rejections \u2014 something has to change",
+      "description": "None of these get better by retrying. label_missing and unsupported_label point at the mapping; not_appliable means the mapped target is a label GROUP rather than a label; file_locked is about the document itself (double-key encrypted, or protected in a way SharePoint cannot decrypt).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"rejected_label_missing.*|rejected_unsupported_label.*|rejected_not_appliable.*|rejected_file_locked.*|failed.*\"}[5m]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 210,
+      "type": "timeseries",
+      "title": "Transient \u2014 worth another run",
+      "description": "deferred_retry_later is 423 fileDecryptionDeferred: the service is saying it can do this, just not now. deferred_label_pending means the mapped label was not in the tenant at write time but the registry saw it live recently, so this is propagation rather than deletion. rejected_label_disabled may reverse when an admin turns the label back on.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"deferred_retry_later.*|deferred_label_pending.*|rejected_label_disabled.*\"}[5m]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 211,
+      "type": "timeseries",
+      "title": "Billed writes that did not resolve",
+      "description": "pending_unterminated against the billed-call rate. The gap is money spent on writes whose outcome we never observed. A persistent gap means the poll window is too short for this tenant, not that the writes failed.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"pending_unterminated.*\"}[5m]))",
+          "legendFormat": "pending_unterminated",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[5m]))",
+          "legendFormat": "billed calls",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 212,
+      "type": "text",
+      "title": "How to read this row",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Label sync runs in SCANNER mode only.** Set **Component = Scanner** (or leave it on All) \u2014 the `$job` and `$pod` variables on the rest of this dashboard are driven by `sharepoint_content_fetch_*`, which only the *content* pod emits, so they can never name the pod doing this work. That is why this row selects on `$component` instead.\n\n**Blank panels are the expected state until the feature is switched on.** The producer half is gated behind `LABELSYNC_PRODUCER_ENABLED`, which defaults to **false**. Left unset, a label-sync job finds no handler and vanishes with no error and no log line \u2014 blank panels here are the only signal that has happened. It also needs `ELASTICSEARCH_HOST` pointed at the real index: a client built against a host that answers nothing constructs fine, then fails every read.\n\n**Only `applied` costs money.** `skipped_already_correct` and the pre-flight rejections are free; `assignSensitivityLabel` is the one metered call in Graph, at **$0.00185** each. An `_cached` suffix on an outcome means the verdict came from the label cache rather than a fresh read \u2014 same meaning, no Graph call.\n\n**429s do not appear here.** Graph throttling shows up in the Throttling row at the top of this dashboard, and only for content mode. Scanner-side Graph traffic is on the *Microsoft Graph API* row, gated by `$job`."
+      }
+    },
+    {
       "type": "row",
       "title": "IN-FLIGHT LEAK DETECTOR \u2014 the rival hypothesis",
       "collapsed": false,
@@ -796,7 +1449,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 55
       },
       "panels": [],
       "id": 4
@@ -867,7 +1520,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 56
       }
     },
     {
@@ -885,7 +1538,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 56
       }
     },
     {
@@ -896,7 +1549,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 64
       },
       "panels": [],
       "id": 5
@@ -967,7 +1620,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 37
+        "y": 65
       }
     },
     {
@@ -1036,7 +1689,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 37
+        "y": 65
       }
     },
     {
@@ -1105,7 +1758,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 37
+        "y": 65
       }
     },
     {
@@ -1116,7 +1769,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 73
       },
       "panels": [],
       "id": 6
@@ -1136,7 +1789,7 @@
         "h": 14,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 74
       }
     }
   ]
