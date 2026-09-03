@@ -189,14 +189,15 @@
     {
       "id": 3,
       "type": "timeseries",
-      "title": "Files per Scan — p50 / p95 / p99",
+      "title": "Entries per Directory — p50 / p95 / p99",
+      "description": "Entries per directory, NOT files. The counter is incremented once per file (cifsscan.go:485) and once per subdirectory (cifsscan.go:737), so a directory holding 50 files and 10 subdirectories reports 60. Verified in dev on 2026-09-03: 100008 files + 2008 subdirectories = 102016, exactly the histogram sum. Answers one question - is the share uniform, or is there a monster directory? A p99 of 10000 against a p50 of 50 means a single directory will dominate the whole scan. In the dev fixture p50 and p99 nearly coincide (48 vs 64) because the tree was seeded uniformly; a real share has a long tail. Aggregated with max_over_time rather than rate() for the same scrape-interval reason as the duration panels. Note that a percentile cannot surface a lone outlier: one slow directory in 2009 sits at the 99.95th percentile, so p99 excludes it by definition - that needs a max, not a quantile.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))", "legendFormat": "p50" },
-        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))", "legendFormat": "p95" },
-        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))", "legendFormat": "p99" }
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (max_over_time(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (max_over_time(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))", "legendFormat": "p99" }
       ]
     },
     {
@@ -306,14 +307,15 @@
     {
       "id": 15,
       "type": "timeseries",
-      "title": "Scan Duration — p50 / p95 / p99",
+      "title": "Directory Processing — p50 / p95 / p99",
+      "description": "Wall-clock of processing ONE directory end to end: listing entries, statx of every file, ACL query when enabled, and publishing the items (cifsscan.go:655-687). NOT the job duration - the traversal forks one NATS message per subdirectory, so a scan of 2009 directories produces 2009 independent observations and none of them spans the whole job. No connector-side metric can measure the job: nobody owns it end to end. Aggregated with max_over_time over the dashboard range instead of rate(): a scale-to-zero pod often finishes inside one 30s scrape interval, leaving a single sample that rate() cannot derive a slope from - measured in dev on 2026-09-03, this panel was blank four minutes after a 100k scan. GUARDRAIL: if the mean (_sum/_count) reads BELOW the p50, the buckets have lost resolution and the percentiles are interpolation artifacts rather than measurements. That happened here with buckets starting at 0.1s measuring 5ms latencies: histogram_quantile returned 0.1 x q for every quantile.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 23 },
       "fieldConfig": { "defaults": { "unit": "s" } },
       "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))", "legendFormat": "p50" },
-        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))", "legendFormat": "p95" },
-        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))", "legendFormat": "p99" }
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (max_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (max_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))", "legendFormat": "p99" }
       ]
     },
     {
