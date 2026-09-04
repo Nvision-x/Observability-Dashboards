@@ -32,6 +32,30 @@
       "tooltip": "Which extractor served each extension, and why a routed one did not run",
       "type": "link",
       "url": "/d/content-service-extraction-routing"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Tika vs Kreuzberg",
+      "tooltip": "Tika and Kreuzberg side by side on the same documents",
+      "type": "link",
+      "url": "/d/content-service-tika-comparison"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Runtime",
+      "tooltip": "CPU, memory, goroutines, file descriptors and restarts",
+      "type": "link",
+      "url": "/d/apps-v2-content-service-runtime"
     }
   ],
   "liveNow": false,
@@ -2566,7 +2590,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "- Slot occupancy (count, 0–60, left axis) vs. `aborted/s` (rate, right axis) — different units, check the legend value, not just line height.\n- Occupancy capped at EXTRACTION_MAX_CONCURRENCY — deployed value 60 (code default 10; confirm `contentService.env` before trusting the red line).\n- Occupancy saturates: once pinned it can't show how far behind you are — use \"Extraction queue wait\" for that.\n- Sustained `aborted/s` > 0 → the gate is shedding work (deadline expired while queueing), not just pacing it.\n- Per-lane split shows who holds the gate: `bulk` filling it during a scan is expected, interactive extractions should still get in. No line for a lane = no traffic, not zero.",
+      "description": "- Occupancy and capacity (count, left axis) vs. `aborted/s` (rate, right axis) — different units, check the legend value, not just line height.\n- Capacity is `content_extraction_slots_capacity` summed over reporting pods. Each pod exports its own EXTRACTION_MAX_CONCURRENCY, so this tracks a helm change on the next rollout and stays right mid-rollout when pods disagree. No capacity line = the metric is not in the deployed image yet, NOT zero capacity.\n- Both slot series are fleet sums across pods, so they legitimately exceed any single pod's limit. Compare occupancy against the capacity line, never against a fixed number.\n- Occupancy saturates: once pinned at capacity it can't show how far behind you are — use \"Extraction queue wait\" for that.\n- A held slot is not always a document being parsed. It covers the raw read, the extractor call, and the compress-and-write tail after the extractor has already answered.\n- Sustained `aborted/s` > 0 → the gate is shedding work (deadline expired while queueing), not just pacing it.\n- Per-lane split shows who holds the gate: `bulk` filling it during a scan is expected, interactive extractions should still get in. No line for a lane = no traffic, not zero.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2585,10 +2609,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 60
               }
             ]
           }
@@ -2611,6 +2631,35 @@
               {
                 "id": "custom.axisLabel",
                 "value": "aborted/s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
               }
             ]
           }
@@ -2659,9 +2708,18 @@
           "expr": "sum by (lane) (rate(content_extraction_queue_wait_seconds_count{namespace=\"$namespace\", job=\"$job\", outcome=\"aborted\"}[5m]))",
           "legendFormat": "aborted/s — {{lane}}",
           "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(content_extraction_slots_capacity{namespace=\"$namespace\", job=\"$job\"})",
+          "legendFormat": "capacity (slots)",
+          "refId": "D"
         }
       ],
-      "title": "Extraction concurrency (cap 60) — occupied slots (count) vs. abandoned-wait rate (req/s)",
+      "title": "Extraction concurrency — occupied slots vs. capacity (count) and abandoned-wait rate (req/s)",
       "type": "timeseries"
     },
     {

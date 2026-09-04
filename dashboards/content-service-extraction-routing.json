@@ -15,10 +15,34 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "Content Service",
-      "tooltip": "The main content-service dashboard: requests, cache, extraction and dedup",
+      "title": "Overview",
+      "tooltip": "Requests, cache, extraction, dedup and the KEDA trigger",
       "type": "link",
       "url": "/d/content-service"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Tika vs Kreuzberg",
+      "tooltip": "Tika and Kreuzberg side by side on the same documents",
+      "type": "link",
+      "url": "/d/content-service-tika-comparison"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Runtime",
+      "tooltip": "CPU, memory, goroutines, file descriptors and restarts",
+      "type": "link",
+      "url": "/d/apps-v2-content-service-runtime"
     }
   ],
   "liveNow": false,
@@ -41,7 +65,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Which backend actually parsed each document, per second.\n\n- kreuzberg \u2014 xberg, the default extractor: everything no route claims.\n- tika_routed \u2014 Tika as a routed extractor (TIKA_EXTENSIONS), the foreground parse.\n- spreadsheet \u2014 xlsxparser over gRPC (SPREADSHEET_EXTENSIONS).\n- tika \u2014 the SAMPLED COMPARISON second parse only, not a routing destination. It appears here so it is not mistaken for routed traffic; it is zero unless EXTRACTION_COMPARISON_ENABLED is on.\n\nA routed series at zero while its extensions are being requested is the thing to chase \u2014 see the fallback row below for why.",
+      "description": "Which backend actually parsed each document, per second.\n\n- kreuzberg \u2014 xberg, the default extractor: everything no route claims.\n- tika_routed \u2014 Tika as a routed extractor (TIKA_EXTENSIONS), the foreground parse.\n- spreadsheet \u2014 xlsxparser over gRPC (SPREADSHEET_EXTENSIONS).\n- skipped \u2014 not an extractor: content-service answered before calling one, either because the file was larger than EXTRACTION_MAX_SIZE (status skipped) or because it was zero bytes (status empty_content). These were recorded under kreuzberg until the preflights got a label of their own.\n- unroutable \u2014 not an extractor: file types content-service resolved as unroutable are registered to a processor with no backend, so they are answered UNSUPPORTED_TYPE without a round trip. Volume here is documents deliberately not extracted, not failures, and it is excluded from the failure and bytes panels below.\n- tika \u2014 the SAMPLED COMPARISON second parse only, not a routing destination. It appears here so it is not mistaken for routed traffic; it is zero unless EXTRACTION_COMPARISON_ENABLED is on.\n\nA routed series at zero while its extensions are being requested is the thing to chase \u2014 see the fallback row below for why.",
       "id": 1,
       "title": "Extractions by parser_kind",
       "type": "timeseries",
@@ -155,7 +179,7 @@
       },
       "id": 3,
       "title": "Extension \u2192 parser_kind (selected range)",
-      "description": "Which backend served each file type over the dashboard range. This is the panel that answers 'are spreadsheets actually going where I configured them'. An extension appearing under kreuzberg that you expected under spreadsheet or tika_routed means it fell back \u2014 the reason is in the row below.\n\nextension is bounded by EXTRACTION_COMPARISON_EXTENSION_WHITELIST; anything off that list shows as 'other', and a file with no extension as 'unknown'.",
+      "description": "Which backend served each file type over the dashboard range. This is the panel that answers 'are spreadsheets actually going where I configured them'. An extension appearing under kreuzberg that you expected under spreadsheet or tika_routed means it fell back \u2014 the reason is in the row below.\n\nextension is bounded by KNOWN_EXTENSIONS. A file type content-service resolved as unroutable \u2014 UNROUTABLE_EXTENSIONS, EXCLUDED_EXTENSIONS, or media and source code switched that way \u2014 shows as 'unroutable' rather than under its own extension. A file with no extension shows as 'unknown'. Anything on no list shows as 'other', which now means exactly one thing: a file type nobody has classified yet, and the prompt to put it on a list. The lists are per-environment configuration \u2014 the applications chart carries defaults and each nxdeployment-*-env values file may override them \u2014 so what counts as 'other' here is not necessarily what counts as 'other' on another cluster. docs/extension-lists.md in content-service-be-go is the provenance record for the chart defaults.",
       "type": "table",
       "gridPos": {
         "h": 9,
@@ -444,7 +468,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\", parser_kind=~\"spreadsheet|tika_routed\"}[5m]))\n  /\nsum (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\", parser_kind!=\"tika\"}[5m]))",
+          "expr": "sum (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\", parser_kind=~\"spreadsheet|tika_routed\"}[5m]))\n  /\nsum (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\", parser_kind!~\"unroutable|skipped\", parser_kind!=\"tika\"}[5m]))",
           "legendFormat": "routed share",
           "refId": "A"
         }
@@ -513,7 +537,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (parser_kind, status) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\", status!=\"success\", status!=\"skipped\"}[5m]))",
+          "expr": "sum by (parser_kind, status) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\", status!=\"success\", status!=\"skipped\", parser_kind!~\"unroutable|skipped\"}[5m]))",
           "legendFormat": "{{parser_kind}} \u2014 {{status}}",
           "refId": "A"
         }
@@ -569,7 +593,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (parser_kind) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\", status!=\"success\", status!=\"skipped\"}[5m]))\n  /\nsum by (parser_kind) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "expr": "sum by (parser_kind) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\", status!=\"success\", status!=\"skipped\", parser_kind!~\"unroutable|skipped\"}[5m]))\n  /\nsum by (parser_kind) (rate(content_extraction_total{namespace=\"$namespace\", job=\"$job\", parser_kind!~\"unroutable|skipped\"}[5m]))",
           "legendFormat": "{{parser_kind}}",
           "refId": "A"
         }
@@ -694,7 +718,7 @@
       },
       "id": 15,
       "title": "Failures by extension and status (selected range)",
-      "description": "Which file types are failing, and how, over the dashboard range. The per-parser panels above say WHICH BACKEND is unhealthy; this one says WHICH CONTENT is, which is the question a routing change actually raises.\n\nstatus is the extraction outcome vocabulary (unsupported_type, empty_content, corrupted, timeout, error), NOT the caller-facing error code from docs/error-codes.md \u2014 no metric carries error_code and extension on the same series today.\n\nsuccess and skipped are both excluded, matching Failure rate by parser_kind: skipped is a document extraction was never attempted on, not a failure. Pair with Extension \u2192 parser_kind above to see which backend produced the failures for a given extension.\n\nextension is bounded by EXTRACTION_COMPARISON_EXTENSION_WHITELIST; anything off that list shows as 'other', and a file with no extension as 'unknown'.",
+      "description": "Which file types are failing, and how, over the dashboard range. The per-parser panels above say WHICH BACKEND is unhealthy; this one says WHICH CONTENT is, which is the question a routing change actually raises.\n\nstatus is the extraction outcome vocabulary (unsupported_type, empty_content, corrupted, timeout, error), NOT the caller-facing error code from docs/error-codes.md \u2014 no metric carries error_code and extension on the same series today.\n\nsuccess is excluded, as are both preflight skips \u2014 parser_kind 'skipped', covering a file over EXTRACTION_MAX_SIZE and a zero-byte file alike \u2014 and parser_kind 'unroutable'. The rule is the same one Failure rate by parser_kind uses: extraction was never attempted, so it is not a failure. That traffic is broken out on Skipped before extraction, by extension and reason, directly below.\n\nNote that empty_content still appears here when a real extractor returned no text from a file that had bytes in it. That is a genuine extraction failure and a different thing from a zero-byte source, which is why the filter is on parser_kind rather than on the status. Pair with Extension \u2192 parser_kind above to see which backend produced the failures for a given extension.\n\nextension is bounded by KNOWN_EXTENSIONS. A file type content-service resolved as unroutable \u2014 UNROUTABLE_EXTENSIONS, EXCLUDED_EXTENSIONS, or media and source code switched that way \u2014 shows as 'unroutable' rather than under its own extension. A file with no extension shows as 'unknown'. Anything on no list shows as 'other', which now means exactly one thing: a file type nobody has classified yet, and the prompt to put it on a list. The lists are per-environment configuration \u2014 the applications chart carries defaults and each nxdeployment-*-env values file may override them \u2014 so what counts as 'other' here is not necessarily what counts as 'other' on another cluster. docs/extension-lists.md in content-service-be-go is the provenance record for the chart defaults.",
       "type": "table",
       "gridPos": {
         "h": 9,
@@ -729,7 +753,65 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "sum by (extension, status) (increase(content_extraction_total{namespace=\"$namespace\", job=\"$job\", status!=\"success\", status!=\"skipped\"}[$__range]))",
+          "expr": "sum by (extension, status) (increase(content_extraction_total{namespace=\"$namespace\", job=\"$job\", status!=\"success\", status!=\"skipped\", parser_kind!~\"unroutable|skipped\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "id": 16,
+      "title": "Skipped before extraction, by extension and reason (selected range)",
+      "description": "How much content never reaches an extractor at all, and what it is.\n\ncontent-service answers two conditions from the raw object's size alone, before an extraction slot is taken or a body is read. Both record parser_kind 'skipped', because no parser ran:\n\n- skipped \u2014 the file is larger than EXTRACTION_MAX_SIZE. The caller still gets the raw object, with skipped=true and a reason; only the text is missing.\n- empty_content \u2014 the file is zero bytes. The caller gets EMPTY_CONTENT, non-retryable, which is the same answer the extractor used to give after a round trip.\n\nRead it as a content question, not a health one. A steady trickle is normal for any real corpus. What is worth chasing is a single extension dominating the table \u2014 a connector emitting zero-byte placeholders shows up here as one extension's empty_content climbing, and a scan of media or disk images shows up as skipped against a size bucket at the top of the range.\n\nThis is deliberately NOT on Failures by extension and status: extraction was never attempted, so neither row is a failure. Files declined by policy are a third thing again \u2014 they carry parser_kind 'unroutable' and the extension label 'unroutable', so they are one row on Extension \u2192 parser_kind rather than a breakdown here.",
+      "type": "table",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 53
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        }
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Value"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "format": "table",
+          "instant": true,
+          "expr": "sum by (extension, status, size_bucket) (increase(content_extraction_total{namespace=\"$namespace\", job=\"$job\", parser_kind=\"skipped\"}[$__range]))",
           "legendFormat": "",
           "refId": "A"
         }
@@ -751,7 +833,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 53
+        "y": 62
       },
       "id": 400,
       "panels": [],
@@ -771,7 +853,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 54
+        "y": 63
       },
       "fieldConfig": {
         "defaults": {
@@ -808,7 +890,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (parser_kind) (rate(content_extraction_bytes_sent_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "expr": "sum by (parser_kind) (rate(content_extraction_bytes_sent_total{namespace=\"$namespace\", job=\"$job\", parser_kind!~\"unroutable|skipped\"}[5m]))",
           "legendFormat": "{{parser_kind}}",
           "refId": "A"
         }
@@ -827,7 +909,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 54
+        "y": 63
       },
       "fieldConfig": {
         "defaults": {
@@ -864,7 +946,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (parser_kind) (rate(content_extraction_bytes_received_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "expr": "sum by (parser_kind) (rate(content_extraction_bytes_received_total{namespace=\"$namespace\", job=\"$job\", parser_kind!~\"unroutable|skipped\"}[5m]))",
           "legendFormat": "{{parser_kind}}",
           "refId": "A"
         }
@@ -883,7 +965,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 71
       },
       "fieldConfig": {
         "defaults": {
@@ -920,7 +1002,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (parser_kind) (rate(content_extraction_bytes_received_total{namespace=\"$namespace\", job=\"$job\"}[5m]))\n  /\nsum by (parser_kind) (rate(content_extraction_bytes_sent_total{namespace=\"$namespace\", job=\"$job\"}[5m]))",
+          "expr": "sum by (parser_kind) (rate(content_extraction_bytes_received_total{namespace=\"$namespace\", job=\"$job\", parser_kind!~\"unroutable|skipped\"}[5m]))\n  /\nsum by (parser_kind) (rate(content_extraction_bytes_sent_total{namespace=\"$namespace\", job=\"$job\", parser_kind!~\"unroutable|skipped\"}[5m]))",
           "legendFormat": "{{parser_kind}}",
           "refId": "A"
         }
