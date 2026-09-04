@@ -162,15 +162,22 @@
     {
       "id": 1,
       "type": "timeseries",
-      "title": "Files Discovered vs Processed vs Sent (rate)",
-      "description": "Discovered = files that reached processing; sent = items handed to the batch sender. Processed and sent are identical by construction, so the real funnel is discovered to sent.",
+      "title": "Scanner Items by Outcome (rate)",
+      "description": "Terminal outcome per file the scanner processed, plotted against the discovery rate. The outcomes sum to discovered; marshal_failed is bad data, batch_send_failed is the sender or NATS.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "discovered" },
-        { "refId": "B", "expr": "sum(rate(cifs_scanner_files_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "processed" },
-        { "refId": "C", "expr": "sum(rate(cifs_scanner_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "sent" }
+        {
+          "refId": "A",
+          "expr": "sum(rate(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "discovered"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (outcome) (rate(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
       ]
     },
     {
@@ -213,7 +220,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(cifs_scanner_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) / sum(rate(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "expr": "sum(rate(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", outcome=\"sent\"}[5m])) / clamp_min(sum(rate(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])), 0.0001)",
           "legendFormat": "sent / discovered"
         }
       ]
@@ -222,7 +229,7 @@
       "id": 5,
       "type": "timeseries",
       "title": "Item Loss (discovered − sent)",
-      "description": "Absolute loss rate. Sustained above zero means UpsertItem is failing for some files; the per-item reason goes to the error stream, not to a metric.",
+      "description": "Absolute loss rate. Sustained above zero means items are not reaching the batch sender; the outcome panel says which of the two causes.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 12, "x": 12, "y": 8 },
       "fieldConfig": {
@@ -231,7 +238,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) - sum(rate(cifs_scanner_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "expr": "sum(rate(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])) - sum(rate(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", outcome=\"sent\"}[5m]))",
           "legendFormat": "items lost/s"
         }
       ]
