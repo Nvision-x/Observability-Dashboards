@@ -1,5 +1,5 @@
 {
-  "__comment": "NVisionX Backup Status — ALL EKS CLIENTS, ONE DASHBOARD. Same layout pattern as scan-activity-all-clients.json (combined overview + one collapsible row per client). CONFIRMED LIVE against Integration (2026-08-19): kube_job_status_succeeded/_failed/_completion_time/_start_time are USELESS here - both backup CronJobs set ttlSecondsAfterFinished: 600, so kube-state-metrics only ever sees the completed Job object for a 10-minute window after each run (daily for postgres, weekly for opensearch); outside that window the query returns nothing at all, which is what 'No data' on the first version of this dashboard actually meant. Rebuilt around kube_cronjob_status_last_successful_time instead, which lives on the permanent CronJob object (never garbage-collected) - confirmed present with real values: cronjob='databases-postgres-backup' (namespace default, schedule '0 2 * * *' daily) and cronjob='databases-opensearch-backup' (schedule '0 2 * * 0' weekly). Health per client = freshness of that timestamp vs. 1.5x the expected schedule interval (36h for daily postgres, 216h/9d for weekly opensearch) - a generous grace window, not exact-schedule matching, since exact run time can drift a little run to run. Per-run duration and multi-run history panels were dropped entirely rather than shipped broken - that data doesn't survive the Job's 10-minute TTL and there is no CronJob-level substitute for it.",
+  "__comment": "NVisionX Backup Status — ALL EKS CLIENTS, ONE DASHBOARD. Same layout pattern as scan-activity-all-clients.json (combined overview + one collapsible row per client). CONFIRMED LIVE against Integration (2026-08-19): kube_job_status_succeeded/_failed/_completion_time/_start_time are USELESS here - both backup CronJobs set ttlSecondsAfterFinished: 600, so kube-state-metrics only ever sees the completed Job object for a 10-minute window after each run (daily for postgres, weekly for opensearch); outside that window the query returns nothing at all, which is what 'No data' on the first version of this dashboard actually meant. Rebuilt around kube_cronjob_status_last_successful_time instead, which lives on the permanent CronJob object (never garbage-collected) - confirmed present with real values: cronjob='databases-postgres-backup' (namespace default, schedule '0 2 * * *' daily) and cronjob='databases-opensearch-backup' (schedule '0 2 * * 0' weekly). Health per client = freshness of that timestamp vs. 1.5x the expected schedule interval (36h for daily postgres, 216h/9d for weekly opensearch) - a generous grace window, not exact-schedule matching, since exact run time can drift a little run to run. Per-run duration and multi-run history panels were dropped entirely rather than shipped broken - that data doesn't survive the Job's 10-minute TTL and there is no CronJob-level substitute for it. | 2026-09-07: replaced the 4 'N clients fresh / N clients stale' panels (metric-type-first layout) with a single repeated per-client tile row (client-first layout, green/red per client) per manager feedback - at-a-glance 'X green, Y red' with the client name right on the tile, no need to cross-reference two panels to find out which client is failing.",
   "annotations": {
     "list": [
       {
@@ -69,7 +69,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "**Overview** counts how many clients have a fresh vs. stale/overdue backup across the full client fleet (Demo, Demo2, Integration, IONIS, KrispyKreme, SSB, UAT) — \"fresh\" means the last successful run completed within 1.5x its expected schedule (36h for daily PostgreSQL, 9 days for weekly OpenSearch). **Below, one row per client**: hours since the last successful backup (colored) and when that was, for both backup types. Use the **🌐 All / 🏭 Prod Only / 🧪 Prod-test Only** links (top right) to filter which clients show below, or add/remove individual clients with the **Clients** picker.",
+        "content": "**Overview** shows one tile per client: green means both PostgreSQL and OpenSearch backups are fresh (last successful run within 1.5x its expected schedule - 36h for daily PostgreSQL, 9 days for weekly OpenSearch); red means at least one is stale/overdue for that client. **Below, one row per client**: hours since the last successful backup (colored) and when that was, for both backup types - open a client's row to see which backup type is behind and by how much. Use the **🌐 All / 🏭 Prod Only / 🧪 Prod-test Only** links (top right) to filter which clients show, or add/remove individual clients with the **Clients** picker.",
         "mode": "markdown"
       },
       "pluginVersion": "11.5.2",
@@ -92,490 +92,92 @@
     },
     {
       "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
+        "type": "prometheus",
+        "uid": "${client_ds}"
       },
+      "description": "Green = this client's PostgreSQL AND OpenSearch backups are both fresh. Red = at least one is stale/overdue - open the client's row below for which one and how long.",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "fixed",
-            "fixedColor": "green"
+            "mode": "thresholds"
           },
           "unit": "short",
-          "mappings": []
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Stale",
+                  "color": "red"
+                }
+              }
+            },
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "Healthy",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "noValue": "No data"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
+        "w": 4,
         "x": 0,
         "y": 3
       },
-      "id": 2,
+      "id": 6,
       "options": {
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
-        "justifyMode": "auto",
+        "justifyMode": "center",
         "orientation": "auto",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
-            "sum"
+            "lastNotNull"
           ],
           "fields": "",
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "auto",
+        "textMode": "value_and_name",
         "wideLayout": true
       },
       "pluginVersion": "11.5.2",
+      "repeat": "client_ds",
+      "repeatDirection": "h",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
+            "uid": "${client_ds}"
           },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600",
+          "expr": "((time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600) * ((time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600)",
           "instant": true,
-          "legendFormat": "Demo",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600",
-          "instant": true,
-          "legendFormat": "Demo2",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600",
-          "instant": true,
-          "legendFormat": "Integration",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600",
-          "instant": true,
-          "legendFormat": "IONIS",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600",
-          "instant": true,
-          "legendFormat": "KrispyKreme",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600",
-          "instant": true,
-          "legendFormat": "SSB",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) < bool 129600",
-          "instant": true,
-          "legendFormat": "UAT",
-          "refId": "UAT"
+          "refId": "A"
         }
       ],
-      "title": "PostgreSQL: clients with a fresh backup",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "short",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 3
-      },
-      "id": 3,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) >= bool 129600",
-          "instant": true,
-          "legendFormat": "Demo",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) >= bool 129600",
-          "instant": true,
-          "legendFormat": "Demo2",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) >= bool 129600",
-          "instant": true,
-          "legendFormat": "Integration",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) >= bool 129600",
-          "instant": true,
-          "legendFormat": "IONIS",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) >= bool 129600",
-          "instant": true,
-          "legendFormat": "KrispyKreme",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) >= bool 129600",
-          "instant": true,
-          "legendFormat": "SSB",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*postgres-backup.*\"})) >= bool 129600",
-          "instant": true,
-          "legendFormat": "UAT",
-          "refId": "UAT"
-        }
-      ],
-      "title": "PostgreSQL: clients with a stale/overdue backup",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "green"
-          },
-          "unit": "short",
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 12,
-        "y": 3
-      },
-      "id": 4,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600",
-          "instant": true,
-          "legendFormat": "Demo",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600",
-          "instant": true,
-          "legendFormat": "Demo2",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600",
-          "instant": true,
-          "legendFormat": "Integration",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600",
-          "instant": true,
-          "legendFormat": "IONIS",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600",
-          "instant": true,
-          "legendFormat": "KrispyKreme",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600",
-          "instant": true,
-          "legendFormat": "SSB",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) < bool 777600",
-          "instant": true,
-          "legendFormat": "UAT",
-          "refId": "UAT"
-        }
-      ],
-      "title": "OpenSearch: clients with a fresh backup",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "short",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 3
-      },
-      "id": 5,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "11.5.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfmklaiqtfif4c"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) >= bool 777600",
-          "instant": true,
-          "legendFormat": "Demo",
-          "refId": "Demo"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl7hw5ukkwzkd"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) >= bool 777600",
-          "instant": true,
-          "legendFormat": "Demo2",
-          "refId": "Demo2"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efl6f47f8cj5sb"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) >= bool 777600",
-          "instant": true,
-          "legendFormat": "Integration",
-          "refId": "Integration"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs7yusoeq680e"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) >= bool 777600",
-          "instant": true,
-          "legendFormat": "IONIS",
-          "refId": "IONIS"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efs2d1k3se39ca"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) >= bool 777600",
-          "instant": true,
-          "legendFormat": "KrispyKreme",
-          "refId": "KrispyKreme"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "dfs2d5r9cp0qob"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) >= bool 777600",
-          "instant": true,
-          "legendFormat": "SSB",
-          "refId": "SSB"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "efmkjlznz8ykgb"
-          },
-          "expr": "(time() - max(kube_cronjob_status_last_successful_time{namespace=\"default\", cronjob=~\".*opensearch-backup.*\"})) >= bool 777600",
-          "instant": true,
-          "legendFormat": "UAT",
-          "refId": "UAT"
-        }
-      ],
-      "title": "OpenSearch: clients with a stale/overdue backup",
+      "title": "$client_ds",
       "type": "stat"
     },
     {
