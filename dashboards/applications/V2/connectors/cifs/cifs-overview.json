@@ -161,7 +161,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_scanner_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "(sum(max_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[$__range])) or vector(0))"
         }
       ]
     },
@@ -169,7 +169,7 @@
       "id": 83,
       "type": "stat",
       "title": "Item Loss (total)",
-      "description": "Files discovered minus items sent over the selected range. Should be 0. Neither counter carries datasource_id, so a loss cannot be attributed to a specific share.",
+      "description": "Files discovered minus items sent over the selected range. Should be 0. A non-zero value is broken down by cause in Items Failed.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
       "fieldConfig": {
@@ -193,7 +193,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)) - (sum(max_over_time(cifs_scanner_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "(sum(max_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)) - (sum(max_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[$__range])) or vector(0))"
         }
       ]
     },
@@ -451,21 +451,33 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Files Processed (5m)",
+      "title": "Items Failed (5m)",
+      "description": "Rate of items that never reached the batch sender, both causes summed. marshal_failed is bad data, batch_send_failed is the sender or NATS; the split is on the pipeline board.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 3, "x": 12, "y": 11 },
       "fieldConfig": {
-        "defaults": { "unit": "ops", "decimals": 2 }
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.01 },
+              { "color": "red", "value": 0.1 }
+            ]
+          }
+        }
       },
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "none",
+        "colorMode": "background",
         "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(cifs_scanner_files_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+          "expr": "sum(rate(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=~\"marshal_failed|batch_send_failed\"}[5m]))"
         }
       ]
     },
@@ -486,7 +498,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(cifs_scanner_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+          "expr": "sum(rate(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[5m]))"
         }
       ]
     },
@@ -548,7 +560,7 @@
       "id": 10,
       "type": "timeseries",
       "title": "Scanner Throughput (rate, 5m)",
-      "description": "Discovered = files that reached processing; sent = items handed to the batch sender. Processed and sent are identical by construction, so the real funnel is discovered to sent.",
+      "description": "Discovered = files that reached processing; sent = items that made it into a batch; failed = items that did not. Discovered equals sent plus failed by construction.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
       "fieldConfig": {
@@ -562,13 +574,13 @@
         },
         {
           "refId": "B",
-          "expr": "sum(rate(cifs_scanner_files_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "files processed"
+          "expr": "sum(rate(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[5m]))",
+          "legendFormat": "items sent"
         },
         {
           "refId": "C",
-          "expr": "sum(rate(cifs_scanner_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "items sent"
+          "expr": "sum(rate(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=~\"marshal_failed|batch_send_failed\"}[5m]))",
+          "legendFormat": "items failed"
         }
       ]
     },
