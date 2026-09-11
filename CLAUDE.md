@@ -138,11 +138,19 @@ Every V2 dashboard MUST include in `tags`:
 ### Template variables (V2 standard)
 Every V2 dashboard declares these in `templating.list`, in this order:
 - `$datasource` — type `datasource`, query `prometheus`. Default value should match the actual Prometheus datasource UID used in your Grafana (CLAUDE.md previously claimed `prometheus-nx` but V1 dashboards use `${DS_PROMETHEUS}` or `Prometheus` — confirm against your real Grafana before relying on the default).
-- `$namespace` — `label_values(process_start_time_seconds{job=~".*<name>.*"}, namespace)`.
+- `$namespace` — `label_values(kube_deployment_spec_replicas{deployment=~".*<name>.*"}, namespace)`. **Never `process_start_time_seconds` here** — see the note below.
 - `$component` — **connectors only.** Custom variable with `All` / `Scanner` / `Content` options for connectors that have a content-fetch pod; single-value, used as a job-regex selector. Its option values are full job regexes, not bare names — see the job-label table below. Services have a single pod type and omit this variable.
 - `$pod` — `label_values(process_start_time_seconds{job=~"$component", namespace="$namespace"}, pod)` for connectors, or `job=~".*<name>.*"` for services. Multi-value with `includeAll`.
 
-Use `process_start_time_seconds` rather than `up` to drive `$namespace` / `$pod`. The process collector always exports it — including when `METRICS_ENABLED=false`, where only the Go and process collectors are served — so the variables still resolve on a pod whose app instruments are switched off.
+⚠️ **`$namespace` must be fed from kube-state-metrics, not from a process metric.** `process_start_time_seconds` describes the *process*: it does not exist if the pod never ran. Every connector is `minReplicaCount: 0`, so that is the **normal** state, not an edge case. With no options the `current` value saved in the JSON cannot be applied, Grafana interpolates empty, `namespace=""` matches nothing, and the whole board goes blank — including the ~15 backlog and KEDA panels whose own series (`nats_consumer_*`, `kube_horizontalpodautoscaler_*`) survive the sleeping pod perfectly well. That is the board failing to answer "how far behind is it?" in exactly the state the connector spends most of its life in.
+
+Use something that describes the **deployment object** instead: `kube_deployment_spec_replicas`, or anything else from kube-state-metrics. It exists at 0 replicas. Measured on CIFS in dev, where this cost 15 panels; the three CIFS boards and the three Box boards are fixed, the other V2 boards still carry the old query.
+
+Two traps when verifying the fix: a kickoff **hides** the bug (once the pod is awake the old query resolves too, so look at the board *before* generating load), and Prometheus resolves `label_values` at ~2h block granularity, so a window 20 minutes after the pod died still returns the old value. Reproducing it needs an explicit window of *hours* before the last run.
+
+`$pod` is a different case and **does** stay on `process_start_time_seconds`: that variable is meant to list pods that actually exist, and the process collector always exports it — including when `METRICS_ENABLED=false`, where only the Go and process collectors are served — so it still resolves on a pod whose app instruments are switched off.
+
+⚠️ **`$pod` needs `allValue: ".+"`, not `".*"`.** Where a PodMonitor and a Service-level catch-all both scrape the same target, every series arrives twice and only the PodMonitor copy carries a `pod` label. In PromQL `.*` matches the *absent* label too, so `pod=~"$pod"` grabs both copies and every additive aggregation returns exactly double. `histogram_quantile` and `_sum`/`_count` ratios are immune, so percentiles stay right while counters lie and no panel looks obviously broken. Do **not** generalise `.+` to business labels like `$datasource_id` — there `.*` is correct, because series legitimately lacking the label would otherwise be dropped.
 
 Pipeline dashboards add view-specific variables when needed (e.g., `$query_type` for Snowflake/PostgreSQL, `$datasource_id` for CIFS).
 
@@ -242,7 +250,7 @@ Every non-root dashboard must include the root link. Use `${var:queryparam}` to 
 `applications-overview.json` is the exception: as the root it has an empty `links` array, and reaches components through the `fieldConfig.defaults.links` drill-down on each row's `Pods Up` stat.
 
 ### Metric naming
-Native Prometheus connectors emit `<connector>_connector_*` (e.g., `snowflake_connector_items_sent_total`). OTel-based connectors emit different prefixes (Box: `box_*`, SharePoint: `graph_*`). Histograms use `_seconds` suffix and exponential buckets — **note that bucket ranges differ across connectors**, so latency panels are connector-specific (no shared library panel for histograms today).
+Native Prometheus connectors emit `<connector>_connector_*` (e.g., `snowflake_connector_items_sent_total`). CIFS and Box use a per-subsystem shape instead — `cifs_scanner_*` / `cifs_augmenter_*` / `cifs_content_*`, and `box_scanner_*` / `box_augmenter_*` / `box_api_*` / `box_content_*` — which is the current convention for new work, because it lets a query be reused across connectors with a namespace swap. SharePoint is the last one still on the OTel meter and emits `graph_*`. Histograms use `_seconds` suffix and exponential buckets — **note that bucket ranges differ across connectors**, so latency panels are connector-specific (no shared library panel for histograms today).
 
 Services differ from connectors here:
 - **Domain metrics are per-service and not prefixed by the service name automatically.** Request service names its own instruments `request_service_*`; registration service does not, and emits a bare `connector_registrations_total`. The `Namespace` field on `pipeline-lib-go/metrics.Config` sets the OTel *meter* name (instrumentation scope), **not** a Prometheus metric prefix — the exporter is created with a plain `prometheus.New()`. Do not assume a service prefix.
