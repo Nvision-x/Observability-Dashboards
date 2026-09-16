@@ -2022,7 +2022,7 @@
     {
       "id": 113,
       "type": "timeseries",
-      "title": "Saturation \u2014 in-flight, slots, deferrals",
+      "title": "Saturation \u2014 in-flight, slots, contention",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2036,7 +2036,39 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short"
-        }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "slot requeues /s"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "slot deferrals /s"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
       },
       "targets": [
         {
@@ -2053,9 +2085,14 @@
           "refId": "C",
           "expr": "sum(rate(box_scanner_user_slot_deferrals_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "slot deferrals /s"
+        },
+        {
+          "refId": "R",
+          "expr": "sum(rate(box_scanner_user_slot_requeues_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "slot requeues /s"
         }
       ],
-      "description": "Where the scanner throttles itself. Box rate-limits per impersonated user, so the connector holds a fixed number of slots per user shared across every pod; work that finds no free slot is deferred and redelivered later. Flat at zero with the pods asleep is the normal state; flat WITH load would mean only one of the two folder entry points got instrumented."
+      "description": "Where the scanner throttles itself. Box rate-limits per impersonated user, so the connector holds a fixed number of slots per user shared across every pod. A folder that finds no free slot waits, then is RE-PUBLISHED with its delivery count reset \u2014 'requeues' is that path and is the normal sign of contention. 'deferrals' is the fallback once a folder exhausts BOX_USER_SLOT_MAX_REQUEUE: it NAKs, spends a delivery, and is the last step before the SDK discards the folder and its whole subtree. Requeues climbing with deferrals at zero is healthy; deferrals above zero is not."
     },
     {
       "id": 114,
@@ -2752,10 +2789,10 @@
         "uid": "${datasource}"
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
         "x": 18,
-        "y": 61
+        "y": 61,
+        "w": 3,
+        "h": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -2778,7 +2815,7 @@
           "expr": "sum(rate(box_scanner_user_slot_deferrals_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
         }
       ],
-      "description": "Fork/folder messages NAKed with a 5s delay because the impersonated user was already at BOX_USER_MAX_CONCURRENCY across all pods."
+      "description": "Folders that exhausted BOX_USER_SLOT_MAX_REQUEUE and fell back to a NAK. Each one spends a delivery, and past JOBENGINE_MAX_DELIVER the SDK discards the folder AND its subtree. Anything above zero means the requeue bound is too low for this tenant."
     },
     {
       "id": 145,
@@ -2965,7 +3002,24 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short"
-        }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "slot requeues /s (leading)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
       },
       "targets": [
         {
@@ -2982,9 +3036,14 @@
           "refId": "C",
           "expr": "sum(rate(box_api_rate_limit_hits_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "429s /s (lagging)"
+        },
+        {
+          "refId": "R",
+          "expr": "sum(rate(box_scanner_user_slot_requeues_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "slot requeues /s (leading)"
         }
       ],
-      "description": "The pair that makes tuning legible. The limiter p95 must rise BEFORE the 429s do. Note the limiter is per pod while Box's ceiling is per app, so a single pod can look idle while Box throttles the whole deployment \u2014 the sum across pods is the number to compare against the ceiling."
+      "description": "Read left to right in time: contention shows up before Box complains. Requeues rise first (folders cannot get a slot), then limiter wait (the client throttling itself), and 429s last \u2014 by then Box is already refusing. Deferrals sit between requeues and loss: they only appear once folders exhaust the requeue bound."
     },
     {
       "id": 148,
@@ -4814,6 +4873,183 @@
         }
       ],
       "description": "Share of everything the augmenter touched that Box no longer had."
+    },
+    {
+      "id": 206,
+      "type": "stat",
+      "title": "Slot Requeues (5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 61,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "none",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(box_scanner_user_slot_requeues_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+        }
+      ],
+      "description": "Folders re-published because their user was saturated. This is back-pressure working: a re-publish resets the delivery count, so waiting never walks a folder toward the DLQ. Non-zero is normal under load."
+    },
+    {
+      "type": "row",
+      "title": "Data Loss \u2014 Dead Letter Queue",
+      "collapsed": false,
+      "id": 216,
+      "gridPos": {
+        "x": 0,
+        "y": 132,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "DLQ Depth",
+      "id": 217,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 133,
+        "w": 6,
+        "h": 5
+      },
+      "description": "Messages the SDK gave up on and removed from the stream. For the scanner each one is a FOLDER plus every subtree it would have expanded \u2014 so this count does not measure the damage: one discarded message cost 7 files when it hit a leaf, and would have cost thousands near the root. Any non-zero value means a scan silently returned less than the tenant holds. The connector's own funnel cannot show this: items_sent still equals files_discovered. See PLAN-deferral-dlq.md.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_stream_total_messages{stream_name=\"DLQ_CONSUME_BOX\"})"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "DLQ Depth over time",
+      "id": 218,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 133,
+        "w": 18,
+        "h": 5
+      },
+      "description": "A step up here marks the moment a scan started losing folders. It is the only external evidence: the connector reports zero failures throughout.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "legendFormat": "{{stream_name}}",
+          "expr": "max by (stream_name) (nats_stream_total_messages{stream_name=\"DLQ_CONSUME_BOX\"})"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DLQ_CONSUME_BOX"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
     }
   ]
 }
