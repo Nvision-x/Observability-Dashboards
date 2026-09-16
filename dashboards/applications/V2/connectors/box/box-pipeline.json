@@ -1548,7 +1548,7 @@
     {
       "id": 162,
       "type": "timeseries",
-      "title": "User Slot Deferrals by Datasource (rate, 5m)",
+      "title": "Slot Contention by Datasource (rate, 5m)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1562,16 +1562,53 @@
       "fieldConfig": {
         "defaults": {
           "unit": "ops"
-        }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^requeues.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^deferrals.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
       },
       "targets": [
         {
           "refId": "A",
+          "expr": "sum by (datasource_id) (rate(box_scanner_user_slot_requeues_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "requeues \u00b7 {{datasource_id}}"
+        },
+        {
+          "refId": "B",
           "expr": "sum by (datasource_id) (rate(box_scanner_user_slot_deferrals_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
-          "legendFormat": "{{datasource_id}}"
+          "legendFormat": "deferrals \u00b7 {{datasource_id}}"
         }
       ],
-      "description": "Fork/folder messages NAKed with a 5s delay because the impersonated user was already at BOX_USER_MAX_CONCURRENCY across all pods. Slots at the cap with this rising means the cap is what binds; this at zero with slots free means the bottleneck is elsewhere, most likely the Box rate limiter."
+      "description": "Two paths out of a saturated user, and the pair is the diagnostic:\n\nrequeues up, deferrals at zero \u2014 healthy. Folders that find no slot are re-published with their delivery count reset, so contention never walks them toward a discard.\n\ndeferrals above zero \u2014 folders are exhausting BOX_USER_SLOT_MAX_REQUEUE and falling back to a NAK. That spends a delivery, and past JOBENGINE_MAX_DELIVER the SDK removes the folder and everything below it. This is the last warning before silent loss.\n\nboth at zero \u2014 no contention; the user's slots are keeping up."
     },
     {
       "type": "row",
