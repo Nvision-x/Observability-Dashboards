@@ -62,7 +62,7 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "query": "label_values(process_start_time_seconds{job=~\".*snowflake-connector-be-go.*\"}, namespace)",
+        "query": "label_values(kube_deployment_spec_replicas{deployment=~\".*snowflake-connector-be-go.*\"}, namespace)",
         "current": {
           "selected": true,
           "text": "default",
@@ -90,7 +90,7 @@
         },
         "hide": 0,
         "includeAll": true,
-        "allValue": ".*",
+        "allValue": ".+",
         "multi": true,
         "refresh": 2,
         "sort": 1
@@ -764,6 +764,68 @@
           "refId": "C",
           "expr": "histogram_quantile(0.99, sum by (le) (rate(snowflake_content_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
           "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 210,
+      "title": "Errors \u2014 Standard Error Codes",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
+      "panels": []
+    },
+    {
+      "id": 211,
+      "type": "timeseries",
+      "title": "Errors by Code (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 27
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (error_code) (rate(snowflake_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "{{error_code}}"
+        }
+      ]
+    },
+    {
+      "id": 212,
+      "type": "timeseries",
+      "title": "Errors by Operation (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 27
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (operation) (rate(snowflake_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "{{operation}}"
         }
       ]
     }
