@@ -62,7 +62,7 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "query": "label_values(process_start_time_seconds{job=~\".*snowflake-connector-be-go.*\"}, namespace)",
+        "query": "label_values(kube_deployment_spec_replicas{deployment=~\".*snowflake-connector-be-go.*\"}, namespace)",
         "current": {
           "selected": true,
           "text": "default",
@@ -121,7 +121,7 @@
         },
         "hide": 0,
         "includeAll": true,
-        "allValue": ".*",
+        "allValue": ".+",
         "multi": true,
         "refresh": 2,
         "sort": 1
@@ -408,6 +408,58 @@
       "fieldConfig": { "defaults": { "unit": "short" } },
       "targets": [
         { "refId": "A", "expr": "sum by (outcome) (increase(snowflake_content_sample_verify_empty_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{outcome}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 310,
+      "title": "Errors & Connection Test",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 56 },
+      "panels": []
+    },
+    {
+      "id": 311,
+      "type": "timeseries",
+      "title": "Errors by Code and Operation (rate, 5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 57 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (error_code, operation) (rate(snowflake_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{error_code}} / {{operation}}" }
+      ]
+    },
+    {
+      "id": 312,
+      "type": "timeseries",
+      "title": "Connection Test Outcomes (rate, 5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 57 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (outcome) (rate(snowflake_connectiontest_requests_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{outcome}}" }
+      ]
+    },
+    {
+      "id": 313,
+      "type": "timeseries",
+      "title": "Connection Test Objects Skipped (rate, 5m)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 65 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (level) (rate(snowflake_connectiontest_object_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{level}}" }
+      ]
+    },
+    {
+      "id": 314,
+      "type": "timeseries",
+      "title": "Connection Test Duration by Depth (p95)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 65 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, depth) (rate(snowflake_connectiontest_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "{{depth}}" }
       ]
     }
   ]
