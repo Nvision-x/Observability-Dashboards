@@ -1,5 +1,5 @@
 {
-  "__comment": "NVisionX Cluster Health Overview (all clusters, per-environment via $datasource). Sourced entirely from kube-state-metrics and node-exporter - both always-on cluster components, not app-specific business metrics - so every panel here should show real data regardless of which services are currently idle/scaled to zero. | 2026-08-28: added a \"What's Wrong Right Now\" section with always-visible detail tables (crash-looping pods with reason+restarts, Failed-phase pods, not-ready nodes with condition, pending pods with age), and click-through drill-down links from the Nodes Not Ready / Pods Failed / Pods Pending / Restarts KPI tiles to their matching detail table, per manager request for the dashboard to be self-explanatory to non-engineers. The plain-English status banner was tried and then removed per feedback - the KPI strip's own red/green tiles already say what's wrong. | Folded in Infrastructure Overview's Network I/O and Storage Usage panels (the only two panels there not already covered here) and deleted that dashboard as a duplicate.",
+  "__comment": "NVisionX Cluster Health Overview (all clusters, per-environment via $datasource). Sourced entirely from kube-state-metrics and node-exporter - both always-on cluster components, not app-specific business metrics - so every panel here should show real data regardless of which services are currently idle/scaled to zero. | 2026-08-28: added a \"What's Wrong Right Now\" section with always-visible detail tables (crash-looping pods with reason+restarts, Failed-phase pods, not-ready nodes with condition, pending pods with age), and click-through drill-down links from the Nodes Not Ready / Pods Failed / Pods Pending / Restarts KPI tiles to their matching detail table, per manager request for the dashboard to be self-explanatory to non-engineers. The plain-English status banner was tried and then removed per feedback - the KPI strip's own red/green tiles already say what's wrong. | Folded in Infrastructure Overview's Network I/O and Storage Usage panels (the only two panels there not already covered here) and deleted that dashboard as a duplicate. | 2026-09-19: fixed the crash-loop table (601) to also catch terminated-container failures (OOMKilled, Error, etc) - it previously only checked waiting_reason (CrashLoopBackOff-style), completely missing containers that die and get marked Terminated instead. Added a $workload picker (unifies Deployment/StatefulSet/DaemonSet names, scoped by $namespace) and a full pod-detail table (id=701) so picking a namespace shows its workloads, picking a workload narrows every pod-level panel to just that workload's pods, and leaving Workload on All shows everything - per manager request.",
   "annotations": {
     "list": [
       {
@@ -605,8 +605,8 @@
     {
       "id": 601,
       "type": "table",
-      "title": "Pods Crash-Looping / Erroring (why + restart count)",
-      "description": "Every pod currently stuck in a bad waiting state, with the real Kubernetes reason and how many times it's restarted. Restart count is the best available proxy for \"how long\" — kube-state-metrics doesn't expose an exact failure-start timestamp; for the precise duration, check `kubectl describe pod` or cluster Events.",
+      "title": "Pods Crash-Looping / Erroring / Terminated (why + restart count)",
+      "description": "Every container currently either stuck in a bad waiting state (CrashLoopBackOff, ImagePullBackOff, etc) or that most recently terminated abnormally (OOMKilled, Error, etc), with restart count. Restart count is the best available proxy for \"how long\" - kube-state-metrics doesn't expose an exact failure-start timestamp; for the precise duration, check `kubectl describe pod` or cluster Events.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -629,7 +629,7 @@
           "links": [
             {
               "title": "🔎 Explore this query",
-              "url": "/explore?orgId=1&left=%7B%22datasource%22%3A%22${datasource}%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22kube_pod_container_status_waiting_reason%7Bnamespace%3D~%5C%22$namespace%5C%22%2C%20reason%3D~%5C%22CrashLoopBackOff%7CImagePullBackOff%7CErrImagePull%7CCreateContainerConfigError%7CInvalidImageName%5C%22%7D%20%3D%3D%201%22%2C%22refId%22%3A%22A%22%7D%2C%7B%22expr%22%3A%22sum%20by%20%28namespace%2C%20pod%2C%20container%29%20%28kube_pod_container_status_restarts_total%7Bnamespace%3D~%5C%22$namespace%5C%22%7D%29%22%2C%22refId%22%3A%22B%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D",
+              "url": "/explore?orgId=1&left=%7B%22datasource%22%3A%22${datasource}%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22kube_pod_container_status_waiting_reason%7Bnamespace%3D~%5C%22$namespace%5C%22%2C%20reason%3D~%5C%22CrashLoopBackOff%7CImagePullBackOff%7CErrImagePull%7CCreateContainerConfigError%7CInvalidImageName%7CRunContainerError%5C%22%7D%20%3D%3D%201%22%2C%22refId%22%3A%22A%22%7D%2C%7B%22expr%22%3A%22kube_pod_container_status_terminated_reason%7Bnamespace%3D~%5C%22$namespace%5C%22%2C%20reason%3D~%5C%22OOMKilled%7CError%7CContainerCannotRun%7CDeadlineExceeded%7CStartError%5C%22%7D%20%3D%3D%201%22%2C%22refId%22%3A%22B%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D",
               "targetBlank": true
             }
           ]
@@ -705,7 +705,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "kube_pod_container_status_waiting_reason{namespace=~\"$namespace\", reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|InvalidImageName\"} == 1",
+          "expr": "kube_pod_container_status_waiting_reason{namespace=~\"$namespace\", pod=~\"$workload.*\", reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|InvalidImageName|RunContainerError\"} == 1",
           "legendFormat": "",
           "refId": "A",
           "editorMode": "code",
@@ -717,9 +717,21 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (namespace, pod, container) (kube_pod_container_status_restarts_total{namespace=~\"$namespace\"})",
+          "expr": "kube_pod_container_status_terminated_reason{namespace=~\"$namespace\", pod=~\"$workload.*\", reason=~\"OOMKilled|Error|ContainerCannotRun|DeadlineExceeded|StartError\"} == 1",
           "legendFormat": "",
           "refId": "B",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (namespace, pod, container) (kube_pod_container_status_restarts_total{namespace=~\"$namespace\", pod=~\"$workload.*\"})",
+          "legendFormat": "",
+          "refId": "C",
           "editorMode": "code",
           "instant": true,
           "range": false
@@ -740,17 +752,20 @@
               "otel_scope_name": true,
               "otel_scope_version": true,
               "Value #A": true,
+              "Value #B": true,
               "__name__": true,
               "endpoint": true,
               "prometheus": true,
               "prometheus_replica": true,
-              "service": true
+              "service": true,
+              "uid": true
             },
             "renameByName": {
               "reason": "Reason",
-              "Value #B": "Restarts",
+              "Value #C": "Restarts",
               "pod": "Pod",
-              "namespace": "Namespace"
+              "namespace": "Namespace",
+              "container": "Container"
             }
           }
         }
@@ -804,7 +819,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "kube_pod_status_phase{namespace=~\"$namespace\", phase=\"Failed\"} == 1",
+          "expr": "kube_pod_status_phase{namespace=~\"$namespace\", pod=~\"$workload.*\", phase=\"Failed\"} == 1",
           "legendFormat": "",
           "refId": "A",
           "editorMode": "code",
@@ -989,7 +1004,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "kube_pod_status_phase{namespace=~\"$namespace\", phase=\"Pending\"} == 1",
+          "expr": "kube_pod_status_phase{namespace=~\"$namespace\", pod=~\"$workload.*\", phase=\"Pending\"} == 1",
           "legendFormat": "",
           "refId": "A",
           "editorMode": "code",
@@ -1001,7 +1016,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(time() - kube_pod_created{namespace=~\"$namespace\"}) / 60",
+          "expr": "(time() - kube_pod_created{namespace=~\"$namespace\", pod=~\"$workload.*\"}) / 60",
           "legendFormat": "",
           "refId": "B",
           "editorMode": "code",
@@ -1042,6 +1057,285 @@
       ]
     },
     {
+      "id": 700,
+      "type": "row",
+      "title": "📦 Workload Detail",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "panels": []
+    },
+    {
+      "id": 701,
+      "type": "table",
+      "title": "All Pods — Full Detail ($namespace / $workload)",
+      "description": "Every pod matching the Namespace and Workload pickers above, regardless of health - this is the complete inventory, not just the failures. Pick a specific workload (Deployment/StatefulSet/DaemonSet name) to see just its pods with full status; leave Workload on All to see everything in the selected namespace(s).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "color-background"
+            },
+            "filterable": true
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Not Ready",
+                  "color": "red"
+                }
+              }
+            },
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "Ready",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Phase"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Running": {
+                        "color": "green"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "Pending": {
+                        "color": "yellow"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "Failed": {
+                        "color": "red"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "Succeeded": {
+                        "color": "blue"
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "Unknown": {
+                        "color": "gray"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ready"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Restarts"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Restarts",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "kube_pod_info{namespace=~\"$namespace\", pod=~\"$workload.*\"}",
+          "legendFormat": "",
+          "refId": "A",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (namespace, pod, phase) (kube_pod_status_phase{namespace=~\"$namespace\", pod=~\"$workload.*\"} == 1)",
+          "legendFormat": "",
+          "refId": "B",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "min by (namespace, pod) (kube_pod_container_status_ready{namespace=~\"$namespace\", pod=~\"$workload.*\"})",
+          "legendFormat": "",
+          "refId": "C",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (namespace, pod) (kube_pod_container_status_restarts_total{namespace=~\"$namespace\", pod=~\"$workload.*\"})",
+          "legendFormat": "",
+          "refId": "D",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(time() - kube_pod_created{namespace=~\"$namespace\", pod=~\"$workload.*\"}) / 60",
+          "legendFormat": "",
+          "refId": "E",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "instance": true,
+              "otel_scope_name": true,
+              "otel_scope_version": true,
+              "Value #A": true,
+              "Value #B": true,
+              "__name__": true,
+              "endpoint": true,
+              "prometheus": true,
+              "prometheus_replica": true,
+              "service": true,
+              "uid": true,
+              "container": true,
+              "created_by_kind": true,
+              "created_by_name": true,
+              "host_ip": true,
+              "pod_ip": true,
+              "priority_class": true
+            },
+            "renameByName": {
+              "namespace": "Namespace",
+              "pod": "Pod",
+              "phase": "Phase",
+              "node": "Node",
+              "Value #C": "Ready",
+              "Value #D": "Restarts",
+              "Value #E": "Age (min)"
+            },
+            "indexByName": {
+              "Namespace": 0,
+              "Pod": 1,
+              "Phase": 2,
+              "Ready": 3,
+              "Restarts": 4,
+              "Age (min)": 5,
+              "Node": 6
+            }
+          }
+        }
+      ]
+    },
+    {
       "id": 200,
       "type": "row",
       "title": "🥧 Pod Health Breakdown",
@@ -1050,7 +1344,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 34
       },
       "panels": []
     },
@@ -1067,7 +1361,7 @@
         "h": 9,
         "w": 8,
         "x": 0,
-        "y": 24
+        "y": 35
       },
       "fieldConfig": {
         "defaults": {
@@ -1206,7 +1500,7 @@
         "h": 9,
         "w": 8,
         "x": 8,
-        "y": 24
+        "y": 35
       },
       "fieldConfig": {
         "defaults": {
@@ -1273,7 +1567,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 24
+        "y": 35
       },
       "fieldConfig": {
         "defaults": {
@@ -1343,7 +1637,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 33
+        "y": 44
       },
       "panels": []
     },
@@ -1360,7 +1654,7 @@
         "h": 9,
         "w": 8,
         "x": 0,
-        "y": 34
+        "y": 45
       },
       "fieldConfig": {
         "defaults": {
@@ -1434,7 +1728,7 @@
         "h": 9,
         "w": 8,
         "x": 8,
-        "y": 34
+        "y": 45
       },
       "fieldConfig": {
         "defaults": {
@@ -1501,7 +1795,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 34
+        "y": 45
       },
       "fieldConfig": {
         "defaults": {
@@ -1568,7 +1862,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 43
+        "y": 54
       },
       "fieldConfig": {
         "defaults": {
@@ -1646,7 +1940,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 43
+        "y": 54
       },
       "fieldConfig": {
         "defaults": {
@@ -1710,7 +2004,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 51
+        "y": 62
       },
       "panels": []
     },
@@ -1727,7 +2021,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 52
+        "y": 63
       },
       "fieldConfig": {
         "defaults": {
@@ -1789,7 +2083,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 52
+        "y": 63
       },
       "fieldConfig": {
         "defaults": {
@@ -1855,7 +2149,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 52
+        "y": 63
       },
       "fieldConfig": {
         "defaults": {
@@ -1917,7 +2211,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 69
       },
       "fieldConfig": {
         "defaults": {
@@ -2001,7 +2295,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 66
+        "y": 77
       },
       "panels": []
     },
@@ -2018,7 +2312,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 67
+        "y": 78
       },
       "fieldConfig": {
         "defaults": {
@@ -2168,6 +2462,29 @@
         "sort": 1,
         "regex": "",
         "skipUrlSync": false
+      },
+      {
+        "name": "workload",
+        "label": "Workload",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values((label_replace(kube_deployment_labels{namespace=~\"$namespace\"}, \"workload_name\", \"$1\", \"deployment\", \"(.*)\") or label_replace(kube_statefulset_labels{namespace=~\"$namespace\"}, \"workload_name\", \"$1\", \"statefulset\", \"(.*)\") or label_replace(kube_daemonset_labels{namespace=~\"$namespace\"}, \"workload_name\", \"$1\", \"daemonset\", \"(.*)\")), workload_name)",
+        "query": {
+          "query": "label_values((label_replace(kube_deployment_labels{namespace=~\"$namespace\"}, \"workload_name\", \"$1\", \"deployment\", \"(.*)\") or label_replace(kube_statefulset_labels{namespace=~\"$namespace\"}, \"workload_name\", \"$1\", \"statefulset\", \"(.*)\") or label_replace(kube_daemonset_labels{namespace=~\"$namespace\"}, \"workload_name\", \"$1\", \"daemonset\", \"(.*)\")), workload_name)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "current": {},
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "refresh": 2,
+        "sort": 1,
+        "regex": "",
+        "skipUrlSync": false
       }
     ]
   },
@@ -2188,7 +2505,7 @@
   "timezone": "browser",
   "title": "Cluster Health Overview",
   "uid": "nx-cluster-health-overview",
-  "version": 1,
+  "version": 2,
   "weekStart": "",
   "folderUid": "overview-folder"
 }
