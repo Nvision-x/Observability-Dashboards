@@ -1,5 +1,5 @@
 {
-  "__comment": "NVisionX Scan Activity + OpenSearch Overview — ALL EKS CLIENTS, ONE DASHBOARD. Supersedes the loose hand-imported nx-scan-activity-all-clients.json (workspace root) — same uid, so once this git-synced copy lands it updates that dashboard in place instead of living as a second copy. EKS-only by design: the $client_ds picker only ever lists each client's own Prometheus datasource (Demo/Demo2/Integration/IONIS/KrispyKreme/SSB/UAT), which is how every EKS environment already reaches this central Grafana via remote_write; Replicated/on-prem clients use a completely separate deployment path (KOTS) and are intentionally not in this picker. Layout: top row = combined totals across every selected client. Below that, ONE COLLAPSIBLE ROW PER CLIENT (Grafana row-repeat on $client_ds) — expand a client's row to see, under that client's name: files scanned, data size, scans running now, backlog, a breakdown of WHAT TYPE of scans ran (by connector_type: S3/BOX/SHAREPOINT/etc), HOW MANY per source datasource, and a trend of scan volume + queue health over time. All per-client numbers come from OpenSearch indirectly: nx-scan-metrics-exporter (nx-application-helm's observability chart, component scanMetricsExporter) runs inside each EKS cluster, queries that cluster's OpenSearch domain directly (same VPC, no cross-VPC hop needed), and republishes nx_scan_files_total{connector_type}/nx_scan_bytes_total{connector_type}/nx_scan_files_by_datasource{datasource_access_id} as Prometheus gauges that ride the existing scrape->remote_write->mimir path. nats_consumer_* (Running/Backlog) comes straight from NATS's own exporter and needs no extra wiring. IMPORTANT PREREQUISITE: as of 2026-08-19 `scanMetricsExporter.enabled` defaults to false in nx-application-helm and no client's env-specific values file turns it on yet — until it's flipped to true and the observability layer is redeployed for a given client, that client's Files/Data/connector-type/datasource panels will read 0 while Running/Backlog (NATS-sourced) still show real numbers. That's a deploy-time toggle per client, not a dashboard bug. | 2026-08-25: split into three stacked sections (All / Prod / Prod-test) per Ben's request for a prod/non-prod selector on the larger-aggregation dashboards. This dashboard had no existing per-client repeat structure (unlike backups-all-clients.json) - every panel independently hardcoded all 7 client UIDs summed together - so a live picker/link approach wasn't possible; instead each of the ~30 original panels was duplicated into three environment-scoped copies (target lists filtered by datasource UID), stacked vertically under three banner rows. Client-to-UID mapping: Prod = Demo/IONIS/KrispyKreme/SSB/UAT, Prod-test = Demo2/Integration.",
+  "__comment": "NVisionX Scan Activity + OpenSearch Overview — ALL EKS CLIENTS, ONE DASHBOARD. Supersedes the loose hand-imported nx-scan-activity-all-clients.json (workspace root) — same uid, so once this git-synced copy lands it updates that dashboard in place instead of living as a second copy. EKS-only by design: the $client_ds picker only ever lists each client's own Prometheus datasource (Demo/Demo2/Integration/IONIS/KrispyKreme/SSB/UAT), which is how every EKS environment already reaches this central Grafana via remote_write; Replicated/on-prem clients use a completely separate deployment path (KOTS) and are intentionally not in this picker. Layout: top row = combined totals across every selected client. Below that, ONE COLLAPSIBLE ROW PER CLIENT (Grafana row-repeat on $client_ds) — expand a client's row to see, under that client's name: files scanned, data size, scans running now, backlog, a breakdown of WHAT TYPE of scans ran (by connector_type: S3/BOX/SHAREPOINT/etc), HOW MANY per source datasource, and a trend of scan volume + queue health over time. All per-client numbers come from OpenSearch indirectly: nx-scan-metrics-exporter (nx-application-helm's observability chart, component scanMetricsExporter) runs inside each EKS cluster, queries that cluster's OpenSearch domain directly (same VPC, no cross-VPC hop needed), and republishes nx_scan_files_total{connector_type}/nx_scan_bytes_total{connector_type}/nx_scan_files_by_datasource{datasource_access_id} as Prometheus gauges that ride the existing scrape->remote_write->mimir path. nats_consumer_* (Running/Backlog) comes straight from NATS's own exporter and needs no extra wiring. IMPORTANT PREREQUISITE: as of 2026-08-19 `scanMetricsExporter.enabled` defaults to false in nx-application-helm and no client's env-specific values file turns it on yet — until it's flipped to true and the observability layer is redeployed for a given client, that client's Files/Data/connector-type/datasource panels will read 0 while Running/Backlog (NATS-sourced) still show real numbers. That's a deploy-time toggle per client, not a dashboard bug. | 2026-08-25: split into three stacked sections (All / Prod / Prod-test) per Ben's request for a prod/non-prod selector on the larger-aggregation dashboards. This dashboard had no existing per-client repeat structure (unlike backups-all-clients.json) - every panel independently hardcoded all 7 client UIDs summed together - so a live picker/link approach wasn't possible; instead each of the ~30 original panels was duplicated into three environment-scoped copies (target lists filtered by datasource UID), stacked vertically under three banner rows. Client-to-UID mapping: Prod = Demo/IONIS/KrispyKreme/SSB/UAT, Prod-test = Demo2/Integration. | 2026-09-18: folded in OpenSearch Scan Detail (per-client Prometheus-exporter deep dive) and the legacy NVisionX Scan Activity Overview (direct OpenSearch totals/recent-files query, a genuinely different data path from the Prometheus-exporter-based panels above) as two collapsed rows, so all scan activity views live in one dashboard. Both keep their own single-client picker since they're meant to be visited already scoped to one client, not repeated across all of them.",
   "annotations": {
     "list": [
       {
@@ -12745,6 +12745,1095 @@
         }
       ],
       "type": "table"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 274
+      },
+      "id": 90112,
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Files scanned (records)",
+          "description": "Current total document count in OpenSearch (*-nxidx-*), summed across connectors. Sourced from nx_scan_files_total (nx-scan-metrics-exporter), a gauge re-read from OpenSearch every scrape — not scoped to the time picker like the old per-document query was, since this is a running total, not new-in-range.",
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 0,
+            "y": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${detail_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "blue"
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(nx_scan_files_total)"
+            }
+          ],
+          "id": 90100
+        },
+        {
+          "type": "stat",
+          "title": "Total size of scanned files",
+          "description": "Current total 'size' (bytes) of scanned files across connectors. Sourced from nx_scan_bytes_total (nx-scan-metrics-exporter) — a running total, not scoped to the time picker.",
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 6,
+            "y": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${detail_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decbytes",
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "green"
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(nx_scan_bytes_total)"
+            }
+          ],
+          "id": 90101
+        },
+        {
+          "type": "stat",
+          "title": "Scans running NOW",
+          "description": "In-flight messages across all *-scanner-v1 NATS consumers. Live gauge — independent of the time range.",
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 12,
+            "y": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${detail_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"}))"
+            }
+          ],
+          "id": 90102
+        },
+        {
+          "type": "stat",
+          "title": "Backlog (pending)",
+          "description": "Files queued but not yet picked up by scanners. Live gauge.",
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 18,
+            "y": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${detail_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1000
+                  },
+                  {
+                    "color": "red",
+                    "value": 50000
+                  }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"}))"
+            }
+          ],
+          "id": 90103
+        },
+        {
+          "type": "piechart",
+          "title": "Files scanned by connector",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${detail_prometheus_ds}"
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "values": [
+                "value",
+                "percent"
+              ]
+            },
+            "reduceOptions": {
+              "values": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "legendFormat": "{{connector_type}}",
+              "expr": "sum by (connector_type) (nx_scan_files_total)"
+            }
+          ],
+          "id": 90104
+        },
+        {
+          "type": "barchart",
+          "title": "Data scanned by connector",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${detail_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decbytes"
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "legendFormat": "{{connector_type}}",
+              "expr": "sum by (connector_type) (nx_scan_bytes_total)"
+            }
+          ],
+          "id": 90105
+        },
+        {
+          "type": "barchart",
+          "title": "Files scanned by datasource (top 15)",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${detail_prometheus_ds}"
+          },
+          "options": {
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "legendFormat": "{{datasource_access_id}}",
+              "expr": "topk(15, sum by (datasource_access_id) (nx_scan_files_by_datasource))"
+            }
+          ],
+          "id": 90106
+        },
+        {
+          "type": "timeseries",
+          "title": "Files scanned over time (by connector)",
+          "description": "New files per interval, approximated as delta() of the running nx_scan_files_total gauge (not a per-bucket count query like the old OpenSearch date_histogram).",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 14
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${detail_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "bars",
+                "stacking": {
+                  "mode": "normal"
+                },
+                "fillOpacity": 70
+              }
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "legendFormat": "{{connector_type}}",
+              "expr": "delta(nx_scan_files_total[$__interval])"
+            }
+          ],
+          "id": 90107
+        },
+        {
+          "type": "timeseries",
+          "title": "Data scanned over time",
+          "description": "New bytes per interval, approximated as delta() of the running nx_scan_bytes_total gauge.",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 14
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${detail_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decbytes",
+              "custom": {
+                "drawStyle": "bars",
+                "fillOpacity": 50
+              }
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(delta(nx_scan_bytes_total[$__interval]))"
+            }
+          ],
+          "id": 90108
+        },
+        {
+          "type": "timeseries",
+          "title": "In-flight (scanning now) by source",
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 23
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${detail_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 20
+              }
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "legendFormat": "{{stream_name}}",
+              "expr": "max by (stream_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"})"
+            }
+          ],
+          "id": 90109
+        },
+        {
+          "type": "timeseries",
+          "title": "Backlog (pending) by source",
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 23
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${detail_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 20
+              }
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "legendFormat": "{{stream_name}}",
+              "expr": "max by (stream_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"})"
+            }
+          ],
+          "id": 90110
+        },
+        {
+          "type": "timeseries",
+          "title": "Redeliveries / retries by source (processing-error proxy)",
+          "description": "nats_consumer_num_redelivered rising = messages failing and being retried. Sustained growth indicates a scan is NOT running fine. Authoritative per-scan status requires the Postgres scan-jobs table (follow-up).",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 31
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${detail_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10
+              }
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "legendFormat": "{{stream_name}} / {{consumer_name}}",
+              "expr": "max by (stream_name, consumer_name) (nats_consumer_num_redelivered{consumer_name=~\".*-scanner-v1|archiver-v1|extractor-v1\"})"
+            }
+          ],
+          "id": 90111
+        }
+      ],
+      "title": "🔍 Per-Client Deep Dive — Prometheus/NATS live pipeline (pick a client below)",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 275
+      },
+      "id": 90126,
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Files scanned (records)",
+          "description": "Count of file/object records in OpenSearch (*-nxidx-*) in range — one record per file processed by a scan; equals the number of records stored in OpenSearch. NOTE: cumulative across scan runs, so re-scans of the same datasource are counted again (this is 'files processed', not 'unique files').",
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 0,
+            "y": 0
+          },
+          "datasource": {
+            "type": "grafana-opensearch-datasource",
+            "uid": "${legacy_opensearch_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "blue"
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "sum"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "query": "*",
+              "metrics": [
+                {
+                  "id": "1",
+                  "type": "count"
+                }
+              ],
+              "bucketAggs": [
+                {
+                  "id": "2",
+                  "type": "date_histogram",
+                  "field": "date_partition_ingested",
+                  "settings": {
+                    "interval": "auto"
+                  }
+                }
+              ],
+              "timeField": "date_partition_ingested"
+            }
+          ],
+          "id": 90113
+        },
+        {
+          "type": "stat",
+          "title": "Total size of scanned files",
+          "description": "Sum of each record's source file 'size' (bytes) in range — the total size of the FILES that were scanned, NOT data downloaded/stored by the platform. Scanning reads metadata (content collection is off for these records), so OpenSearch storage is only tens of GB; this number is the aggregate size of the catalogued files at the source.",
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 6,
+            "y": 0
+          },
+          "datasource": {
+            "type": "grafana-opensearch-datasource",
+            "uid": "${legacy_opensearch_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decbytes",
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "green"
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "sum"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "query": "*",
+              "metrics": [
+                {
+                  "id": "1",
+                  "type": "sum",
+                  "field": "size"
+                }
+              ],
+              "bucketAggs": [
+                {
+                  "id": "2",
+                  "type": "date_histogram",
+                  "field": "date_partition_ingested",
+                  "settings": {
+                    "interval": "auto"
+                  }
+                }
+              ],
+              "timeField": "date_partition_ingested"
+            }
+          ],
+          "id": 90114
+        },
+        {
+          "type": "stat",
+          "title": "Scans running NOW",
+          "description": "In-flight messages across all *-scanner-v1 NATS consumers. Live gauge — independent of the time range.",
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 12,
+            "y": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${legacy_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"}))"
+            }
+          ],
+          "id": 90115
+        },
+        {
+          "type": "stat",
+          "title": "Backlog (pending)",
+          "description": "Files queued but not yet picked up by scanners. Live gauge.",
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 18,
+            "y": 0
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${legacy_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1000
+                  },
+                  {
+                    "color": "red",
+                    "value": 50000
+                  }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"}))"
+            }
+          ],
+          "id": 90116
+        },
+        {
+          "type": "piechart",
+          "title": "Files scanned by connector",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 5
+          },
+          "datasource": {
+            "type": "grafana-opensearch-datasource",
+            "uid": "${legacy_opensearch_ds}"
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "values": [
+                "value",
+                "percent"
+              ]
+            },
+            "reduceOptions": {
+              "values": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "query": "*",
+              "metrics": [
+                {
+                  "id": "1",
+                  "type": "count"
+                }
+              ],
+              "bucketAggs": [
+                {
+                  "id": "2",
+                  "type": "terms",
+                  "field": "connector_type.keyword",
+                  "settings": {
+                    "size": "15",
+                    "orderBy": "_count",
+                    "order": "desc"
+                  }
+                }
+              ],
+              "timeField": "date_partition_ingested"
+            }
+          ],
+          "id": 90117
+        },
+        {
+          "type": "barchart",
+          "title": "Data scanned by connector",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 5
+          },
+          "datasource": {
+            "type": "grafana-opensearch-datasource",
+            "uid": "${legacy_opensearch_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decbytes"
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "query": "*",
+              "metrics": [
+                {
+                  "id": "1",
+                  "type": "sum",
+                  "field": "size"
+                }
+              ],
+              "bucketAggs": [
+                {
+                  "id": "2",
+                  "type": "terms",
+                  "field": "connector_type.keyword",
+                  "settings": {
+                    "size": "15",
+                    "orderBy": "1",
+                    "order": "desc"
+                  }
+                }
+              ],
+              "timeField": "date_partition_ingested"
+            }
+          ],
+          "id": 90118
+        },
+        {
+          "type": "barchart",
+          "title": "Files scanned by datasource (top 15)",
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 5
+          },
+          "datasource": {
+            "type": "grafana-opensearch-datasource",
+            "uid": "${legacy_opensearch_ds}"
+          },
+          "options": {
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "query": "*",
+              "metrics": [
+                {
+                  "id": "1",
+                  "type": "count"
+                }
+              ],
+              "bucketAggs": [
+                {
+                  "id": "2",
+                  "type": "terms",
+                  "field": "datasource_access_id.keyword",
+                  "settings": {
+                    "size": "15",
+                    "orderBy": "_count",
+                    "order": "desc"
+                  }
+                }
+              ],
+              "timeField": "date_partition_ingested"
+            }
+          ],
+          "id": 90119
+        },
+        {
+          "type": "timeseries",
+          "title": "Files scanned over time (by connector)",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 14
+          },
+          "datasource": {
+            "type": "grafana-opensearch-datasource",
+            "uid": "${legacy_opensearch_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "bars",
+                "stacking": {
+                  "mode": "normal"
+                },
+                "fillOpacity": 70
+              },
+              "color": {
+                "mode": "palette-classic-by-name"
+              }
+            },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "query": "*",
+              "metrics": [
+                {
+                  "id": "1",
+                  "type": "count"
+                }
+              ],
+              "bucketAggs": [
+                {
+                  "id": "3",
+                  "type": "terms",
+                  "field": "connector_type.keyword",
+                  "settings": {
+                    "size": "10",
+                    "orderBy": "_count",
+                    "order": "desc"
+                  }
+                },
+                {
+                  "id": "2",
+                  "type": "date_histogram",
+                  "field": "date_partition_ingested",
+                  "settings": {
+                    "interval": "auto"
+                  }
+                }
+              ],
+              "timeField": "date_partition_ingested"
+            }
+          ],
+          "id": 90120
+        },
+        {
+          "type": "timeseries",
+          "title": "Data scanned over time",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 14
+          },
+          "datasource": {
+            "type": "grafana-opensearch-datasource",
+            "uid": "${legacy_opensearch_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decbytes",
+              "custom": {
+                "drawStyle": "bars",
+                "fillOpacity": 50
+              }
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "query": "*",
+              "metrics": [
+                {
+                  "id": "1",
+                  "type": "sum",
+                  "field": "size"
+                }
+              ],
+              "bucketAggs": [
+                {
+                  "id": "2",
+                  "type": "date_histogram",
+                  "field": "date_partition_ingested",
+                  "settings": {
+                    "interval": "auto"
+                  }
+                }
+              ],
+              "timeField": "date_partition_ingested"
+            }
+          ],
+          "id": 90121
+        },
+        {
+          "type": "timeseries",
+          "title": "In-flight (scanning now) by source",
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 23
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${legacy_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 20
+              }
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "legendFormat": "{{stream_name}}",
+              "expr": "max by (stream_name) (nats_consumer_num_ack_pending{consumer_name=~\".*-scanner-v1\"})"
+            }
+          ],
+          "id": 90122
+        },
+        {
+          "type": "timeseries",
+          "title": "Backlog (pending) by source",
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 23
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${legacy_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 20
+              }
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "legendFormat": "{{stream_name}}",
+              "expr": "max by (stream_name) (nats_consumer_num_pending{consumer_name=~\".*-scanner-v1\"})"
+            }
+          ],
+          "id": 90123
+        },
+        {
+          "type": "timeseries",
+          "title": "Redeliveries / retries by source (processing-error proxy)",
+          "description": "nats_consumer_num_redelivered rising = messages failing and being retried. Sustained growth indicates a scan is NOT running fine. Authoritative per-scan status requires the Postgres scan-jobs table (follow-up).",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 31
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${legacy_prometheus_ds}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10
+              }
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "legendFormat": "{{stream_name}} / {{consumer_name}}",
+              "expr": "max by (stream_name, consumer_name) (nats_consumer_num_redelivered{consumer_name=~\".*-scanner-v1|archiver-v1|extractor-v1\"})"
+            }
+          ],
+          "id": 90124
+        },
+        {
+          "type": "table",
+          "title": "Recent scanned files",
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 39
+          },
+          "datasource": {
+            "type": "grafana-opensearch-datasource",
+            "uid": "${legacy_opensearch_ds}"
+          },
+          "description": "Latest scanned documents in range. Narrow with the query box, e.g. connector_type:S3 or datasource_access_id:s3-access-012.",
+          "targets": [
+            {
+              "refId": "A",
+              "query": "*",
+              "metrics": [
+                {
+                  "id": "1",
+                  "type": "raw_data",
+                  "settings": {
+                    "size": "200"
+                  }
+                }
+              ],
+              "bucketAggs": [],
+              "timeField": "date_partition_ingested"
+            }
+          ],
+          "id": 90125
+        }
+      ],
+      "title": "📁 Direct OpenSearch Totals & Recent Files (pick a client below)",
+      "type": "row"
     }
   ],
   "preload": false,
@@ -12761,7 +13850,34 @@
     "eks"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "detail_prometheus_ds",
+        "label": "Deep-dive client (Prometheus)",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "legacy_prometheus_ds",
+        "label": "Direct-query client (Prometheus)",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 2
+      },
+      {
+        "name": "legacy_opensearch_ds",
+        "label": "Direct-query client (OpenSearch)",
+        "type": "datasource",
+        "query": "grafana-opensearch-datasource",
+        "current": {},
+        "hide": 2
+      }
+    ]
   },
   "time": {
     "from": "now-24h",
@@ -12822,9 +13938,9 @@
     ]
   },
   "timezone": "",
-  "title": "OpenSearch Scan Overview",
+  "title": "Scan Activity",
   "uid": "nx-scan-activity-all-clients",
-  "version": 25,
+  "version": 26,
   "weekStart": "",
   "folderUid": "scans-folder"
 }

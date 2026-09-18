@@ -1,5 +1,5 @@
 {
-  "__comment": "Combined per manager request: applications-monitor.json, nx-applications-dashboard.json, and nx-applications-monitoring.json all queried the same metric family (container_cpu/memory/network_*, kube_pod_container_status_ready/restarts) at three different granularities (fleet health / namespace-wide aggregate / per-service detail) - combined into one dashboard with those three as collapsible sections instead of three separate files, all sharing one $datasource + $namespace picker. BUGS FIXED while merging: (1) applications-monitor.json's Fleet Health panels queried an exact hardcoded snapshot of pod names including their ReplicaSet hash suffix (e.g. 'applications-archiver-789855dc6d-ngx9v') - those hashes change on every deploy, so this was already stale and would show 'Bad'/'No data' for current pods. Rebuilt as a dynamic label_values() query against $namespace, no hardcoded pod list. (2) nx-applications-dashboard.json's panels used gridPos w:30, exceeding Grafana's 24-column grid (always rendered clipped/overflowing), and its last two panels (Pod Count / Pod Restarts) overlapped by 2 grid units - re-tiled as a clean 2-column layout. (3) nx-applications-monitoring.json's 60 panels (15 services x 4 panels) had no row headers at all, just implicit grouping by title prefix - added one collapsible row divider per service for real navigability. | Folded in the 4 genuinely new panels from Application Health Executive View (Request Rate, Request Latency p95, HTTP Success Rate, Services Down by name) as a new top row - its other panels (Services Up count, Overall Fleet Health %, CPU Usage by Pod, Hourly Request Volume) duplicated what Fleet Health Summary / All-Pods Resource Overview already cover here, so those were not re-added. application-health-executive.json deleted as a duplicate.",
+  "__comment": "Combined per manager request: applications-monitor.json, nx-applications-dashboard.json, and nx-applications-monitoring.json all queried the same metric family (container_cpu/memory/network_*, kube_pod_container_status_ready/restarts) at three different granularities (fleet health / namespace-wide aggregate / per-service detail) - combined into one dashboard with those three as collapsible sections instead of three separate files, all sharing one $datasource + $namespace picker. BUGS FIXED while merging: (1) applications-monitor.json's Fleet Health panels queried an exact hardcoded snapshot of pod names including their ReplicaSet hash suffix (e.g. 'applications-archiver-789855dc6d-ngx9v') - those hashes change on every deploy, so this was already stale and would show 'Bad'/'No data' for current pods. Rebuilt as a dynamic label_values() query against $namespace, no hardcoded pod list. (2) nx-applications-dashboard.json's panels used gridPos w:30, exceeding Grafana's 24-column grid (always rendered clipped/overflowing), and its last two panels (Pod Count / Pod Restarts) overlapped by 2 grid units - re-tiled as a clean 2-column layout. (3) nx-applications-monitoring.json's 60 panels (15 services x 4 panels) had no row headers at all, just implicit grouping by title prefix - added one collapsible row divider per service for real navigability. | Folded in the 4 genuinely new panels from Application Health Executive View (Request Rate, Request Latency p95, HTTP Success Rate, Services Down by name) as a new top row - its other panels (Services Up count, Overall Fleet Health %, CPU Usage by Pod, Hourly Request Volume) duplicated what Fleet Health Summary / All-Pods Resource Overview already cover here, so those were not re-added. application-health-executive.json deleted as a duplicate. | 2026-09-18: folded in Applications V2 - Overview (the per-connector/per-service Pods Up drill-down index, 80 panels) as an additional section, so there is one Applications Overview dashboard instead of two. Its drill-down links already point at Connectors Detail / Services Detail. Recomputed gridPos block-by-block while merging - the source file had a pre-existing row/tile overlap bug (Credential Manager row overlapped the prior Box-Content block).",
   "annotations": {
     "list": []
   },
@@ -2363,6 +2363,3054 @@
         "uid": "${datasource}"
       },
       "id": 359
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 193
+      },
+      "id": 10004,
+      "panels": [],
+      "title": "🔗 V2 Migrated Components — Pods Up (drill-down index into Connectors/Services Detail)",
+      "type": "row"
+    },
+    {
+      "type": "row",
+      "id": 10005,
+      "title": "Snowflake — Scanner",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 194
+      },
+      "panels": []
+    },
+    {
+      "id": 10006,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 195
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open Snowflake Overview",
+              "url": "/d/nx-connectors-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*snowflake-connector-be-go\", namespace=\"$namespace\"})"
+        }
+      ]
+    },
+    {
+      "id": 10007,
+      "type": "stat",
+      "title": "Items Sent (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 195
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(snowflake_scanner_items_sent_total{namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10008,
+      "type": "stat",
+      "title": "Scan p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 195
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(snowflake_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10009,
+      "type": "stat",
+      "title": "Error Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 195
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(snowflake_scanner_database_errors_total{namespace=\"$namespace\"}[5m])) + sum(rate(snowflake_scanner_table_errors_total{namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 10010,
+      "title": "Snowflake — Content",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 199
+      },
+      "panels": []
+    },
+    {
+      "id": 10011,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 200
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open Snowflake Overview",
+              "url": "/d/nx-connectors-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*snowflake-connector-be-go-content\", namespace=\"$namespace\"})"
+        }
+      ]
+    },
+    {
+      "id": 10012,
+      "type": "stat",
+      "title": "Requests (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 200
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(snowflake_content_requests_total{namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10013,
+      "type": "stat",
+      "title": "Fetch p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 200
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(snowflake_content_duration_seconds_bucket{namespace=\"$namespace\", outcome=\"success\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10014,
+      "type": "stat",
+      "title": "Error Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 200
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(snowflake_content_requests_total{namespace=\"$namespace\", outcome=\"error\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 10015,
+      "title": "CIFS — Scanner & Augmenter",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 204
+      },
+      "panels": []
+    },
+    {
+      "id": 10016,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 205
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open CIFS Overview",
+              "url": "/d/nx-connectors-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*cifs-connector-be-go\", namespace=\"$namespace\"})"
+        }
+      ]
+    },
+    {
+      "id": 10017,
+      "type": "stat",
+      "title": "Items Sent (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 205
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(cifs_scanner_items_sent_total{namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10018,
+      "type": "stat",
+      "title": "Scan p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 205
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10019,
+      "type": "stat",
+      "title": "Error Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 205
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(cifs_scanner_acl_errors_total{namespace=\"$namespace\"}[5m])) + sum(rate(cifs_scanner_worker_connect_errors_total{namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 10020,
+      "title": "CIFS — Content",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 209
+      },
+      "panels": []
+    },
+    {
+      "id": 10021,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 210
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open CIFS Overview",
+              "url": "/d/nx-connectors-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*cifs-connector-be-go-content\", namespace=\"$namespace\"})"
+        }
+      ]
+    },
+    {
+      "id": 10022,
+      "type": "stat",
+      "title": "Fetches (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 210
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(cifs_content_fetch_total{namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10023,
+      "type": "stat",
+      "title": "Fetch p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 210
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", success=\"true\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10024,
+      "type": "stat",
+      "title": "Error Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 210
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(cifs_content_fetch_total{namespace=\"$namespace\", success=\"false\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 10025,
+      "title": "Registration Service",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 214
+      },
+      "panels": []
+    },
+    {
+      "id": 10026,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 215
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open Registration Service Overview",
+              "url": "/d/nx-services-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*registration-service.*\", namespace=\"$namespace\"})"
+        }
+      ]
+    },
+    {
+      "id": 10027,
+      "type": "stat",
+      "title": "Registrations (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 215
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(connector_registrations_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10028,
+      "type": "stat",
+      "title": "gRPC p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 215
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10029,
+      "type": "stat",
+      "title": "Error Rate",
+      "description": "Non-OK gRPC responses per second. Filtered on the numeric code label rather than status, which is free text including the error message.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 215
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", code!=\"0\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 10030,
+      "title": "Request Service",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 219
+      },
+      "panels": []
+    },
+    {
+      "id": 10031,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 220
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open Request Service Overview",
+              "url": "/d/nx-services-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*request-service.*\", namespace=\"$namespace\"})"
+        }
+      ]
+    },
+    {
+      "id": 10032,
+      "type": "stat",
+      "title": "Tests Created (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 220
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", outcome=\"created\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10033,
+      "type": "stat",
+      "title": "Round-Trip p95",
+      "description": "Job creation through result consumed from NATS, on the service's own 0.1s-300s ladder — a different scale from the HTTP/gRPC latency histograms because a connection test is dispatched asynchronously and can run for minutes. Only counts round trips that completed: a result that never arrives shows up as a drop in observation count, not a latency spike.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 220
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(request_service_connectiontest_duration_seconds_bucket{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10034,
+      "type": "stat",
+      "title": "Error Rate",
+      "description": "Connection-test creations that failed, per second. This is a dispatch-side failure; a test that dispatches fine but never comes back shows up as stalled on the request-service overview, not here.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 220
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", outcome=\"error\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 10035,
+      "title": "Knowledge Service",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 224
+      },
+      "panels": []
+    },
+    {
+      "id": 10036,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 225
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open Knowledge Service Overview",
+              "url": "/d/nx-services-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"})"
+        }
+      ]
+    },
+    {
+      "id": 10037,
+      "type": "stat",
+      "title": "Ingested (rate)",
+      "description": "outcome=\"forwarded\" only — the one outcome that means a document was actually ingested.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 225
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"forwarded\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10038,
+      "type": "stat",
+      "title": "Processing p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 225
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_service_pipeline_documents_processed_duration_seconds_bucket{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10039,
+      "type": "stat",
+      "title": "Not Ingested",
+      "description": "outcome=\"failed_permanent\" — documents knowledge-service gave up on. NOT a drop rate: the item is still forwarded downstream carrying its failure in knowledge_hub. Retryable conditions never appear here — they are retried in-process until they resolve, so this counter only moves on a terminal verdict.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 225
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_service_pipeline_documents_processed_total{job=~\".*knowledge-service-be-go.*\", namespace=\"$namespace\", outcome=\"failed_permanent\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 10040,
+      "title": "MySQL — Scanner",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 229
+      },
+      "panels": []
+    },
+    {
+      "id": 10041,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 230
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open MySQL Overview",
+              "url": "/d/nx-connectors-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*mysql-connector-be-go\", namespace=\"$namespace\"})"
+        }
+      ]
+    },
+    {
+      "id": 10042,
+      "type": "stat",
+      "title": "Items Sent (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 230
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(mysql_scanner_items_sent_total{namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10043,
+      "type": "stat",
+      "title": "Scan p95",
+      "description": "ScanStart discovery + fan-out phase, on a 0.5s–1024s ladder. Not whole-scan duration.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 230
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(mysql_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10044,
+      "type": "stat",
+      "title": "Error Rate",
+      "description": "Query failures against the source database only. Skipped tables, inline fallbacks and connector panics are counted apart — see the MySQL overview's Silent-Failure Signals row.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 230
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(mysql_scanner_database_errors_total{namespace=\"$namespace\"}[5m])) + sum(rate(mysql_scanner_table_errors_total{namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 10045,
+      "title": "MySQL — Content",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 234
+      },
+      "panels": []
+    },
+    {
+      "id": 10046,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 235
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open MySQL Overview",
+              "url": "/d/nx-connectors-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*mysql-connector-be-go-content\", namespace=\"$namespace\"})"
+        }
+      ]
+    },
+    {
+      "id": 10047,
+      "type": "stat",
+      "title": "Fetches (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 235
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(mysql_content_requests_total{namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10048,
+      "type": "stat",
+      "title": "Fetch p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 235
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(mysql_content_duration_seconds_bucket{namespace=\"$namespace\", outcome=\"success\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10049,
+      "type": "stat",
+      "title": "Error Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 235
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(mysql_content_requests_total{namespace=\"$namespace\", outcome=\"error\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 10050,
+      "title": "Knowledge Hub — Ingestor (sidecar in knowledge-service)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 239
+      },
+      "panels": []
+    },
+    {
+      "id": 10051,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 240
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open Knowledge Hub (sidecar) Ingestion",
+              "url": "/d/nx-services-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"})"
+        }
+      ]
+    },
+    {
+      "id": 10052,
+      "type": "stat",
+      "title": "Ingested (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 240
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_hub_ingest_documents_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", outcome=\"succeeded\"}[5m]))"
+        }
+      ],
+      "description": "outcome=\"succeeded\" only — the one outcome that wrote a document. \"reused\" is a same-checksum short-circuit and is deliberately excluded."
+    },
+    {
+      "id": 10053,
+      "type": "stat",
+      "title": "Ingest p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 240
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_hub_ingest_duration_seconds_bucket{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10054,
+      "type": "stat",
+      "title": "Failed (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 240
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_hub_ingest_documents_total{job=~\".*knowledge-hub-be-go-sidecar\", namespace=\"$namespace\", outcome=\"failed\"}[5m]))"
+        }
+      ],
+      "description": "Classified failures. Split by phase on the Ingestion dashboard — a pre-mutation failure costs nothing, a mid-write one leaves a document that used to be retrievable and is not now."
+    },
+    {
+      "type": "row",
+      "id": 10055,
+      "title": "Knowledge Hub — API (standalone pod)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 244
+      },
+      "panels": []
+    },
+    {
+      "id": 10056,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 245
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open Knowledge Hub (standalone) Overview",
+              "url": "/d/nx-services-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"})"
+        }
+      ]
+    },
+    {
+      "id": 10057,
+      "type": "stat",
+      "title": "RPC Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 245
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_hub_rpc_requests_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10058,
+      "type": "stat",
+      "title": "RPC p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 245
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(knowledge_hub_rpc_request_duration_seconds_bucket{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10059,
+      "type": "stat",
+      "title": "Error Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 245
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(knowledge_hub_rpc_requests_total{job=~\".*knowledge-hub-be-go\", namespace=\"$namespace\", code!=\"ok\"}[5m]))"
+        }
+      ],
+      "description": "Connect codes other than \"ok\". This is the wire outcome, not the ingestion verdict."
+    },
+    {
+      "type": "row",
+      "id": 10060,
+      "title": "PostgreSQL — Scanner",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 249
+      },
+      "panels": []
+    },
+    {
+      "id": 10061,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 250
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0",
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open PostgreSQL Overview",
+              "url": "/d/nx-connectors-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*postgresql-connector-be-go\", namespace=\"$namespace\"}) or vector(0)"
+        }
+      ]
+    },
+    {
+      "id": 10062,
+      "type": "stat",
+      "title": "Items Sent (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 250
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(postgresql_connector_items_sent_total{namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10063,
+      "type": "stat",
+      "title": "Fan-out p95",
+      "description": "ScanStart discovery + fan-out phase, on a 50ms–~102s ladder. Not whole-scan duration.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 250
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(postgresql_connector_scan_duration_seconds_bucket{namespace=\"$namespace\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10064,
+      "type": "stat",
+      "title": "Error Rate",
+      "description": "Failures against the source database only: schema-listing failures on a DatabaseFork plus per-table scan and publish failures.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 250
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(rate(postgresql_connector_database_errors_total{namespace=\"$namespace\"}[5m])) or vector(0)) + (sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\"}[5m])) or vector(0)) + (sum(rate(postgresql_connector_columns_failed_total{namespace=\"$namespace\"}[5m])) or vector(0))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 10065,
+      "title": "PostgreSQL — Content",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 254
+      },
+      "panels": []
+    },
+    {
+      "id": 10066,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 255
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0",
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open PostgreSQL Overview",
+              "url": "/d/nx-connectors-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*postgresql-connector-be-go-content\", namespace=\"$namespace\"}) or vector(0)"
+        }
+      ]
+    },
+    {
+      "id": 10067,
+      "type": "stat",
+      "title": "Fetches (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 255
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10068,
+      "type": "stat",
+      "title": "Fetch p95",
+      "description": "Successful fetches only (success=\"true\").",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 255
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", success=\"true\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10069,
+      "type": "stat",
+      "title": "Error Rate",
+      "description": "Every error_code summed. The NAK_* codes were redelivered with no reply sent; the FETCH_ERROR_* codes were answered with an error response.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 255
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\", success=\"false\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 10070,
+      "title": "Box — Scanner & Augmenter",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 259
+      },
+      "panels": []
+    },
+    {
+      "id": 10071,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 260
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open Box Overview",
+              "url": "/d/nx-connectors-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*box-connector-be-go\", namespace=\"$namespace\"})"
+        }
+      ]
+    },
+    {
+      "id": 10072,
+      "type": "stat",
+      "title": "Items Sent (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 260
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(box_scanner_items_processed_total{namespace=\"$namespace\", outcome=\"sent\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10073,
+      "type": "stat",
+      "title": "Folder p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 260
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10074,
+      "type": "stat",
+      "title": "Error Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 260
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(box_scanner_items_processed_total{namespace=\"$namespace\", outcome=~\"build_failed|upsert_failed\"}[5m])) + sum(rate(box_scanner_folders_processed_total{namespace=\"$namespace\", outcome=\"publish_failed\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 10075,
+      "title": "Box — Content",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 264
+      },
+      "panels": []
+    },
+    {
+      "id": 10076,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 265
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open Box Overview",
+              "url": "/d/nx-connectors-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*box-connector-be-go-content\", namespace=\"$namespace\"})"
+        }
+      ]
+    },
+    {
+      "id": 10077,
+      "type": "stat",
+      "title": "Fetches (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 265
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(box_content_fetch_total{namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10078,
+      "type": "stat",
+      "title": "Fetch p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 265
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(box_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", success=\"true\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 10079,
+      "type": "stat",
+      "title": "Error Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 265
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(box_content_fetch_total{namespace=\"$namespace\", success=\"false\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 10080,
+      "type": "row",
+      "title": "Credential Manager",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 269
+      },
+      "panels": []
+    },
+    {
+      "id": 10081,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 270
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open Credential Manager Overview",
+              "url": "/d/nx-services-detail"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*credentialmanager.*\", namespace=\"$namespace\"})"
+        }
+      ],
+      "description": "Every connector resolves its credentials through this pod over gRPC."
+    },
+    {
+      "id": 10082,
+      "type": "stat",
+      "title": "JWKS Available",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 270
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min(auth_jwks_available{job=~\".*credentialmanager.*\", namespace=\"$namespace\"})"
+        }
+      ],
+      "description": "0 means the UI-facing Connect API is rejecting every request. It does not mean this service is down: the gRPC CredentialService connectors depend on never touches the JWKS, which is why this is a metric rather than a health check. The p95 and error rate beside it are that gRPC surface, so a JWKS outage should leave them flat."
+    },
+    {
+      "id": 10083,
+      "type": "stat",
+      "title": "Credential Lookup p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 270
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*credentialmanager.*\", namespace=\"$namespace\"}[5m])))"
+        }
+      ],
+      "description": "gRPC, the surface connectors call. Every connector blocks on this before it can read anything."
+    },
+    {
+      "id": 10084,
+      "type": "stat",
+      "title": "Error Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 270
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.1
+              }
+            ]
+          },
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(grpc_requests_total{job=~\".*credentialmanager.*\", namespace=\"$namespace\", code!=\"0\"}[5m]))"
+        }
+      ],
+      "description": "Non-OK gRPC codes, matching how Registration Service reports its error rate."
     }
   ],
   "preload": false,
@@ -2436,7 +5484,7 @@
   "timezone": "browser",
   "title": "Applications Overview",
   "uid": "nx-applications-overview",
-  "version": 1,
+  "version": 2,
   "weekStart": "",
   "folderUid": "overview-folder"
 }
