@@ -50,7 +50,7 @@
         "type": "query",
         "label": "Namespace",
         "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "query": "label_values(process_start_time_seconds{job=~\".*snowflake-connector-be-go.*\"}, namespace)",
+        "query": "label_values(kube_deployment_spec_replicas{deployment=~\".*snowflake-connector-be-go.*\"}, namespace)",
         "current": { "selected": true, "text": "default", "value": "default" },
         "hide": 0,
         "includeAll": false,
@@ -82,7 +82,7 @@
         "current": { "selected": true, "text": "All", "value": "$__all" },
         "hide": 0,
         "includeAll": true,
-        "allValue": ".*",
+        "allValue": ".+",
         "multi": true,
         "refresh": 2,
         "sort": 1
@@ -243,6 +243,38 @@
       "fieldConfig": { "defaults": { "unit": "short" } },
       "targets": [
         { "refId": "A", "expr": "go_threads{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 410,
+      "title": "Connection Test",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 },
+      "panels": []
+    },
+    {
+      "id": 411,
+      "type": "timeseries",
+      "title": "Probe Duration by Depth",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 33 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le, depth) (rate(snowflake_connectiontest_probe_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p50 {{depth}}" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le, depth) (rate(snowflake_connectiontest_probe_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p95 {{depth}}" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le, depth) (rate(snowflake_connectiontest_probe_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p99 {{depth}}" }
+      ]
+    },
+    {
+      "id": 412,
+      "type": "timeseries",
+      "title": "Connection Tests In Flight",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 33 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(snowflake_connectiontest_in_flight{namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "in flight" }
       ]
     }
   ]
