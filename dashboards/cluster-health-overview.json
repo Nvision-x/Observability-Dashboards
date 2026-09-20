@@ -2471,9 +2471,9 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "definition": "label_values((label_replace(kube_deployment_labels{namespace=~\"$namespace\"}, \"workload_name\", \"$1\", \"deployment\", \"(.*)\") or label_replace(kube_statefulset_labels{namespace=~\"$namespace\"}, \"workload_name\", \"$1\", \"statefulset\", \"(.*)\") or label_replace(kube_daemonset_labels{namespace=~\"$namespace\"}, \"workload_name\", \"$1\", \"daemonset\", \"(.*)\")), workload_name)",
+        "definition": "label_values(kube_pod_info{namespace=~\"$namespace\"}, created_by_name)",
         "query": {
-          "query": "label_values((label_replace(kube_deployment_labels{namespace=~\"$namespace\"}, \"workload_name\", \"$1\", \"deployment\", \"(.*)\") or label_replace(kube_statefulset_labels{namespace=~\"$namespace\"}, \"workload_name\", \"$1\", \"statefulset\", \"(.*)\") or label_replace(kube_daemonset_labels{namespace=~\"$namespace\"}, \"workload_name\", \"$1\", \"daemonset\", \"(.*)\")), workload_name)",
+          "query": "label_values(kube_pod_info{namespace=~\"$namespace\"}, created_by_name)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "current": {},
