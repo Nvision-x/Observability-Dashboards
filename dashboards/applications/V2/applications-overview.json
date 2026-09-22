@@ -3090,6 +3090,196 @@
         }
       ],
       "description": "Non-OK gRPC codes, matching how Registration Service reports its error rate."
+    },
+    {
+      "id": 1700,
+      "type": "row",
+      "title": "Datasource Service",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 77
+      },
+      "panels": []
+    },
+    {
+      "id": 65,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 78
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open Datasource Service Overview",
+              "url": "/d/apps-v2-datasource-service-overview?${namespace:queryparam}"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*datasource-service.*\", namespace=\"$namespace\"})"
+        }
+      ],
+      "description": "Scans are defined here and their schedules fire from this pod. Down means no scan can be defined or started, and no cron schedule fires. The one failure this stat cannot show is the API being silently off — an unset JWKS_URL leaves the pod up and firing schedules while every UI call gets a 404, which is the api_enabled gauge on the component board."
+    },
+    {
+      "id": 66,
+      "type": "stat",
+      "title": "Firings (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 78
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 3
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\"}[5m]))"
+        }
+      ],
+      "description": "Scheduled and manual firings together — the domain work this service does. Low and spiky is the normal shape: this counts scans being started, not scans running."
+    },
+    {
+      "id": 67,
+      "type": "stat",
+      "title": "API p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 78
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*datasource-service.*\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m])))"
+        }
+      ],
+      "description": "The Connect API the UI calls. It serves Connect over HTTP rather than gRPC, so its RPCs are counted as HTTP requests and there is no grpc_request_duration_seconds here. Safe to read as a percentile: the service passes SubsecondLatencyBuckets explicitly, so the histogram has a real seconds ladder rather than the millisecond-tuned SDK default. OPTIONS is excluded so an allowed CORS preflight, which is a near-zero 204 on the same route, cannot drag the percentile down."
+    },
+    {
+      "id": 68,
+      "type": "stat",
+      "title": "Failed Firings (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 78
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.01
+              }
+            ]
+          },
+          "decimals": 3
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", outcome=\"failed\"}[5m]))"
+        }
+      ],
+      "description": "Firings that produced no job — the pipeline could not be ensured, or the job engine rejected the submission. The error stat for this row is the domain failure rather than a non-2xx rate, because a scan that never starts is what a user notices; the API error ratio is on the component board. Skipped firings are excluded: those are the concurrency rules working, not a fault."
     }
   ]
 }
