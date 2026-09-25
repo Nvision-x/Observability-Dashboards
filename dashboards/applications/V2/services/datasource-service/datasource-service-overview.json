@@ -302,7 +302,7 @@
       "id": 5,
       "type": "stat",
       "title": "Skipped (5m)",
-      "description": "A skipped firing is the concurrency rules working, not a fault — the schedule came due while the definition was already running, or a full scan needed exclusive access. Deliberately not coloured as an error. Skips climbing while submissions fall is the signal to read the Skip Reasons panel: it usually means a schedule fires faster than its scans complete.",
+      "description": "A skipped firing is the rule that a definition never runs twice at once, working — not a fault. The definition's schedule came due, or someone pressed Run now, while a ScanStart job was still active on the datasource access. Deliberately not coloured as an error. Skips climbing while submissions fall is the signal to read the Skip Reasons panel: it usually means a schedule fires faster than its scans complete.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -909,6 +909,114 @@
       ]
     },
     {
+      "id": 57,
+      "type": "timeseries",
+      "title": "Errors by Route & Status (rate)",
+      "description": "Which RPC is failing, and how. One series per route and non-2xx status, so a 404 on GetJobDefinition and a 502 on RunJobNow read as different problems rather than one error ratio. Connect maps its error codes onto HTTP statuses for the Connect protocol the UI uses, so the status here is the RPC outcome, not only transport failure.\n\nOPTIONS is kept, as on Request Rate by Status: a refused preflight is a 405 against the route it was guarding, and that is the CORS signal.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (route, status) (rate(http_requests_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", status!~\"2..\"}[5m]))",
+          "legendFormat": "{{route}} {{status}}"
+        }
+      ]
+    },
+    {
+      "id": 58,
+      "type": "timeseries",
+      "title": "Error Ratio by Route (non-2xx)",
+      "description": "Error Ratio split by RPC. Read it with Errors by Route & Status beside it: on a route called a handful of times in the window one failure is a large share, so a high ratio with a tiny rate is a single refused call, not an outage. A route with no errors in the window draws no line. clamp_min keeps each ratio defined while its route is idle.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.05
+              },
+              {
+                "color": "red",
+                "value": 0.25
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (route) (rate(http_requests_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", status!~\"2..\"}[5m])) / clamp_min(sum by (route) (rate(http_requests_total{job=~\".*datasource-service.*\", namespace=\"$namespace\"}[5m])), 0.001)",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
       "type": "row",
       "id": 300,
       "title": "Job Firings",
@@ -917,7 +1025,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 39
       },
       "panels": []
     },
@@ -934,7 +1042,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 32
+        "y": 40
       },
       "fieldConfig": {
         "defaults": {
@@ -1025,7 +1133,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 32
+        "y": 40
       },
       "fieldConfig": {
         "defaults": {
@@ -1070,7 +1178,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 32
+        "y": 40
       },
       "fieldConfig": {
         "defaults": {
@@ -1117,7 +1225,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 48
       },
       "panels": []
     },
@@ -1125,7 +1233,7 @@
       "id": 30,
       "type": "timeseries",
       "title": "Skip Reasons (rate)",
-      "description": "definition_already_running is the ordinary one: the previous scan from the same definition had not finished. full_scan_needs_exclusive_access and full_scan_in_progress are a full scan refusing to share with an incremental one in either direction. concurrency_forbidden is a definition configured to never overlap at all. All four are policy, not error — what matters is the trend, because a reason that never clears means a schedule is set faster than its scans take.",
+      "description": "scan_in_progress is the only skip: a ScanStart job was already active on the datasource access when the firing came due. Usually it is the definition's own previous scan still running; it can also be a scan some other service started on the same access, which the job engine reports just the same. Augments and connection tests never cause a skip. It is policy, not error — what matters is the trend, because a skip that never clears means a schedule is set faster than its scans take.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1134,7 +1242,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 41
+        "y": 49
       },
       "fieldConfig": {
         "defaults": {
@@ -1182,7 +1290,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 41
+        "y": 49
       },
       "fieldConfig": {
         "defaults": {
@@ -1230,7 +1338,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 41
+        "y": 49
       },
       "fieldConfig": {
         "defaults": {
@@ -1289,7 +1397,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 57
       },
       "panels": []
     },
@@ -1306,7 +1414,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 50
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
@@ -1351,7 +1459,7 @@
         "h": 8,
         "w": 6,
         "x": 6,
-        "y": 50
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
@@ -1396,7 +1504,7 @@
         "h": 8,
         "w": 6,
         "x": 12,
-        "y": 50
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
@@ -1443,7 +1551,7 @@
         "h": 8,
         "w": 6,
         "x": 18,
-        "y": 50
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
