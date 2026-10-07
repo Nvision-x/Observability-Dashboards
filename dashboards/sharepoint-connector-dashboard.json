@@ -1426,7 +1426,7 @@
       "id": 213,
       "type": "stat",
       "title": "File-type refusals, free (range)",
-      "description": "Label writes the file-type gate refused before any Graph call, over the selected range: files Microsoft cannot apply a label to (legacy .doc .xls .ppt, templates, PDF when LABELSYNC_PDF_WRITE_ENABLED is off, anything outside the write list). Each one is a metered call NOT made. Counted as the batch runs (NXE-2921).",
+      "description": "Label writes the file-type gate refused before any Graph call, over the selected range: files Microsoft cannot apply a label to (legacy .doc .xls .ppt, templates, PDF when LABELSYNC_PDF_WRITE_ENABLED is off, anything outside the write list). Each one is a metered call NOT made. Counted as the batch runs (NXE-2921). Blank means no pod with label sync switched on reported in the range.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1467,9 +1467,10 @@
       },
       "targets": [
         {
-          "expr": "sum((increase(sharepoint_label_sync_file_type_gated_total{job=~\"$component\"}[$__range]) and sharepoint_label_sync_file_type_gated_total{job=~\"$component\"} offset $__range) or (last_over_time(sharepoint_label_sync_file_type_gated_total{job=~\"$component\"}[$__range]) unless sharepoint_label_sync_file_type_gated_total{job=~\"$component\"} offset $__range)) or vector(0)",
+          "expr": "sum((increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"}[$__range]) and sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"} offset $__range) or (last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"}[$__range]) unless sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"} offset $__range))",
           "legendFormat": "",
-          "refId": "A"
+          "refId": "A",
+          "instant": true
         }
       ]
     },
@@ -1477,7 +1478,7 @@
       "id": 214,
       "type": "stat",
       "title": "File-type refusals, billed (range)",
-      "description": "Writes that WERE sent to assignSensitivityLabel and refused by Microsoft for the file type, over the selected range. Each was billed at $0.00185. Should be 0: anything here is a type the gate let through and Microsoft refused (most likely PDF on a tenant without PDF labelling: set LABELSYNC_PDF_WRITE_ENABLED=false). Counted when the write resolves.",
+      "description": "Writes that WERE sent to assignSensitivityLabel and refused by Microsoft for the file type, over the selected range. Each was billed at $0.00185. Should be 0: anything here is a type the gate let through and Microsoft refused. pdf: the tenant has no PDF labelling, set LABELSYNC_PDF_WRITE_ENABLED=false. A type listed in LABELSYNC_WRITE_EXTRA_EXTENSIONS: take it out again. unknown: the index had no file name. See Billed refusals by extension. Counted when the write resolves.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1522,9 +1523,10 @@
       },
       "targets": [
         {
-          "expr": "sum((increase(sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"}[$__range]) and sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"} offset $__range) or (last_over_time(sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"}[$__range]) unless sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"} offset $__range)) or vector(0)",
+          "expr": "sum((increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[$__range]) and sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"} offset $__range) or (last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[$__range]) unless sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"} offset $__range))",
           "legendFormat": "",
-          "refId": "A"
+          "refId": "A",
+          "instant": true
         }
       ]
     },
@@ -1581,9 +1583,10 @@
       },
       "targets": [
         {
-          "expr": "(sum((increase(sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"}[$__range]) and sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"} offset $__range) or (last_over_time(sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"}[$__range]) unless sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"} offset $__range)) or vector(0)) * 0.00185",
+          "expr": "sum((increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[$__range]) and sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"} offset $__range) or (last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[$__range]) unless sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"} offset $__range)) * 0.00185",
           "legendFormat": "",
-          "refId": "A"
+          "refId": "A",
+          "instant": true
         }
       ]
     },
@@ -1591,7 +1594,7 @@
       "id": 216,
       "type": "stat",
       "title": "PDF write enabled, per pod",
-      "description": "LABELSYNC_PDF_WRITE_ENABLED as each scanner pod read it at startup. On: PDFs are sent (right only if the tenant has EnableSensitivityLabelforPDF). Off: PDFs are refused for free. No value means the pod predates NXE-2921 or label sync is not running on it.",
+      "description": "LABELSYNC_PDF_WRITE_ENABLED as each scanner pod read it at startup. On: PDFs are sent (right only if the tenant has EnableSensitivityLabelforPDF). Off: PDFs are refused for free. Reported at startup only by a scanner pod with the label-sync producer switched on (LABELSYNC_PRODUCER_ENABLED); no value means it is off or the pod predates NXE-2921. Live pods only.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1650,7 +1653,8 @@
         {
           "expr": "max by (pod) (sharepoint_label_sync_pdf_write_enabled{job=~\"$component\"})",
           "legendFormat": "{{pod}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true
         }
       ]
     },
@@ -1658,7 +1662,7 @@
       "id": 217,
       "type": "stat",
       "title": "Extra writable extensions, per pod",
-      "description": "How many LABELSYNC_WRITE_EXTRA_EXTENSIONS entries each scanner pod accepted at startup (added to Microsoft's apply list). Normally 0. Entries the connector dropped (pdf, dots, paths) are not counted; they are in its startup warning.",
+      "description": "How many LABELSYNC_WRITE_EXTRA_EXTENSIONS entries each scanner pod accepted at startup (added to Microsoft's apply list). Normally 0. Entries the connector dropped (pdf, dots, paths) are not counted; they are in its startup warning. Live pods with the label-sync producer switched on only.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1704,7 +1708,8 @@
         {
           "expr": "max by (pod) (sharepoint_label_sync_write_extra_extensions{job=~\"$component\"})",
           "legendFormat": "{{pod}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true
         }
       ]
     },
@@ -1712,7 +1717,7 @@
       "id": 218,
       "type": "bargauge",
       "title": "Free refusals by extension (range)",
-      "description": "The free refusals above, split by extension. The extension is bounded by the connector: Microsoft's labellable read list plus configured extras, else none (a name with no extension), unknown (no name in the index) or other. Never a file name.",
+      "description": "The free refusals above, split by extension. The extension is bounded by the connector: Microsoft's labellable read list plus configured extras, else none (a name with no extension), unknown (no name in the index) or other. Never a file name. Empty when nothing was refused in the range.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1765,7 +1770,7 @@
       "id": 219,
       "type": "bargauge",
       "title": "Billed refusals by extension (range)",
-      "description": "The billed file-type refusals, split by extension. A type that shows up here every run should be refused by the gate instead: pdf -> LABELSYNC_PDF_WRITE_ENABLED=false; anything else is a type on our write list Microsoft refused, which needs a code change.",
+      "description": "The billed file-type refusals, split by extension. A type that shows up here every run should be refused by the gate instead: pdf -> LABELSYNC_PDF_WRITE_ENABLED=false; a type added through LABELSYNC_WRITE_EXTRA_EXTENSIONS -> remove it there; unknown -> the file has no name in the index; any other type is on our own write list and Microsoft refused it, which needs a code change. Empty when nothing was refused in the range.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1818,7 +1823,7 @@
       "id": 220,
       "type": "bargauge",
       "title": "Wasted spend by datasource (range)",
-      "description": "Billed file-type refusals x $0.00185, by the connector's access_id (one per datasource). Map an access_id to a datasource in the API's datasource access list.",
+      "description": "Billed file-type refusals x $0.00185, by the connector's access_id (one per datasource). Map an access_id to a datasource in the API's datasource access list. Empty when nothing was refused in the range.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1871,7 +1876,7 @@
       "id": 221,
       "type": "timeseries",
       "title": "File-type refusals: free vs billed",
-      "description": "Rate of file-type refusals, the free gate against the billed backstop. Like the other rate graphs here, it cannot see the first event of a pod's life (the series is created at 1); the stats above can.",
+      "description": "Rate of file-type refusals, the free gate against the billed backstop. The split by extension is in the bar charts above.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1914,13 +1919,13 @@
       },
       "targets": [
         {
-          "expr": "sum by (extension) (rate(sharepoint_label_sync_file_type_gated_total{job=~\"$component\"}[5m]))",
-          "legendFormat": "free: {{extension}}",
+          "expr": "sum(rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"}[5m]))",
+          "legendFormat": "refused free (gate)",
           "refId": "A"
         },
         {
-          "expr": "sum by (extension) (rate(sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"}[5m]))",
-          "legendFormat": "billed: {{extension}}",
+          "expr": "sum(rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[5m]))",
+          "legendFormat": "refused after a billed call",
           "refId": "B"
         }
       ]
