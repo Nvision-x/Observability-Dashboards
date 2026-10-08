@@ -1031,7 +1031,7 @@
       "id": 205,
       "type": "stat",
       "title": "Terminal rejections (range)",
-      "description": "Outcomes that will never succeed on retry: label_missing (an admin deleted it \u2014 the MAPPING is stale), unsupported_label, not_appliable (the target is a label group), file_locked (423 on a file SharePoint cannot decrypt), and failed. Non-zero means someone has to change something; re-running only costs money.",
+      "description": "Outcomes that will never succeed on retry: label_missing (an admin deleted it \u2014 the MAPPING is stale), unsupported_label, not_appliable (the target is a label group), file_locked (423 on a file SharePoint cannot decrypt), rejected_file_not_labellable_billed (a write sent to a file type Microsoft refused, usually PDF on a tenant without PDF labelling: set LABELSYNC_PDF_WRITE_ENABLED=false on both the connector and the API), and failed. Non-zero means someone has to change something; re-running only costs money.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1079,7 +1079,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"rejected_label_missing.*|rejected_unsupported_label.*|rejected_not_appliable.*|rejected_file_locked.*|failed.*\"}[$__range]))",
+          "expr": "sum(increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"rejected_label_missing.*|rejected_unsupported_label.*|rejected_not_appliable.*|rejected_file_locked.*|rejected_file_not_labellable_billed|failed.*\"}[$__range]))",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1262,7 +1262,7 @@
       "id": 209,
       "type": "timeseries",
       "title": "Terminal rejections \u2014 something has to change",
-      "description": "None of these get better by retrying. label_missing and unsupported_label point at the mapping; not_appliable means the mapped target is a label GROUP rather than a label; file_locked is about the document itself (double-key encrypted, or protected in a way SharePoint cannot decrypt).",
+      "description": "None of these get better by retrying. label_missing and unsupported_label point at the mapping; not_appliable means the mapped target is a label GROUP rather than a label; file_locked is about the document itself (double-key encrypted, or protected in a way SharePoint cannot decrypt); rejected_file_not_labellable_billed is a file type Microsoft refused after we sent the write, which every later job pays for again until the file-type settings change.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1305,7 +1305,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (outcome) (rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"rejected_label_missing.*|rejected_unsupported_label.*|rejected_not_appliable.*|rejected_file_locked.*|failed.*\"}[5m]))",
+          "expr": "sum by (outcome) (rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"rejected_label_missing.*|rejected_unsupported_label.*|rejected_not_appliable.*|rejected_file_locked.*|rejected_file_not_labellable_billed|failed.*\"}[5m]))",
           "legendFormat": "{{outcome}}",
           "refId": "A"
         }
@@ -1946,7 +1946,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**Label sync runs in SCANNER mode only.** Set **Component = Scanner** (or leave it on All) \u2014 the `$job` and `$pod` variables on the rest of this dashboard are driven by `sharepoint_content_fetch_*`, which only the *content* pod emits, so they can never name the pod doing this work. That is why this row selects on `$component` instead.\n\n**Blank panels are the expected state until the feature is switched on**, and they are the *only* outward signal that it is not. The producer half is gated behind `LABELSYNC_PRODUCER_ENABLED`, which defaults to false; left unset, a label-sync job finds no handler and vanishes with no error, no log line and no failed job. In Kubernetes the switch is the Helm value `sharepointConnectorBeGo.labelSync.producerEnabled` on the **scanner** deployment \u2014 content mode never registers the handlers. Check it before assuming the pipeline is broken:\n\n```\nkubectl get cm -o jsonpath='{.data.LABELSYNC_PRODUCER_ENABLED}' \\\n  <release>-applications-sharepoint-connector-be-go-config\n```\n\n**Only `applied` costs money.** `skipped_already_correct` and the pre-flight rejections are free; `assignSensitivityLabel` is the one metered call in Graph, at **$0.00185** each. An `_cached` suffix on an outcome means the verdict came from the label cache rather than a fresh read \u2014 same meaning, no Graph call.\n\n**429s do not appear here.** Graph throttling shows up in the Throttling row at the top of this dashboard, and only for content mode. Scanner-side Graph traffic is on the *Microsoft Graph API* row, gated by `$job`.\n\n**File types (NXE-2921).** Microsoft reads labels from more types than it lets us write them to. The connector refuses a write to a type it cannot take before any Graph call (free) and counts it in `sharepoint_label_sync_file_type_gated_total`; a write that was still sent and refused for its type is billed and counted in `sharepoint_label_sync_file_type_billed_refusals_total`. Both carry a bounded `extension` and `access_id`. The billed one should stay at 0; if it does not, read its extension panel."
+        "content": "**Label sync runs in SCANNER mode only.** Set **Component = Scanner** (or leave it on All) \u2014 the `$job` and `$pod` variables on the rest of this dashboard are driven by `sharepoint_content_fetch_*`, which only the *content* pod emits, so they can never name the pod doing this work. That is why this row selects on `$component` instead.\n\n**Blank panels are the expected state until the feature is switched on**, and they are the *only* outward signal that it is not. The producer half is gated behind `LABELSYNC_PRODUCER_ENABLED`, which defaults to false; left unset, a label-sync job finds no handler and vanishes with no error, no log line and no failed job. In Kubernetes the switch is the Helm value `sharepointConnectorBeGo.labelSync.producerEnabled` on the **scanner** deployment \u2014 content mode never registers the handlers. Check it before assuming the pipeline is broken:\n\n```\nkubectl get cm -o jsonpath='{.data.LABELSYNC_PRODUCER_ENABLED}' \\\n  <release>-applications-sharepoint-connector-be-go-config\n```\n\n**Every write we send costs money, whatever its outcome.** `assignSensitivityLabel` is the one metered call in Graph, at **$0.00185** each, and it is billed once it is sent, not when it succeeds: `applied`, `pending_unterminated` and `rejected_file_not_labellable_billed` each cost a call, and so does `failed` unless the write never left the pod. Free means no write was sent: `skipped_already_correct`, `rejected_file_not_labellable_gated` and the pre-flight rejections. The exact count is *Billed calls*, not a sum of outcomes. An `_cached` suffix on an outcome means the verdict came from the label cache rather than a fresh read \u2014 same meaning, no Graph call.\n\n**429s do not appear here.** Graph throttling shows up in the Throttling row at the top of this dashboard, and only for content mode. Scanner-side Graph traffic is on the *Microsoft Graph API* row, gated by `$job`.\n\n**File types (NXE-2921).** Microsoft reads labels from more types than it lets us write them to. The connector refuses a write to a type it cannot take before any Graph call (free) and counts it in `sharepoint_label_sync_file_type_gated_total`; a write that was still sent and refused for its type is billed and counted in `sharepoint_label_sync_file_type_billed_refusals_total`. Both carry a bounded `extension` and `access_id`. The billed one should stay at 0; if it does not, read its extension panel."
       }
     },
     {
