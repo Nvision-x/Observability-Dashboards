@@ -156,7 +156,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -193,7 +193,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -233,7 +233,20 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
         }
       },
       "options": {
@@ -243,7 +256,7 @@
           ]
         },
         "colorMode": "background",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -254,9 +267,9 @@
       "description": "Discovered minus every terminal outcome. Should be zero: a non-zero value means an exit path in processFolder is uninstrumented, not that files were lost."
     },
     {
-      "id": 84,
+      "id": 7,
       "type": "stat",
-      "title": "Users Enumerated (total)",
+      "title": "Folders Skipped (total)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -269,8 +282,34 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "locale",
-          "decimals": 0
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
+            ]
+          }
         }
       },
       "options": {
@@ -279,16 +318,15 @@
             "lastNotNull"
           ]
         },
-        "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_scanner_users_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "sum(max_over_time(box_scanner_folders_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"skipped_collab\"}[$__range])) or vector(0)"
         }
       ],
-      "description": "Enterprise users listed at the start of a full scan. In Box the unit of fan-out is the user, so this is the real denominator of a scan."
+      "description": "Folders the scanner walked past without forking. skipped_collab is the owner filter \u2014 a folder owned by another user, left for that user's own fork so it is enumerated exactly once. Expected to be non-zero on a shared tenant; it is here so 'forked' is never mistaken for 'all folders'."
     },
     {
       "id": 85,
@@ -317,7 +355,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -354,7 +392,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -405,7 +443,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -442,7 +480,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -482,7 +520,20 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
         }
       },
       "options": {
@@ -492,7 +543,7 @@
           ]
         },
         "colorMode": "background",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -529,7 +580,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -578,7 +629,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "dark-green"
+                  "fixedColor": "blue"
                 }
               }
             ]
@@ -638,7 +689,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "dark-purple"
+                  "fixedColor": "red"
                 }
               }
             ]
@@ -714,19 +765,19 @@
         "y": 18
       },
       "panels": [],
-      "description": "There are deliberately no ACL panels here: the scanner's collaboration fetch is commented out in folder_work.go to save API tokens, so ACLs come only from the augmenter. A scanner ACL panel would be flat by design, which on a board is indistinguishable from a broken one."
+      "description": "In: consumer backlog, in-flight and redelivered, plus the replicas that caused. In the middle: discovered \u2192 failed \u2192 sent, with per-folder latency and per-user admission saturation. KEDA signals against their thresholds last."
     },
     {
-      "id": 101,
+      "id": 145,
       "type": "stat",
-      "title": "Pods Up",
+      "title": "Scan Mode (window)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
-        "w": 3,
+        "w": 6,
         "x": 0,
         "y": 19
       },
@@ -734,20 +785,110 @@
         "defaults": {
           "unit": "short",
           "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "text",
                 "value": null
               },
               {
-                "color": "green",
+                "color": "blue",
                 "value": 1
               }
             ]
           }
-        }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "incremental"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "dark-green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "full \u00b7 stale cursor"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "full \u00b7 no cursor"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "reduceOptions": {
@@ -755,70 +896,35 @@
             "lastNotNull"
           ]
         },
+        "graphMode": "none",
         "colorMode": "background",
-        "graphMode": "none"
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "orientation": "horizontal"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(up{job=~\".*box-connector-be-go\", namespace=\"$namespace\", pod=~\"$pod\"})"
+          "legendFormat": "incremental",
+          "expr": "sum(max_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"incremental\", reason=\"cursor_fresh\"}[$__range]))"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "full \u00b7 stale cursor",
+          "expr": "sum(max_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"full\", reason=\"cursor_stale\"}[$__range]))"
+        },
+        {
+          "refId": "C",
+          "legendFormat": "full \u00b7 no cursor",
+          "expr": "sum(max_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"full\", reason=\"no_cursor\"}[$__range]))"
         }
       ],
-      "description": "Zero is the normal state, not an outage: minReplicaCount is 0 and the cooldown is 900s."
+      "description": "Which mode each scan ran in, and why. A tile at 0 in grey means that path did not happen \u2014 it stays on screen on purpose, because 'did not happen' and 'no data' are different answers. green = incremental ran; yellow = the cursor aged past BOX_INCREMENTAL_MAX_AGE_HOURS so a full scan re-baselined; red = no usable cursor at all, which sustained means incremental is broken rather than idle."
     },
     {
-      "id": 102,
+      "id": 121,
       "type": "stat",
-      "title": "Restarts (1h)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 3,
-        "y": 19
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          }
-        }
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "colorMode": "background",
-        "graphMode": "none"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", container=\"box-connector-be-go\"}[1h]))"
-        }
-      ]
-    },
-    {
-      "id": 103,
-      "type": "stat",
-      "title": "Files Discovered (5m)",
+      "title": "NATS \u2014 Scanner Backlog",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -831,8 +937,8 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
-          "decimals": 2
+          "unit": "short",
+          "decimals": 0
         }
       },
       "options": {
@@ -842,19 +948,19 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+          "expr": "max(nats_consumer_num_pending{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})"
         }
       ]
     },
     {
-      "id": 104,
+      "id": 122,
       "type": "stat",
-      "title": "Items Sent (5m)",
+      "title": "NATS \u2014 In Flight (unacked)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -867,8 +973,8 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
-          "decimals": 2
+          "unit": "short",
+          "decimals": 0
         }
       },
       "options": {
@@ -878,19 +984,19 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[5m]))"
+          "expr": "max(nats_consumer_num_ack_pending{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})"
         }
       ]
     },
     {
-      "id": 105,
+      "id": 123,
       "type": "stat",
-      "title": "Items Failed (5m)",
+      "title": "NATS \u2014 Redelivered",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -903,8 +1009,8 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
-          "decimals": 2,
+          "unit": "short",
+          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -913,11 +1019,24 @@
                 "value": null
               },
               {
-                "color": "red",
-                "value": 0.001
+                "color": "orange",
+                "value": 1
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
         }
       },
       "options": {
@@ -927,20 +1046,20 @@
           ]
         },
         "colorMode": "background",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=~\"build_failed|upsert_failed\"}[5m]))"
+          "expr": "max(nats_consumer_num_redelivered{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})"
         }
       ],
-      "description": "Total items the scanner discovered but could not deliver: build_failed and upsert_failed added together. This is the headline loss count. For WHICH of the two it was, see 'Scanner Items by Outcome' \u2014 build_failed is bad data, upsert_failed is the sender or NATS."
+      "description": "A connector that fails and retries in a loop shows up here and nowhere else."
     },
     {
-      "id": 106,
+      "id": 124,
       "type": "stat",
-      "title": "Folder p95",
+      "title": "Replicas",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -953,8 +1072,8 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
-          "decimals": 3
+          "unit": "short",
+          "decimals": 0
         }
       },
       "options": {
@@ -964,20 +1083,19 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))"
+          "expr": "max(kube_horizontalpodautoscaler_status_current_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*box-connector-be-go\"})"
         }
-      ],
-      "description": "One BoxFolderWork message: a single folder listing plus its publishes and upserts. This is the connector's real unit of work, and the one that makes cost predictable."
+      ]
     },
     {
-      "id": 107,
+      "id": 125,
       "type": "stat",
-      "title": "Folder Work In-Flight",
+      "title": "Max Replicas",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1001,20 +1119,20 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(box_scanner_folder_work_in_flight{namespace=\"$namespace\", pod=~\"$pod\"})"
+          "expr": "max(kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*box-connector-be-go\"})"
         }
       ],
-      "description": "Folder handlers running right now across the selected pods. BoxFork and BoxFolderWork both count \u2014 both process a folder."
+      "description": "The KEDA ceiling as the HPA reports it. The value comes from the chart (autoscaling.maxReplicas) and differs per environment, so read it off the panel rather than assuming one. Desired-equals-max is not by itself a sign of trouble \u2014 read it together with the backlog: at a low ceiling it is reached routinely."
     },
     {
-      "id": 108,
+      "id": 126,
       "type": "stat",
-      "title": "User Slots Held",
+      "title": "NATS \u2014 Backlog Slope (2m)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1024,6 +1142,294 @@
         "w": 3,
         "x": 21,
         "y": 19
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "none",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "clamp_min(max(deriv(nats_consumer_num_pending{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"}[2m])), 0)"
+        }
+      ],
+      "description": "The trend-based trigger's own signal: messages per second the backlog is growing by."
+    },
+    {
+      "id": 127,
+      "type": "timeseries",
+      "title": "NATS \u2014 Scanner Consumer Backlog",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^pending.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^ack pending.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^redelivered.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(nats_consumer_num_pending{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})",
+          "legendFormat": "pending"
+        },
+        {
+          "refId": "B",
+          "expr": "max(nats_consumer_num_ack_pending{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})",
+          "legendFormat": "ack pending"
+        },
+        {
+          "refId": "C",
+          "expr": "max(nats_consumer_num_redelivered{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})",
+          "legendFormat": "redelivered"
+        }
+      ],
+      "description": "Stream JE_BOX, durable box-scanner-v1. Sustained ack_pending with items_sent at zero is the signature of a stuck connector."
+    },
+    {
+      "id": 128,
+      "type": "timeseries",
+      "title": "KEDA \u2014 Replicas: current vs desired vs max",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(kube_horizontalpodautoscaler_status_current_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*box-connector-be-go\"})",
+          "legendFormat": "current"
+        },
+        {
+          "refId": "B",
+          "expr": "max(kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*box-connector-be-go\"})",
+          "legendFormat": "desired"
+        },
+        {
+          "refId": "C",
+          "expr": "max(kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*box-connector-be-go\"})",
+          "legendFormat": "max"
+        }
+      ],
+      "description": "cooldownPeriod 900s and scaleDown stabilizationWindowSeconds 600s. 'It scaled ten minutes ago and is still the same' is config, not a bug."
+    },
+    {
+      "id": 101,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(up{job=~\".*box-connector-be-go\", namespace=\"$namespace\", pod=~\"$pod\"})) or vector(0)"
+        }
+      ],
+      "description": "With minReplicaCount 0 the connector sleeps when there is no work, so 0 pods is the normal resting state, not an outage. That is why 0 is neutral rather than red \u2014 \"should be running and is not\" is 0 pods WITH backlog, which the backlog panels in this same row show."
+    },
+    {
+      "id": 102,
+      "type": "stat",
+      "title": "Restarts (1h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", container=\"box-connector-be-go\"}[1h]))"
+        }
+      ]
+    },
+    {
+      "id": 103,
+      "type": "stat",
+      "title": "Files Discovered (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 31
       },
       "fieldConfig": {
         "defaults": {
@@ -1038,7 +1444,188 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(max_over_time(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
+        }
+      ],
+      "description": "Rate, not a total: this answers how fast it is going right now. The count for the window is in the Totals row. Count for the dashboard's time range. A rate would read zero here: this connector works in bursts, so by the time anyone looks the burst is over."
+    },
+    {
+      "id": 105,
+      "type": "stat",
+      "title": "Items Failed (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.001
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(max_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=~\"build_failed|upsert_failed\"}[$__range]))"
+        }
+      ],
+      "description": "Total items the scanner discovered but could not deliver: build_failed and upsert_failed added together. This is the headline loss count. For WHICH of the two it was, see 'Scanner Items by Outcome' \u2014 build_failed is bad data, upsert_failed is the sender or NATS."
+    },
+    {
+      "id": 104,
+      "type": "stat",
+      "title": "Items Sent (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "none",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(max_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[$__range]))"
+        }
+      ],
+      "description": "Rate, not a total: this answers how fast it is going right now. The count for the window is in the Totals row. Count for the dashboard's time range. A rate would read zero here: this connector works in bursts, so by the time anyone looks the burst is over."
+    },
+    {
+      "id": 106,
+      "type": "stat",
+      "title": "Folder Duration \u2014 mean / p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 15,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "mean",
+          "expr": "sum(max_over_time(box_scanner_folder_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) / clamp_min(sum(max_over_time(box_scanner_folder_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])), 1)"
+        },
+        {
+          "refId": "B",
+          "legendFormat": "p95",
+          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))"
+        }
+      ],
+      "description": "Two different questions about the same histogram. The mean is total time divided by folder count, and it is the one that multiplies: mean x folder count estimates a larger tenant. The p95 is how bad it gets for the slowest 5%, and it does not multiply. The gap between them is the tail."
+    },
+    {
+      "id": 108,
+      "type": "stat",
+      "title": "User Slots Held",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "none",
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -1060,7 +1647,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 23
+        "y": 35
       },
       "fieldConfig": {
         "defaults": {
@@ -1373,7 +1960,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 23
+        "y": 35
       },
       "fieldConfig": {
         "defaults": {
@@ -1683,7 +2270,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 23
+        "y": 35
       },
       "fieldConfig": {
         "defaults": {
@@ -1721,7 +2308,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 31
+        "y": 43
       },
       "fieldConfig": {
         "defaults": {
@@ -2022,7 +2609,7 @@
     {
       "id": 113,
       "type": "timeseries",
-      "title": "Saturation \u2014 in-flight, slots, contention",
+      "title": "Per-user Contention \u2014 slots held vs requeues",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2031,7 +2618,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 31
+        "y": 43
       },
       "fieldConfig": {
         "defaults": {
@@ -2106,7 +2693,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 31
+        "y": 43
       },
       "fieldConfig": {
         "defaults": {
@@ -2133,378 +2720,6 @@
       "description": "Three genuinely different measurements, plotted together for scale only \u2014 they are not comparable. fan-out is authenticate plus paged GET /users plus publishing one box.fork per user, and EXCLUDES the traversal. incremental is a whole run including its inline augment. root_folder is one BoxFork: a user's root level only, not their tree. 'How long did the scan take end to end' is not answerable from the connector at all \u2014 a scan is a fan-out of messages with no owner."
     },
     {
-      "type": "row",
-      "id": 120,
-      "title": "Scanner \u2014 Backlog & Autoscaling",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 39
-      },
-      "panels": [],
-      "description": "These series live on the broker and on kube-state-metrics, so they survive scale-to-zero and answer 'how far behind is it?' in the state the connector spends most of its time in."
-    },
-    {
-      "id": 121,
-      "type": "stat",
-      "title": "NATS \u2014 Scanner Backlog",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 0,
-        "y": 40
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "decimals": 0
-        }
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "colorMode": "none",
-        "graphMode": "none"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "max(nats_consumer_num_pending{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})"
-        }
-      ]
-    },
-    {
-      "id": 122,
-      "type": "stat",
-      "title": "NATS \u2014 In Flight (unacked)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 4,
-        "y": 40
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "decimals": 0
-        }
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "colorMode": "none",
-        "graphMode": "none"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "max(nats_consumer_num_ack_pending{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})"
-        }
-      ]
-    },
-    {
-      "id": 123,
-      "type": "stat",
-      "title": "NATS \u2014 Redelivered",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 8,
-        "y": 40
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              }
-            ]
-          }
-        }
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "colorMode": "background",
-        "graphMode": "none"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "max(nats_consumer_num_redelivered{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})"
-        }
-      ],
-      "description": "A connector that fails and retries in a loop shows up here and nowhere else."
-    },
-    {
-      "id": 124,
-      "type": "stat",
-      "title": "Replicas",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 12,
-        "y": 40
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "decimals": 0
-        }
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "colorMode": "none",
-        "graphMode": "none"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "max(kube_horizontalpodautoscaler_status_current_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*box-connector-be-go\"})"
-        }
-      ]
-    },
-    {
-      "id": 125,
-      "type": "stat",
-      "title": "Max Replicas",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 16,
-        "y": 40
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "decimals": 0
-        }
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "colorMode": "none",
-        "graphMode": "none"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "max(kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*box-connector-be-go\"})"
-        }
-      ],
-      "description": "The KEDA ceiling as the HPA reports it. The value comes from the chart (autoscaling.maxReplicas) and differs per environment, so read it off the panel rather than assuming one. Desired-equals-max is not by itself a sign of trouble \u2014 read it together with the backlog: at a low ceiling it is reached routinely."
-    },
-    {
-      "id": 126,
-      "type": "stat",
-      "title": "NATS \u2014 Backlog Slope (2m)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 20,
-        "y": 40
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "decimals": 2
-        }
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "colorMode": "none",
-        "graphMode": "none"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "clamp_min(max(deriv(nats_consumer_num_pending{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"}[2m])), 0)"
-        }
-      ],
-      "description": "The trend-based trigger's own signal: messages per second the backlog is growing by."
-    },
-    {
-      "id": 127,
-      "type": "timeseries",
-      "title": "NATS \u2014 Scanner Consumer Backlog",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 44
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "^pending.*"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "blue"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "^ack pending.*"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "dark-purple"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "^redelivered.*"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "orange"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "max(nats_consumer_num_pending{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})",
-          "legendFormat": "pending"
-        },
-        {
-          "refId": "B",
-          "expr": "max(nats_consumer_num_ack_pending{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})",
-          "legendFormat": "ack pending"
-        },
-        {
-          "refId": "C",
-          "expr": "max(nats_consumer_num_redelivered{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})",
-          "legendFormat": "redelivered"
-        }
-      ],
-      "description": "Stream JE_BOX, durable box-scanner-v1. Sustained ack_pending with items_sent at zero is the signature of a stuck connector."
-    },
-    {
-      "id": 128,
-      "type": "timeseries",
-      "title": "KEDA \u2014 Replicas: current vs desired vs max",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 44
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "max(kube_horizontalpodautoscaler_status_current_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*box-connector-be-go\"})",
-          "legendFormat": "current"
-        },
-        {
-          "refId": "B",
-          "expr": "max(kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*box-connector-be-go\"})",
-          "legendFormat": "desired"
-        },
-        {
-          "refId": "C",
-          "expr": "max(kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*box-connector-be-go\"})",
-          "legendFormat": "max"
-        }
-      ],
-      "description": "cooldownPeriod 900s and scaleDown stabilizationWindowSeconds 600s. 'It scaled ten minutes ago and is still the same' is config, not a bug."
-    },
-    {
       "id": 129,
       "type": "timeseries",
       "title": "KEDA \u2014 ack-capacity signal vs threshold",
@@ -2516,7 +2731,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 52
+        "y": 51
       },
       "fieldConfig": {
         "defaults": {
@@ -2562,7 +2777,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 52
+        "y": 51
       },
       "fieldConfig": {
         "defaults": {
@@ -2608,7 +2823,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 52
+        "y": 51
       },
       "fieldConfig": {
         "defaults": {
@@ -2645,13 +2860,13 @@
     {
       "type": "row",
       "id": 140,
-      "title": "Box API \u2014 Saturation",
+      "title": "Box API \u2014 Rate Limits & Quota",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 60
+        "y": 59
       },
       "panels": [],
       "description": "In an API connector the scarce resource is Box's rate limit: roughly 16.67 req/s for the whole app, shared across every pod. None of these series carries a tenant label \u2014 the HTTP client has no datasource_id in scope \u2014 so this row cannot be filtered by datasource. Attribution lives in the scanner funnel instead."
@@ -2659,7 +2874,7 @@
     {
       "id": 141,
       "type": "stat",
-      "title": "API Calls (5m)",
+      "title": "API Calls (window)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2668,12 +2883,12 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 61
+        "y": 60
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps",
-          "decimals": 2
+          "unit": "short",
+          "decimals": 0
         }
       },
       "options": {
@@ -2683,12 +2898,12 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+          "expr": "sum(max_over_time(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
         }
       ],
       "description": "HTTP attempts, not logical calls: doJSON retries up to BOX_MAX_RETRIES, so one GetFile can be four requests. Calls rising faster than items means we are retrying."
@@ -2705,7 +2920,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 61
+        "y": 60
       },
       "fieldConfig": {
         "defaults": {
@@ -2720,7 +2935,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -2733,7 +2948,7 @@
     {
       "id": 143,
       "type": "stat",
-      "title": "429s (5m)",
+      "title": "429s (window)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2742,12 +2957,12 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 61
+        "y": 60
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
-          "decimals": 3,
+          "unit": "short",
+          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -2760,7 +2975,20 @@
                 "value": 0.001
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
         }
       },
       "options": {
@@ -2770,12 +2998,12 @@
           ]
         },
         "colorMode": "background",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(box_api_rate_limit_hits_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+          "expr": "(sum(max_over_time(box_api_rate_limit_hits_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))) or vector(0)"
         }
       ],
       "description": "The LAGGING half: Box has already refused us. Known blind spot \u2014 only doJSON counts here, so a 429 on the content download path (GetFileContent, probeGet) is invisible on this series today."
@@ -2783,21 +3011,21 @@
     {
       "id": 144,
       "type": "stat",
-      "title": "Slot Deferrals (5m)",
+      "title": "Slot Deferrals (window)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "x": 18,
-        "y": 61,
+        "y": 60,
         "w": 3,
         "h": 4
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
-          "decimals": 3
+          "unit": "short",
+          "decimals": 0
         }
       },
       "options": {
@@ -2807,15 +3035,52 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(box_scanner_user_slot_deferrals_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+          "expr": "sum(max_over_time(box_scanner_user_slot_deferrals_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
         }
       ],
       "description": "Folders that exhausted BOX_USER_SLOT_MAX_REQUEUE and fell back to a NAK. Each one spends a delivery, and past JOBENGINE_MAX_DELIVER the SDK discards the folder AND its subtree. Anything above zero means the requeue bound is too low for this tenant."
+    },
+    {
+      "id": 206,
+      "type": "stat",
+      "title": "Slot Requeues (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 60,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "none",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(max_over_time(box_scanner_user_slot_requeues_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
+        }
+      ],
+      "description": "Folders re-published because their user was saturated. This is back-pressure working: a re-publish resets the delivery count, so waiting never walks a folder toward the DLQ. Non-zero is normal under load."
     },
     {
       "id": 145,
@@ -2829,7 +3094,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 65
+        "y": 64
       },
       "fieldConfig": {
         "defaults": {
@@ -2945,7 +3210,7 @@
           "legendFormat": "{{endpoint}}"
         }
       ],
-      "description": "Ten fixed templates, passed in by each client method rather than parsed off the URL. folder_items should dominate during a scan. The four /events values are kept apart on purpose: the cursor read is one or two pages, the admin-log backfill runs up to 200 pages per refresh, and the per-user pull runs up to 50 pages FOR EVERY USER \u2014 collapsing them would hide the one that can run away."
+      "description": "Which endpoint the scan is spending its call budget on right now; folder_items should dominate during a scan. For the totals this scan actually cost, read the table \u2014 this one is shape over time. The four /events endpoints are kept apart on purpose: the cursor read is one or two pages, the admin-log backfill runs up to 200 pages per refresh, and the per-user pull runs once per user."
     },
     {
       "id": 146,
@@ -2959,7 +3224,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 65
+        "y": 64
       },
       "fieldConfig": {
         "defaults": {
@@ -2974,7 +3239,174 @@
           "color": {
             "mode": "palette-classic-by-name"
           }
-        }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "200"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "204"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "304"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "404"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "429"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "400"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "401"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "403"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "500"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "502"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "503"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          }
+        ]
       },
       "targets": [
         {
@@ -2988,7 +3420,7 @@
     {
       "id": 147,
       "type": "timeseries",
-      "title": "Saturation \u2014 leading vs lagging",
+      "title": "Back-pressure \u2014 ours vs Box's",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2997,7 +3429,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 65
+        "y": 64
       },
       "fieldConfig": {
         "defaults": {
@@ -3055,9 +3487,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 8,
         "x": 0,
-        "y": 73
+        "y": 72
       },
       "fieldConfig": {
         "defaults": {
@@ -3178,9 +3610,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 73
+        "w": 8,
+        "x": 8,
+        "y": 72
       },
       "fieldConfig": {
         "defaults": {
@@ -3207,6 +3639,46 @@
       "description": "Sub-second is the interesting range; the ladder starts at 1ms."
     },
     {
+      "id": 146,
+      "type": "table",
+      "title": "API Calls by Endpoint (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 72
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "expr": "sort_desc(sum by (endpoint, status) (max_over_time(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))"
+        }
+      ],
+      "description": "What this scan cost in API calls, as a count rather than a rate. Box rate-limits per app, so the call budget is the binding constraint and 'how many did this scan spend' is the number to plan with. The rate panels next to it answer when, not how much."
+    },
+    {
       "type": "row",
       "id": 160,
       "title": "Augmenter \u2014 box-connector-be-go",
@@ -3215,7 +3687,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 81
+        "y": 80
       },
       "panels": [],
       "description": "The augment path re-fetches each previously discovered file from Box to attach collaborations and an approximated last-access date. It is the only source of ACLs in the connector today."
@@ -3232,7 +3704,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 82
+        "y": 81
       },
       "fieldConfig": {
         "defaults": {
@@ -3542,7 +4014,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 82
+        "y": 81
       },
       "fieldConfig": {
         "defaults": {
@@ -3576,7 +4048,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 82
+        "y": 81
       },
       "fieldConfig": {
         "defaults": {
@@ -3611,7 +4083,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 90
+        "y": 89
       },
       "panels": [],
       "description": "CONNECTOR_MODE=content streams Box file bytes into content-service. These series are labeled by datasource_access_id, not datasource_id: the URN content is handed carries only access, file_id and user_id, so the datasource_id genuinely does not exist in this mode."
@@ -3628,7 +4100,7 @@
         "h": 4,
         "w": 3,
         "x": 0,
-        "y": 91
+        "y": 90
       },
       "fieldConfig": {
         "defaults": {
@@ -3638,7 +4110,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "text",
                 "value": null
               },
               {
@@ -3646,7 +4118,20 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
         }
       },
       "options": {
@@ -3661,9 +4146,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(up{job=~\".*box-connector-be-go-content\", namespace=\"$namespace\", pod=~\"$pod\"})"
+          "expr": "(sum(up{job=~\".*box-connector-be-go-content\", namespace=\"$namespace\", pod=~\"$pod\"})) or vector(0)"
         }
-      ]
+      ],
+      "description": "With minReplicaCount 0 the connector sleeps when there is no work, so 0 pods is the normal resting state, not an outage. That is why 0 is neutral rather than red \u2014 \"should be running and is not\" is 0 pods WITH backlog, which the backlog panels in this same row show."
     },
     {
       "id": 182,
@@ -3677,7 +4163,7 @@
         "h": 4,
         "w": 3,
         "x": 3,
-        "y": 91
+        "y": 90
       },
       "fieldConfig": {
         "defaults": {
@@ -3695,7 +4181,20 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
         }
       },
       "options": {
@@ -3705,7 +4204,7 @@
           ]
         },
         "colorMode": "background",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -3717,7 +4216,7 @@
     {
       "id": 183,
       "type": "stat",
-      "title": "Fetches (5m)",
+      "title": "Fetches (window)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3726,12 +4225,12 @@
         "h": 4,
         "w": 3,
         "x": 6,
-        "y": 91
+        "y": 90
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
-          "decimals": 2
+          "unit": "short",
+          "decimals": 0
         }
       },
       "options": {
@@ -3741,14 +4240,15 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+          "expr": "sum(max_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
         }
-      ]
+      ],
+      "description": "Rate, not a total: this answers how fast it is going right now. The count for the window is in the Totals row. Count for the dashboard's time range. A rate would read zero here: this connector works in bursts, so by the time anyone looks the burst is over."
     },
     {
       "id": 184,
@@ -3762,7 +4262,7 @@
         "h": 4,
         "w": 3,
         "x": 9,
-        "y": 91
+        "y": 90
       },
       "fieldConfig": {
         "defaults": {
@@ -3777,7 +4277,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -3789,7 +4289,7 @@
     {
       "id": 185,
       "type": "stat",
-      "title": "Errors (5m)",
+      "title": "Errors (window)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3798,7 +4298,7 @@
         "h": 4,
         "w": 3,
         "x": 12,
-        "y": 91
+        "y": 90
       },
       "fieldConfig": {
         "defaults": {
@@ -3816,7 +4316,20 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
         }
       },
       "options": {
@@ -3826,12 +4339,12 @@
           ]
         },
         "colorMode": "background",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"false\"}[5m]))"
+          "expr": "(sum(max_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"false\"}[$__range]))) or vector(0)"
         }
       ]
     },
@@ -3847,7 +4360,7 @@
         "h": 4,
         "w": 3,
         "x": 15,
-        "y": 91
+        "y": 90
       },
       "fieldConfig": {
         "defaults": {
@@ -4137,7 +4650,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -4148,9 +4661,9 @@
       "description": "Bytes content-service confirmed in its UploadResponse \u2014 what the far side acknowledged, not what Box declared."
     },
     {
-      "id": 187,
+      "id": 219,
       "type": "stat",
-      "title": "Requests In-Flight",
+      "title": "Content Transfer Rate",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -4159,12 +4672,25 @@
         "h": 4,
         "w": 3,
         "x": 18,
-        "y": 91
+        "y": 90
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
-          "decimals": 0
+          "unit": "Bps",
+          "decimals": 1,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
         }
       },
       "options": {
@@ -4173,15 +4699,15 @@
             "lastNotNull"
           ]
         },
-        "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(box_content_requests_in_flight{namespace=\"$namespace\", pod=~\"$pod\"})"
+          "expr": "(sum(max_over_time(box_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)) / clamp_min(sum(max_over_time(box_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])), 0.001)"
         }
-      ]
+      ],
+      "description": "Bytes per second of actual transfer time \u2014 bytes moved divided by time spent fetching, not by wall clock. Read it against 'Cost per Content Fetch': if the cost per fetch rises while this stays flat, the files got bigger and nothing is wrong; if this falls, something genuinely got slower. Each number alone is ambiguous. Distinct from 'Upload Throughput', which is bytes per second of elapsed time and drops to zero whenever nothing is running."
     },
     {
       "id": 188,
@@ -4195,7 +4721,7 @@
         "h": 4,
         "w": 3,
         "x": 21,
-        "y": 91
+        "y": 90
       },
       "fieldConfig": {
         "defaults": {
@@ -4210,7 +4736,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -4223,25 +4749,26 @@
     {
       "id": 189,
       "type": "timeseries",
-      "title": "Content Fetches by error_code (rate, 5m)",
+      "title": "Content Fetches by Outcome (rate, 5m)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 10,
         "x": 0,
-        "y": 95
+        "y": 94
       },
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
           "custom": {
+            "drawStyle": "bars",
             "stacking": {
               "mode": "normal"
             },
-            "fillOpacity": 70,
+            "fillOpacity": 80,
             "lineWidth": 0
           },
           "color": {
@@ -4256,11 +4783,34 @@
             },
             "properties": [
               {
+                "id": "displayName",
+                "value": "success"
+              },
+              {
                 "id": "color",
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "dark-green"
                 }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NONE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "success"
               }
             ]
           },
@@ -4276,6 +4826,10 @@
                   "mode": "fixed",
                   "fixedColor": "yellow"
                 }
+              },
+              {
+                "id": "displayName",
+                "value": "not found"
               }
             ]
           },
@@ -4289,8 +4843,12 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "orange"
+                  "fixedColor": "yellow"
                 }
+              },
+              {
+                "id": "displayName",
+                "value": "too large"
               }
             ]
           },
@@ -4304,8 +4862,12 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "blue"
+                  "fixedColor": "orange"
                 }
+              },
+              {
+                "id": "displayName",
+                "value": "timeout"
               }
             ]
           },
@@ -4319,8 +4881,12 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "dark-purple"
+                  "fixedColor": "red"
                 }
+              },
+              {
+                "id": "displayName",
+                "value": "permission denied"
               }
             ]
           },
@@ -4334,8 +4900,12 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "red"
+                  "fixedColor": "orange"
                 }
+              },
+              {
+                "id": "displayName",
+                "value": "rate limited"
               }
             ]
           },
@@ -4398,6 +4968,120 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CREDENTIAL_FAILURE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "credential failure"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INVALID_URN"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "invalid urn"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CONNECTION_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "connection failed"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INTERNAL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "internal error"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_READ_ERROR"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "read error"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CACHE_WRITE_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "cache write failed"
+              }
+            ]
           }
         ]
       },
@@ -4408,7 +5092,280 @@
           "legendFormat": "{{error_code}}"
         }
       ],
-      "description": "NONE is the success case. The NAK_* codes are infra failures before or after a wire reply, where no FetchErrorCode applies \u2014 counting them is what makes fetch_total equal the number of deliveries the handler processed, not just the ones that produced a terminal reply. Timeout and too-large are error_code values here rather than their own counters, so an alert can target any code without a new series."
+      "description": "Shape over time: when fetches happened and how the outcomes were interleaved. Read the x axis for timing; the y axis is a rate and will look vanishingly small, because this connector works in bursts \u2014 nine fetches inside a few seconds divided by a five-minute window is 0.025 ops/s, arithmetically correct and of no use to anyone. For HOW MANY fetches ended in each outcome, read 'Content Fetches by Outcome (window)' beside it, which counts over the dashboard range. error_code=NONE is what the connector emits on success and is displayed here as 'success'. Counting per time bucket instead of rating was tried and rejected: increase() summed 7 of 9 and max_over_time minus min_over_time summed 3, because the whole burst lands inside a single bucket on a series created in that same bucket. A panel that disagrees with the one next to it is worse than one that only answers timing."
+    },
+    {
+      "id": 148,
+      "type": "bargauge",
+      "title": "Content Fetches by Outcome (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 10,
+        "y": 94
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NONE"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "success"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "success"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_NOT_FOUND"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "not found"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_TOO_LARGE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "too large"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_RATE_LIMITED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "rate limited"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_TIMEOUT"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "timeout"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_PERMISSION_DENIED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "permission denied"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INTERNAL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "internal error"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CONNECTION_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "connection failed"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CREDENTIAL_FAILURE"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "credential failure"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_READ_ERROR"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "read error"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INVALID_URN"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "invalid urn"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CACHE_WRITE_FAILED"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "cache write failed"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{error_code}}",
+          "expr": "sum by (error_code) (max_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
+        }
+      ],
+      "description": "Where the fetches ended up, as counts. This is the panel that answers 'I ran N fetches \u2014 what happened to them?': the total is in 'Fetches', and this says how it split. Colour carries the verdict: green fine, yellow expected (the file is gone, nothing to do), orange back-pressure, red needs action."
     },
     {
       "id": 190,
@@ -4421,8 +5378,8 @@
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 8,
-        "y": 95
+        "x": 16,
+        "y": 94
       },
       "fieldConfig": {
         "defaults": {
@@ -4449,8 +5406,8 @@
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 16,
-        "y": 95
+        "x": 0,
+        "y": 102
       },
       "fieldConfig": {
         "defaults": {
@@ -4475,9 +5432,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 103
+        "w": 8,
+        "x": 8,
+        "y": 102
       },
       "fieldConfig": {
         "defaults": {
@@ -4563,9 +5520,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 103
+        "w": 8,
+        "x": 16,
+        "y": 102
       },
       "fieldConfig": {
         "defaults": {
@@ -4602,7 +5559,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 111
+        "y": 110
       },
       "fieldConfig": {
         "defaults": {
@@ -4640,7 +5597,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 111
+        "y": 110
       },
       "fieldConfig": {
         "defaults": {
@@ -4683,7 +5640,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 119
+        "y": 118
       },
       "panels": [],
       "description": "Box answers 'how many files are no longer there?' at THREE stages, and they are deliberately not summable: each is a different moment in the pipeline and is diagnosed differently. The incremental one is the cleanest signal in the whole set \u2014 it comes from an explicit ITEM_TRASH/DELETE event from Box, not from a NOT_FOUND inferred after the fact."
@@ -4698,9 +5655,9 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 8,
+        "w": 6,
         "x": 0,
-        "y": 120
+        "y": 119
       },
       "fieldConfig": {
         "defaults": {
@@ -4715,7 +5672,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -4735,9 +5692,9 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 8,
-        "x": 8,
-        "y": 120
+        "w": 6,
+        "x": 6,
+        "y": 119
       },
       "fieldConfig": {
         "defaults": {
@@ -4752,7 +5709,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -4772,9 +5729,9 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 8,
-        "x": 16,
-        "y": 120
+        "w": 6,
+        "x": 12,
+        "y": 119
       },
       "fieldConfig": {
         "defaults": {
@@ -4789,7 +5746,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -4798,6 +5755,68 @@
         }
       ],
       "description": "Discovered by an earlier scan, and Box answered 404 when the augmenter went back for it."
+    },
+    {
+      "id": 149,
+      "type": "stat",
+      "title": "Gone \u2014 404 on content fetch",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 119
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(max_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[$__range])) or vector(0))"
+        }
+      ],
+      "description": "The latest window of all: content went to download the file and it was no longer there, so it disappeared between the scan and the fetch. Do NOT add this to the other stages \u2014 content runs on demand over a subset, not over the whole share, so it has a different denominator. It is here because a 404 on fetch is evidence a file is gone, and until now that evidence only showed up as a content error."
     },
     {
       "id": 204,
@@ -4809,9 +5828,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 16,
+        "w": 12,
         "x": 0,
-        "y": 124
+        "y": 123
       },
       "fieldConfig": {
         "defaults": {
@@ -4833,9 +5852,63 @@
           "refId": "C",
           "expr": "(sum(rate(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[5m])) or vector(0))",
           "legendFormat": "augment - 404 on re-fetch"
+        },
+        {
+          "refId": "D",
+          "legendFormat": "content - 404 on fetch",
+          "expr": "sum(rate(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[5m]))"
         }
       ],
       "description": "Three series, never one number. The augment series is 1:1 with box_augmenter_items_skipped_not_found_total \u2014 the same event increments both, and that second counter exists only so alerts can suppress this expected signal separately. Graphing both would be the same thing counted twice."
+    },
+    {
+      "id": 147,
+      "type": "stat",
+      "title": "Augment Items (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 12,
+        "y": 123
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(max_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+        }
+      ],
+      "description": "The denominator for the percentage next to it. A ratio with no denominator cannot be read: 100% of 4 items and 100% of 40,000 are the same number and completely different news."
     },
     {
       "id": 205,
@@ -4849,7 +5922,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 124
+        "y": 123
       },
       "fieldConfig": {
         "defaults": {
@@ -4864,7 +5937,7 @@
           ]
         },
         "colorMode": "none",
-        "graphMode": "none"
+        "graphMode": "area"
       },
       "targets": [
         {
@@ -4872,44 +5945,7 @@
           "expr": "100 * ((sum(max_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[$__range])) or vector(0)) / clamp_min((sum(max_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)), 1))"
         }
       ],
-      "description": "Share of everything the augmenter touched that Box no longer had."
-    },
-    {
-      "id": 206,
-      "type": "stat",
-      "title": "Slot Requeues (5m)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 21,
-        "y": 61,
-        "w": 3,
-        "h": 4
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "decimals": 3
-        }
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "colorMode": "none",
-        "graphMode": "none"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(rate(box_scanner_user_slot_requeues_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
-        }
-      ],
-      "description": "Folders re-published because their user was saturated. This is back-pressure working: a re-publish resets the delivery count, so waiting never walks a folder toward the DLQ. Non-zero is normal under load."
+      "description": "Share of everything the augmenter touched that Box no longer had. Read it against 'Augment Items' to its left \u2014 the percentage alone hides how small the sample is."
     },
     {
       "type": "row",
@@ -4918,11 +5954,12 @@
       "id": 216,
       "gridPos": {
         "x": 0,
-        "y": 132,
+        "y": 131,
         "w": 24,
         "h": 1
       },
-      "panels": []
+      "panels": [],
+      "description": "What was lost. The scanner funnel can close perfectly and work can still have been discarded here: a message that exhausts its deliveries ends up in the DLQ leaving no trace in items_processed. See PLAN-deferral-dlq.md."
     },
     {
       "type": "stat",
@@ -4934,7 +5971,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 133,
+        "y": 132,
         "w": 6,
         "h": 5
       },
@@ -4967,7 +6004,20 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -4980,7 +6030,7 @@
           "values": false
         },
         "colorMode": "background",
-        "graphMode": "none",
+        "graphMode": "area",
         "textMode": "auto"
       }
     },
@@ -4994,7 +6044,7 @@
       },
       "gridPos": {
         "x": 6,
-        "y": 133,
+        "y": 132,
         "w": 18,
         "h": 5
       },
@@ -5051,5 +6101,6 @@
         }
       }
     }
-  ]
+  ],
+  "description": "Reads top to bottom as one sentence: how much work came in, what happened to it, and what came out. Every stage row has the same shape \u2014 backlog and why it scaled first, then discovered, failed and sent, with the autoscaling detail last. A stat in grey says \"No data\", which is not the same as zero."
 }
