@@ -17,7 +17,7 @@
   "editable": true,
   "graphTooltip": 1,
   "schemaVersion": 39,
-  "version": 4,
+  "version": 5,
   "refresh": "1m",
   "time": {
     "from": "now-6h",
@@ -1031,7 +1031,7 @@
       "id": 205,
       "type": "stat",
       "title": "Terminal rejections (range)",
-      "description": "Outcomes that will never succeed on retry: label_missing (an admin deleted it \u2014 the MAPPING is stale), unsupported_label, not_appliable (the target is a label group), file_locked (423 on a file SharePoint cannot decrypt), and failed. Non-zero means someone has to change something; re-running only costs money.",
+      "description": "Outcomes that will never succeed on retry: label_missing (an admin deleted it \u2014 the MAPPING is stale), unsupported_label, not_appliable (the target is a label group), file_locked (423 on a file SharePoint cannot decrypt), rejected_file_not_labellable_billed (a write sent to a file type Microsoft refused, usually PDF on a tenant without PDF labelling: set LABELSYNC_PDF_WRITE_ENABLED=false on both the connector and the API), and failed. Non-zero means someone has to change something; re-running only costs money.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1079,7 +1079,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"rejected_label_missing.*|rejected_unsupported_label.*|rejected_not_appliable.*|rejected_file_locked.*|failed.*\"}[$__range]))",
+          "expr": "sum(increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"rejected_label_missing.*|rejected_unsupported_label.*|rejected_not_appliable.*|rejected_file_locked.*|rejected_file_not_labellable_billed|failed.*\"}[$__range]))",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1262,7 +1262,7 @@
       "id": 209,
       "type": "timeseries",
       "title": "Terminal rejections \u2014 something has to change",
-      "description": "None of these get better by retrying. label_missing and unsupported_label point at the mapping; not_appliable means the mapped target is a label GROUP rather than a label; file_locked is about the document itself (double-key encrypted, or protected in a way SharePoint cannot decrypt).",
+      "description": "None of these get better by retrying. label_missing and unsupported_label point at the mapping; not_appliable means the mapped target is a label GROUP rather than a label; file_locked is about the document itself (double-key encrypted, or protected in a way SharePoint cannot decrypt); rejected_file_not_labellable_billed is a file type Microsoft refused after we sent the write, which every later job pays for again until the file-type settings change.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1305,7 +1305,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (outcome) (rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"rejected_label_missing.*|rejected_unsupported_label.*|rejected_not_appliable.*|rejected_file_locked.*|failed.*\"}[5m]))",
+          "expr": "sum by (outcome) (rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"rejected_label_missing.*|rejected_unsupported_label.*|rejected_not_appliable.*|rejected_file_locked.*|rejected_file_not_labellable_billed|failed.*\"}[5m]))",
           "legendFormat": "{{outcome}}",
           "refId": "A"
         }
@@ -1423,6 +1423,514 @@
       ]
     },
     {
+      "id": 213,
+      "type": "stat",
+      "title": "File-type refusals, free (range)",
+      "description": "Label writes the file-type gate refused before any Graph call, over the selected range: files Microsoft cannot apply a label to (legacy .doc .xls .ppt, templates, PDF when LABELSYNC_PDF_WRITE_ENABLED is off, anything outside the write list). Each one is a metered call NOT made. Counted as the batch runs (NXE-2921). Blank means no pod with label sync switched on reported in the range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 48
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum((increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"}[$__range]) and sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"} offset $__range) or (last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"}[$__range]) unless sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"} offset $__range))",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 214,
+      "type": "stat",
+      "title": "File-type refusals, billed (range)",
+      "description": "Writes that WERE sent to assignSensitivityLabel and refused by Microsoft for the file type, over the selected range. Each was billed at $0.00185. Should be 0: anything here is a type the gate let through and Microsoft refused. pdf: the tenant has no PDF labelling, set LABELSYNC_PDF_WRITE_ENABLED=false. A type listed in LABELSYNC_WRITE_EXTRA_EXTENSIONS: take it out again. unknown: the index had no file name. See Billed refusals by extension. Counted when the write resolves.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 48
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum((increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[$__range]) and sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"} offset $__range) or (last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[$__range]) unless sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"} offset $__range))",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 215,
+      "type": "stat",
+      "title": "Wasted spend, file-type refusals (range)",
+      "description": "Billed file-type refusals over the selected range x $0.00185. Money spent on writes Microsoft was never going to accept. Azure Cost Management is the invoice; this is our count of the calls.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 48
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "decimals": 4
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum((increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[$__range]) and sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"} offset $__range) or (last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[$__range]) unless sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"} offset $__range)) * 0.00185",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 216,
+      "type": "stat",
+      "title": "PDF write enabled, per pod",
+      "description": "LABELSYNC_PDF_WRITE_ENABLED as each scanner pod read it at startup. On: PDFs are sent (right only if the tenant has EnableSensitivityLabelforPDF). Off: PDFs are refused for free. Reported at startup only by a scanner pod with the label-sync producer switched on (LABELSYNC_PRODUCER_ENABLED); no value means it is off or the pod predates NXE-2921. Live pods only.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 48
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Off",
+                  "color": "orange",
+                  "index": 0
+                },
+                "1": {
+                  "text": "On",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "expr": "max by (pod) (sharepoint_label_sync_pdf_write_enabled{job=~\"$component\"})",
+          "legendFormat": "{{pod}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 217,
+      "type": "stat",
+      "title": "Extra writable extensions, per pod",
+      "description": "How many LABELSYNC_WRITE_EXTRA_EXTENSIONS entries each scanner pod accepted at startup (added to Microsoft's apply list). Normally 0. Entries the connector dropped (pdf, dots, paths) are not counted; they are in its startup warning. Live pods with the label-sync producer switched on only.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 48
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "expr": "max by (pod) (sharepoint_label_sync_write_extra_extensions{job=~\"$component\"})",
+          "legendFormat": "{{pod}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 218,
+      "type": "bargauge",
+      "title": "Free refusals by extension (range)",
+      "description": "The free refusals above, split by extension. The extension is bounded by the connector: Microsoft's labellable read list plus configured extras, else none (a name with no extension), unknown (no name in the index) or other. Never a file name. Empty when nothing was refused in the range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 52
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "expr": "sum by (extension) ((increase(sharepoint_label_sync_file_type_gated_total{job=~\"$component\"}[$__range]) and sharepoint_label_sync_file_type_gated_total{job=~\"$component\"} offset $__range) or (last_over_time(sharepoint_label_sync_file_type_gated_total{job=~\"$component\"}[$__range]) unless sharepoint_label_sync_file_type_gated_total{job=~\"$component\"} offset $__range))",
+          "legendFormat": "{{extension}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 219,
+      "type": "bargauge",
+      "title": "Billed refusals by extension (range)",
+      "description": "The billed file-type refusals, split by extension. A type that shows up here every run should be refused by the gate instead: pdf -> LABELSYNC_PDF_WRITE_ENABLED=false; a type added through LABELSYNC_WRITE_EXTRA_EXTENSIONS -> remove it there; unknown -> the file has no name in the index; any other type is on our own write list and Microsoft refused it, which needs a code change. Empty when nothing was refused in the range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 52
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "expr": "sum by (extension) ((increase(sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"}[$__range]) and sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"} offset $__range) or (last_over_time(sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"}[$__range]) unless sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"} offset $__range))",
+          "legendFormat": "{{extension}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 220,
+      "type": "bargauge",
+      "title": "Wasted spend by datasource (range)",
+      "description": "Billed file-type refusals x $0.00185, by the connector's access_id (one per datasource). Map an access_id to a datasource in the API's datasource access list. Empty when nothing was refused in the range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 52
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 4
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "expr": "(sum by (access_id) ((increase(sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"}[$__range]) and sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"} offset $__range) or (last_over_time(sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"}[$__range]) unless sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"} offset $__range))) * 0.00185",
+          "legendFormat": "{{access_id}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 221,
+      "type": "timeseries",
+      "title": "File-type refusals: free vs billed",
+      "description": "Rate of file-type refusals, the free gate against the billed backstop. The split by extension is in the bar charts above.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"}[5m]))",
+          "legendFormat": "refused free (gate)",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[5m]))",
+          "legendFormat": "refused after a billed call",
+          "refId": "B"
+        }
+      ]
+    },
+    {
       "id": 212,
       "type": "text",
       "title": "How to read this row",
@@ -1434,11 +1942,11 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 68
       },
       "options": {
         "mode": "markdown",
-        "content": "**Label sync runs in SCANNER mode only.** Set **Component = Scanner** (or leave it on All) \u2014 the `$job` and `$pod` variables on the rest of this dashboard are driven by `sharepoint_content_fetch_*`, which only the *content* pod emits, so they can never name the pod doing this work. That is why this row selects on `$component` instead.\n\n**Blank panels are the expected state until the feature is switched on**, and they are the *only* outward signal that it is not. The producer half is gated behind `LABELSYNC_PRODUCER_ENABLED`, which defaults to false; left unset, a label-sync job finds no handler and vanishes with no error, no log line and no failed job. In Kubernetes the switch is the Helm value `sharepointConnectorBeGo.labelSync.producerEnabled` on the **scanner** deployment \u2014 content mode never registers the handlers. Check it before assuming the pipeline is broken:\n\n```\nkubectl get cm -o jsonpath='{.data.LABELSYNC_PRODUCER_ENABLED}' \\\n  <release>-applications-sharepoint-connector-be-go-config\n```\n\n**Only `applied` costs money.** `skipped_already_correct` and the pre-flight rejections are free; `assignSensitivityLabel` is the one metered call in Graph, at **$0.00185** each. An `_cached` suffix on an outcome means the verdict came from the label cache rather than a fresh read \u2014 same meaning, no Graph call.\n\n**429s do not appear here.** Graph throttling shows up in the Throttling row at the top of this dashboard, and only for content mode. Scanner-side Graph traffic is on the *Microsoft Graph API* row, gated by `$job`."
+        "content": "**Label sync runs in SCANNER mode only.** Set **Component = Scanner** (or leave it on All) \u2014 the `$job` and `$pod` variables on the rest of this dashboard are driven by `sharepoint_content_fetch_*`, which only the *content* pod emits, so they can never name the pod doing this work. That is why this row selects on `$component` instead.\n\n**Blank panels are the expected state until the feature is switched on**, and they are the *only* outward signal that it is not. The producer half is gated behind `LABELSYNC_PRODUCER_ENABLED`, which defaults to false; left unset, a label-sync job finds no handler and vanishes with no error, no log line and no failed job. In Kubernetes the switch is the Helm value `sharepointConnectorBeGo.labelSync.producerEnabled` on the **scanner** deployment \u2014 content mode never registers the handlers. Check it before assuming the pipeline is broken:\n\n```\nkubectl get cm -o jsonpath='{.data.LABELSYNC_PRODUCER_ENABLED}' \\\n  <release>-applications-sharepoint-connector-be-go-config\n```\n\n**Every write we send costs money, whatever its outcome.** `assignSensitivityLabel` is the one metered call in Graph, at **$0.00185** each, and it is billed once it is sent, not when it succeeds: `applied`, `pending_unterminated` and `rejected_file_not_labellable_billed` each cost a call, and so does `failed` unless the write never left the pod. Free means no write was sent: `skipped_already_correct`, `rejected_file_not_labellable_gated` and the pre-flight rejections. The exact count is *Billed calls*, not a sum of outcomes. An `_cached` suffix on an outcome means the verdict came from the label cache rather than a fresh read \u2014 same meaning, no Graph call.\n\n**429s do not appear here.** Graph throttling shows up in the Throttling row at the top of this dashboard, and only for content mode. Scanner-side Graph traffic is on the *Microsoft Graph API* row, gated by `$job`.\n\n**File types (NXE-2921).** Microsoft reads labels from more types than it lets us write them to. The connector refuses a write to a type it cannot take before any Graph call (free) and counts it in `sharepoint_label_sync_file_type_gated_total`; a write that was still sent and refused for its type is billed and counted in `sharepoint_label_sync_file_type_billed_refusals_total`. Both carry a bounded `extension` and `access_id`. The billed one should stay at 0; if it does not, read its extension panel."
       }
     },
     {
@@ -1449,7 +1957,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 57
+        "y": 77
       },
       "panels": [],
       "id": 4
@@ -1520,7 +2028,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 58
+        "y": 78
       }
     },
     {
@@ -1538,7 +2046,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 58
+        "y": 78
       }
     },
     {
@@ -1549,7 +2057,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 66
+        "y": 86
       },
       "panels": [],
       "id": 5
@@ -1620,7 +2128,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 67
+        "y": 87
       }
     },
     {
@@ -1689,7 +2197,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 67
+        "y": 87
       }
     },
     {
@@ -1758,7 +2266,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 67
+        "y": 87
       }
     },
     {
@@ -1769,7 +2277,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 75
+        "y": 95
       },
       "panels": [],
       "id": 6
@@ -1789,7 +2297,7 @@
         "h": 14,
         "w": 24,
         "x": 0,
-        "y": 76
+        "y": 96
       }
     }
   ]
