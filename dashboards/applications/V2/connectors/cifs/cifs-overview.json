@@ -1,6 +1,7 @@
 {
   "uid": "apps-v2-cifs-overview",
-  "title": "CIFS Connector — Overview",
+  "title": "CIFS Connector \u2014 Overview",
+  "description": "Reads top to bottom as one sentence: how much work came in, what happened to it, and what came out. A stat in grey says \u201cNo data\u201d, which is not the same as zero, and 0 pods is rest, not an outage.",
   "tags": [
     "git-sync",
     "apps-v2",
@@ -18,21 +19,21 @@
   },
   "links": [
     {
-      "title": "CIFS — Pipeline",
+      "title": "CIFS \u2014 Pipeline",
       "type": "link",
       "url": "/d/apps-v2-cifs-pipeline?${namespace:queryparam}",
       "targetBlank": false,
       "icon": "external link"
     },
     {
-      "title": "CIFS — Runtime",
+      "title": "CIFS \u2014 Runtime",
       "type": "link",
       "url": "/d/apps-v2-cifs-runtime?${namespace:queryparam}",
       "targetBlank": false,
       "icon": "external link"
     },
     {
-      "title": "Applications V2 — Overview",
+      "title": "Applications V2 \u2014 Overview",
       "type": "link",
       "url": "/d/apps-v2-overview",
       "targetBlank": false,
@@ -117,8 +118,14 @@
       "type": "row",
       "id": 80,
       "title": "Totals in Window",
+      "description": "The summary for the selected window. Changing the time range changes every number here: these are totals, not rates.",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
       "panels": []
     },
     {
@@ -126,13 +133,28 @@
       "type": "stat",
       "title": "Files Discovered (total)",
       "description": "Files the scanner discovered, totalled over the selected range rather than averaged as a rate. Reads 0 when nothing ran in the window; the backlog panels tell idle from stuck.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
       "fieldConfig": {
-        "defaults": { "unit": "locale", "decimals": 0 }
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "none"
       },
@@ -148,13 +170,28 @@
       "type": "stat",
       "title": "Items Sent (total)",
       "description": "Items the scanner handed to the batch sender, totalled over the selected range. Compare against Files Discovered; the difference is in Item Loss.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
       "fieldConfig": {
-        "defaults": { "unit": "locale", "decimals": 0 }
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "none"
       },
@@ -170,23 +207,54 @@
       "type": "stat",
       "title": "Item Loss (total)",
       "description": "Files discovered minus items sent over the selected range. Should be 0. A non-zero value is broken down by cause in Items Failed.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
       "fieldConfig": {
         "defaults": {
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "unit": "locale",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "none"
       },
@@ -202,13 +270,28 @@
       "type": "stat",
       "title": "Directories Forked (total)",
       "description": "Directories published to NATS as separate work, totalled over the selected range. One per subdirectory found, so it tracks the shape of the tree rather than its file count.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
       "fieldConfig": {
-        "defaults": { "unit": "locale", "decimals": 0 }
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "none"
       },
@@ -224,13 +307,28 @@
       "type": "stat",
       "title": "Content Fetches (total)",
       "description": "Content fetch attempts, totalled over the selected range. Counts every outcome including failures, since the counter is partitioned by error_code.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
       "fieldConfig": {
-        "defaults": { "unit": "locale", "decimals": 0 }
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "none"
       },
@@ -246,13 +344,28 @@
       "type": "stat",
       "title": "Augmenter Items (total)",
       "description": "Items the augmenter processed, totalled over the selected range. All outcomes summed; the per-outcome breakdown is in the Augmenter row.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
       "fieldConfig": {
-        "defaults": { "unit": "locale", "decimals": 0 }
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "none"
       },
@@ -266,9 +379,15 @@
     {
       "type": "row",
       "id": 90,
-      "title": "Unit Cost — seconds per file, by stage",
+      "title": "Unit Cost \u2014 seconds per file, by stage",
+      "description": "What one file costs at each stage. This is capacity analysis, not incident response: it is how you predict a larger share.",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
       "panels": []
     },
     {
@@ -276,13 +395,27 @@
       "type": "stat",
       "title": "Cost per File Discovered",
       "description": "Directory-processing time per file discovered, from the scan duration total divided by files discovered over the selected range. Includes each directory's fan-out, so trees with more directories read higher.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 6 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 6
+      },
       "fieldConfig": {
-        "defaults": { "unit": "s" }
+        "defaults": {
+          "unit": "s"
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "none"
       },
@@ -298,13 +431,27 @@
       "type": "stat",
       "title": "ACL Cost per Item Augmented",
       "description": "Average duration of one ACL query during augment, from the ACL duration total divided by items processed. One query per item; the statx and URN resolve each item also needs are not included.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 6 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 6
+      },
       "fieldConfig": {
-        "defaults": { "unit": "s" }
+        "defaults": {
+          "unit": "s"
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "none"
       },
@@ -320,13 +467,27 @@
       "type": "stat",
       "title": "Cost per Content Fetch",
       "description": "Mean duration of one content fetch, from the fetch duration total divided by the fetch count. Scales with file size rather than file count.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 6 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 6
+      },
       "fieldConfig": {
-        "defaults": { "unit": "s" }
+        "defaults": {
+          "unit": "s"
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "none"
       },
@@ -338,33 +499,106 @@
       ]
     },
     {
+      "id": 356,
+      "type": "stat",
+      "title": "Content Transfer Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "decimals": 1,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(max_over_time(cifs_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)) / clamp_min(sum(max_over_time(cifs_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])), 0.001)"
+        }
+      ],
+      "description": "Bytes per second of actual transfer time \u2014 bytes moved divided by time spent fetching, not by wall clock. Read it against 'Cost per Content Fetch': if the cost per fetch rises while this stays flat, the files got bigger and nothing is wrong; if this falls, something genuinely got slower. Each number alone is ambiguous. Distinct from 'Upload Throughput', which is bytes per second of elapsed time and drops to zero whenever nothing is running."
+    },
+    {
       "type": "row",
       "id": 100,
-      "title": "Scanner — cifs-connector-be-go",
+      "title": "Scanner \u2014 cifs-connector-be-go",
+      "description": "In: how much work is queued and why it scaled. In the middle: discovered, failed and sent, with per-directory latency.",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 10 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
       "panels": []
     },
     {
       "id": 1,
       "type": "stat",
       "title": "Pods Up",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 11 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 11
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "none"
       },
@@ -379,23 +613,57 @@
       "id": 7,
       "type": "stat",
       "title": "Restarts (1h)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 3, "y": 11 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 11
+      },
       "fieldConfig": {
         "defaults": {
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 3 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "area"
       },
@@ -410,13 +678,27 @@
       "id": 2,
       "type": "stat",
       "title": "Mounts Active",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 6, "y": 11 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 11
+      },
       "fieldConfig": {
-        "defaults": { "unit": "short" }
+        "defaults": {
+          "unit": "short"
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "area"
       },
@@ -430,107 +712,205 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Files Discovered (5m)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 9, "y": 11 },
+      "title": "Files Discovered (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 11
+      },
       "fieldConfig": {
-        "defaults": { "unit": "ops", "decimals": 2 }
+        "defaults": {
+          "unit": "short",
+          "decimals": 2
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+          "expr": "sum(max_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
         }
       ]
     },
     {
       "id": 4,
       "type": "stat",
-      "title": "Items Failed (5m)",
+      "title": "Items Failed (window)",
       "description": "Rate of items that never reached the batch sender, both causes summed. marshal_failed is bad data, batch_send_failed is the sender or NATS; the split is on the pipeline board.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 12, "y": 11 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 11
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "unit": "short",
           "decimals": 3,
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.01 },
-              { "color": "red", "value": 0.1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=~\"marshal_failed|batch_send_failed\"}[5m]))"
+          "expr": "sum(max_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=~\"marshal_failed|batch_send_failed\"}[$__range]))"
         }
       ]
     },
     {
       "id": 5,
       "type": "stat",
-      "title": "Items Sent (5m)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 15, "y": 11 },
+      "title": "Items Sent (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 11
+      },
       "fieldConfig": {
-        "defaults": { "unit": "ops", "decimals": 2 }
+        "defaults": {
+          "unit": "short",
+          "decimals": 2
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[5m]))"
+          "expr": "sum(max_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[$__range]))"
         }
       ]
     },
     {
       "id": 6,
       "type": "stat",
-      "title": "ACL Errors (5m)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 18, "y": 11 },
+      "title": "ACL Errors (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 11
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "unit": "short",
           "decimals": 3,
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.01 },
-              { "color": "red", "value": 0.1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(cifs_scanner_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+          "expr": "sum(max_over_time(cifs_scanner_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
         }
       ]
     },
@@ -539,13 +919,27 @@
       "type": "stat",
       "title": "Dir Processing p95",
       "description": "Wall-clock to process one directory: listing its entries, statx per file, ACL query when enabled, and publishing the items. Observed once per directory, so it does not measure a whole scan.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 21, "y": 11 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 11
+      },
       "fieldConfig": {
-        "defaults": { "unit": "s" }
+        "defaults": {
+          "unit": "s"
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "area"
       },
@@ -561,10 +955,20 @@
       "type": "timeseries",
       "title": "Scanner Throughput (rate, 5m)",
       "description": "Discovered = files that reached processing; sent = items that made it into a batch; failed = items that did not. Discovered equals sent plus failed by construction.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
       "fieldConfig": {
-        "defaults": { "unit": "ops" }
+        "defaults": {
+          "unit": "ops"
+        }
       },
       "targets": [
         {
@@ -588,10 +992,20 @@
       "id": 11,
       "type": "timeseries",
       "title": "Errors by Source (rate, 5m)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
       "fieldConfig": {
-        "defaults": { "unit": "ops" }
+        "defaults": {
+          "unit": "ops"
+        }
       },
       "targets": [
         {
@@ -619,12 +1033,22 @@
     {
       "id": 12,
       "type": "timeseries",
-      "title": "Directory Processing — p50 / p95 / p99",
+      "title": "Directory Processing \u2014 p50 / p95 / p99",
       "description": "Wall-clock to process one directory: listing its entries, statx per file, ACL query when enabled, and publishing the items. Observed once per directory, so it does not measure a whole scan.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 23 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
       "fieldConfig": {
-        "defaults": { "unit": "s" }
+        "defaults": {
+          "unit": "s"
+        }
       },
       "targets": [
         {
@@ -648,10 +1072,20 @@
       "id": 13,
       "type": "timeseries",
       "title": "Local Stack Depth (DFS backlog)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 23 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
       "fieldConfig": {
-        "defaults": { "unit": "short" }
+        "defaults": {
+          "unit": "short"
+        }
       },
       "targets": [
         {
@@ -669,9 +1103,15 @@
     {
       "type": "row",
       "id": 150,
-      "title": "Scanner — Backlog & Autoscaling",
+      "title": "Scanner \u2014 Backlog & Autoscaling",
+      "description": "How much work is waiting and whether KEDA reacted. Backlog is the cause of scaling, so it reads before the replica count.",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
       "panels": []
     },
     {
@@ -679,22 +1119,53 @@
       "type": "stat",
       "title": "NATS \u2014 Scanner Backlog",
       "description": "Messages waiting on the scanner durable. Scanner and augmenter share this one durable, so it blends fork and item-batch work and the two cannot be separated here. Server-side signal from the NATS exporter, so it carries no namespace or pod labels.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 32 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 32
+      },
       "fieldConfig": {
         "defaults": {
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "area"
       },
@@ -710,22 +1181,53 @@
       "type": "stat",
       "title": "NATS \u2014 In Flight (unacked)",
       "description": "Delivered but not yet acked: work currently inside the pods. Also the signal KEDA's ack-capacity trigger scales on. Server-side signal from the NATS exporter (no namespace/pod labels).",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 32 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 32
+      },
       "fieldConfig": {
         "defaults": {
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "area"
       },
@@ -741,23 +1243,57 @@
       "type": "stat",
       "title": "NATS \u2014 Redelivered",
       "description": "Messages redelivered after an ack timeout. Sustained growth with a flat items-sent rate means the connector is not draining. Server-side signal from the NATS exporter, so it carries no namespace or pod labels.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 32 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 32
+      },
       "fieldConfig": {
         "defaults": {
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 10 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "area"
       },
@@ -773,13 +1309,27 @@
       "type": "stat",
       "title": "Replicas",
       "description": "Current replicas of the scanner deployment, from the HPA KEDA manages. minReplicaCount is 0, so 0 replicas with an empty queue is normal.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 32 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 32
+      },
       "fieldConfig": {
-        "defaults": { "unit": "short" }
+        "defaults": {
+          "unit": "short"
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "area"
       },
@@ -795,13 +1345,27 @@
       "type": "stat",
       "title": "Max Replicas",
       "description": "Ceiling from the ScaledObject. Replicas pinned here while the backlog grows means the connector is capped, not idle.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 32 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 32
+      },
       "fieldConfig": {
-        "defaults": { "unit": "short" }
+        "defaults": {
+          "unit": "short"
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "area"
       },
@@ -817,23 +1381,57 @@
       "type": "stat",
       "title": "NATS \u2014 Backlog Slope (2m)",
       "description": "Per-second growth of the backlog, clamped at 0. Verbatim the query KEDA's trend-based trigger evaluates; above 0.5 it asks for more pods.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 32 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 32
+      },
       "fieldConfig": {
         "defaults": {
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.1 },
-              { "color": "red", "value": 0.5 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "red",
+                "value": 0.5
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "area"
       },
@@ -849,10 +1447,20 @@
       "type": "timeseries",
       "title": "NATS \u2014 Scanner Consumer Backlog",
       "description": "Backlog on JE_CIFS/cifs-scanner-v1 over time. Scanner and augmenter share this durable, so it blends fork and item-batch work. Server-side signal from the NATS exporter, so it carries no namespace or pod labels.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
       "fieldConfig": {
-        "defaults": { "unit": "short" }
+        "defaults": {
+          "unit": "short"
+        }
       },
       "targets": [
         {
@@ -875,12 +1483,22 @@
     {
       "id": 57,
       "type": "timeseries",
-      "title": "KEDA — Replicas: current vs desired vs max",
+      "title": "KEDA \u2014 Replicas: current vs desired vs max",
       "description": "current below desired means scaling is in progress or blocked; current pinned at max means capped. Scale-down is deliberately slow (cooldown 900s, 600s stabilization window), so a flat line for ten minutes after a burst is configuration, not a stuck HPA.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
       "fieldConfig": {
-        "defaults": { "unit": "short" }
+        "defaults": {
+          "unit": "short"
+        }
       },
       "targets": [
         {
@@ -903,19 +1521,37 @@
     {
       "id": 58,
       "type": "timeseries",
-      "title": "KEDA — ack-capacity signal vs threshold",
+      "title": "KEDA \u2014 ack-capacity signal vs threshold",
       "description": "KEDA's ack-capacity trigger: replicas = ceil(ack_pending / 1000). The red line is that threshold; crossing it is what asks for another pod.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 44 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 44
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": { "thresholdsStyle": { "mode": "line" } },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1000
+              }
             ]
           }
         }
@@ -931,19 +1567,37 @@
     {
       "id": 59,
       "type": "timeseries",
-      "title": "KEDA — trend-based signal vs threshold",
+      "title": "KEDA \u2014 trend-based signal vs threshold",
       "description": "KEDA's trend-based trigger: slope of the backlog over 2m, clamped at 0 so only growth counts. Threshold 0.5, activation 0.1. The pipeline-full trigger is not rendered in dev (capacity is unset), so this plus ack-capacity and pending-wakeup is the whole scaling story.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 44 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 44
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": { "thresholdsStyle": { "mode": "line" } },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 0.5 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.5
+              }
             ]
           }
         }
@@ -959,9 +1613,15 @@
     {
       "type": "row",
       "id": 200,
-      "title": "Augmenter — cifs-connector-be-go",
+      "title": "Augmenter \u2014 cifs-connector-be-go",
+      "description": "What happened to the items that came back to be enriched: how many resolved, how many were already gone, and what the ACL query cost.",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 52 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 52
+      },
       "panels": []
     },
     {
@@ -969,8 +1629,16 @@
       "type": "timeseries",
       "title": "Augmenter Items by Outcome (rate, 5m)",
       "description": "Terminal outcome per item the augmenter touched. outcome=\"missing\" is also counted by items_skipped_not_found_total for the same event, so never sum the two.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 53 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 53
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
@@ -995,7 +1663,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "green"
+                  "fixedColor": "dark-green"
                 }
               }
             ]
@@ -1055,7 +1723,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "semi-dark-orange"
+                  "fixedColor": "orange"
                 }
               }
             ]
@@ -1070,7 +1738,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "purple"
+                  "fixedColor": "dark-purple"
                 }
               }
             ]
@@ -1085,7 +1753,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "semi-dark-purple"
+                  "fixedColor": "red"
                 }
               }
             ]
@@ -1100,7 +1768,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "light-purple"
+                  "fixedColor": "red"
                 }
               }
             ]
@@ -1130,7 +1798,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "semi-dark-red"
+                  "fixedColor": "red"
                 }
               }
             ]
@@ -1160,7 +1828,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "semi-dark-blue"
+                  "fixedColor": "blue"
                 }
               }
             ]
@@ -1179,10 +1847,20 @@
       "id": 21,
       "type": "timeseries",
       "title": "Skipped Not-Found (rate, 5m)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 53 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 53
+      },
       "fieldConfig": {
-        "defaults": { "unit": "ops" }
+        "defaults": {
+          "unit": "ops"
+        }
       },
       "targets": [
         {
@@ -1195,11 +1873,21 @@
     {
       "id": 22,
       "type": "timeseries",
-      "title": "Augmenter ACL Query Duration — p50 / p95 / p99",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 53 },
+      "title": "Augmenter ACL Query Duration \u2014 p50 / p95 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 53
+      },
       "fieldConfig": {
-        "defaults": { "unit": "s" }
+        "defaults": {
+          "unit": "s"
+        }
       },
       "targets": [
         {
@@ -1222,32 +1910,56 @@
     {
       "type": "row",
       "id": 300,
-      "title": "Content — cifs-connector-be-go-content",
+      "title": "Content \u2014 cifs-connector-be-go-content",
+      "description": "The stage that pulls the bytes down. 0 pods with an empty queue is normal: it scales 0\u2194N with KEDA.",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 61 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 61
+      },
       "panels": []
     },
     {
       "id": 30,
       "type": "stat",
       "title": "Pods Up",
-      "description": "Content pods scale 0↔N with KEDA — 0 pods with an empty queue is normal.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 62 },
+      "description": "Content pods scale 0\u2194N with KEDA \u2014 0 pods with an empty queue is normal.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 62
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "none"
       },
@@ -1262,23 +1974,57 @@
       "id": 36,
       "type": "stat",
       "title": "Restarts (1h)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 3, "y": 62 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 62
+      },
       "fieldConfig": {
         "defaults": {
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 3 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "area"
       },
@@ -1292,21 +2038,36 @@
     {
       "id": 31,
       "type": "stat",
-      "title": "Fetches (5m)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 6, "y": 62 },
+      "title": "Fetches (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 62
+      },
       "fieldConfig": {
-        "defaults": { "unit": "ops", "decimals": 2 }
+        "defaults": {
+          "unit": "short",
+          "decimals": 2
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
+          "expr": "sum(max_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
         }
       ]
     },
@@ -1314,13 +2075,28 @@
       "id": 32,
       "type": "stat",
       "title": "Fetch p95 (5m)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 9, "y": 62 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 62
+      },
       "fieldConfig": {
-        "defaults": { "unit": "s", "decimals": 2 }
+        "defaults": {
+          "unit": "s",
+          "decimals": 2
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "area"
       },
@@ -1334,33 +2110,67 @@
     {
       "id": 33,
       "type": "stat",
-      "title": "Errors (5m)",
+      "title": "Errors (window)",
       "description": "Number of content fetch requests that failed in the last 5 minutes. Counter increase on cifs_content_fetch_total{success=\"false\"}.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 12, "y": 62 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 62
+      },
       "fieldConfig": {
         "defaults": {
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "unit": "short",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 10 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"false\"}[5m]))"
+          "expr": "sum(max_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"false\"}[$__range]))"
         }
       ]
     },
@@ -1369,13 +2179,28 @@
       "type": "stat",
       "title": "Upload Throughput",
       "description": "Bytes per second confirmed by the content transfer service (rate over cifs_content_uploaded_bytes_total).",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 15, "y": 62 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 62
+      },
       "fieldConfig": {
-        "defaults": { "unit": "Bps", "decimals": 2 }
+        "defaults": {
+          "unit": "Bps",
+          "decimals": 2
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "area"
       },
@@ -1391,13 +2216,28 @@
       "type": "stat",
       "title": "Mount Acquire p95 (5m)",
       "description": "p95 of successful mount acquires on the content pod. Failed acquires are tracked separately (cifs_content_mount_acquire_failure_duration_seconds).",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 18, "y": 62 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 62
+      },
       "fieldConfig": {
-        "defaults": { "unit": "s", "decimals": 2 }
+        "defaults": {
+          "unit": "s",
+          "decimals": 2
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "area"
       },
@@ -1412,22 +2252,53 @@
       "id": 37,
       "type": "stat",
       "title": "NATS \u2014 Fetch Backlog",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 3, "x": 21, "y": 62 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 62
+      },
       "fieldConfig": {
         "defaults": {
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "background",
         "graphMode": "area"
       },
@@ -1441,10 +2312,18 @@
     {
       "id": 40,
       "type": "timeseries",
-      "title": "Content Fetches by error_code (rate, 5m)",
-      "description": "error_code=\"NONE\" is the success path; NAK_* codes are infra-level failures.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 66 },
+      "title": "Content Fetches by Outcome (rate, 5m)",
+      "description": "Shape over time: when fetches happened and how the outcomes were interleaved. Read the x axis for timing; the y axis is a rate and will look vanishingly small, because this connector works in bursts \u2014 a handful of fetches inside seconds divided by a five-minute window is a fraction of an op per second, arithmetically correct and of no use to anyone. For HOW MANY fetches ended in each outcome, read 'Content Fetches by Outcome (window)' beside it. error_code=NONE is what the connector emits on success and is displayed here as 'success'. Counting per time bucket was tried on the Box board and rejected: increase() and max_over_time minus min_over_time both under-count, because the whole burst lands inside a single bucket on a series created in that same bucket.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 0,
+        "y": 66
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
@@ -1466,10 +2345,223 @@
             },
             "properties": [
               {
+                "id": "displayName",
+                "value": "success"
+              },
+              {
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "green"
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_NOT_FOUND"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "not found"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_TOO_LARGE"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "too large"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_RATE_LIMITED"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "rate limited"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_TIMEOUT"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "timeout"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_PERMISSION_DENIED"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "permission denied"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CREDENTIAL_FAILURE"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "credential failure"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CONNECTION_FAILED"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "connection failed"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INTERNAL"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "internal error"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_READ_ERROR"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "read error"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INVALID_URN"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "invalid urn"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CACHE_WRITE_FAILED"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "cache write failed"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
                 }
               }
             ]
@@ -1485,13 +2577,309 @@
       ]
     },
     {
+      "id": 354,
+      "type": "bargauge",
+      "title": "Content Fetches by Outcome (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 10,
+        "y": 66
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NONE"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "success"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_NOT_FOUND"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "not found"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_TOO_LARGE"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "too large"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_RATE_LIMITED"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "rate limited"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_TIMEOUT"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "timeout"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_PERMISSION_DENIED"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "permission denied"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CREDENTIAL_FAILURE"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "credential failure"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CONNECTION_FAILED"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "connection failed"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INTERNAL"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "internal error"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_READ_ERROR"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "read error"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INVALID_URN"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "invalid urn"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CACHE_WRITE_FAILED"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "cache write failed"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{error_code}}",
+          "expr": "sum by (error_code) (max_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
+        }
+      ],
+      "description": "Where the fetches ended up, as counts. This is the panel that answers 'I ran N fetches \u2014 what happened to them?': the total is in 'Fetches', and this says how it split. Colour carries the verdict: green fine, yellow expected (the file is gone, nothing to do), orange back-pressure, red needs action."
+    },
+    {
       "id": 41,
       "type": "timeseries",
       "title": "Uploaded Bytes (rate)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 66 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 66
+      },
       "fieldConfig": {
-        "defaults": { "unit": "Bps" }
+        "defaults": {
+          "unit": "Bps"
+        }
       },
       "targets": [
         {
@@ -1505,11 +2893,21 @@
       "id": 42,
       "type": "timeseries",
       "title": "Content Requests In-Flight",
-      "description": "Requests currently inside the handler — content-mode saturation signal (the counterpart of the scanner's worker_busy). Authoritative backlog (num_pending) lives on the NATS server.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 74 },
+      "description": "Requests currently inside the handler \u2014 content-mode saturation signal (the counterpart of the scanner's worker_busy). Authoritative backlog (num_pending) lives on the NATS server.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 74
+      },
       "fieldConfig": {
-        "defaults": { "unit": "short" }
+        "defaults": {
+          "unit": "short"
+        }
       },
       "targets": [
         {
@@ -1523,10 +2921,20 @@
       "id": 44,
       "type": "timeseries",
       "title": "NATS \u2014 Content Consumer Backlog",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 74 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 74
+      },
       "fieldConfig": {
-        "defaults": { "unit": "short" }
+        "defaults": {
+          "unit": "short"
+        }
       },
       "targets": [
         {
@@ -1546,10 +2954,20 @@
       "type": "timeseries",
       "title": "NATS \u2014 Content Consumer Redelivery",
       "description": "nats_consumer_num_redelivered for the content durable (content-fetch-cifs). Rising = fetch requests failing and being retried; sustained growth toward MaxDeliver=3 means messages are about to be dropped as poison. Server-side signal from the NATS exporter (no namespace/pod labels).",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 74 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 74
+      },
       "fieldConfig": {
-        "defaults": { "unit": "short" }
+        "defaults": {
+          "unit": "short"
+        }
       },
       "targets": [
         {
@@ -1562,12 +2980,22 @@
     {
       "id": 45,
       "type": "timeseries",
-      "title": "KEDA — Content Replicas: current vs desired vs max",
+      "title": "KEDA \u2014 Content Replicas: current vs desired vs max",
       "description": "The content deployment scales independently of the scanner, off its own ScaledObject watching CONTENT_FETCH/content-fetch-cifs.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 82 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 82
+      },
       "fieldConfig": {
-        "defaults": { "unit": "short" }
+        "defaults": {
+          "unit": "short"
+        }
       },
       "targets": [
         {
@@ -1590,12 +3018,22 @@
     {
       "id": 46,
       "type": "timeseries",
-      "title": "KEDA — Content Trigger Signals",
+      "title": "KEDA \u2014 Content Trigger Signals",
       "description": "Signals behind the content ScaledObject. The consumer_name regex covers both the batch durable and the interactive one used by See Content, which has its own interactive-wakeup trigger. Server-side signal from the NATS exporter (no namespace/pod labels).",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 82 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 82
+      },
       "fieldConfig": {
-        "defaults": { "unit": "short" }
+        "defaults": {
+          "unit": "short"
+        }
       },
       "targets": [
         {
@@ -1618,58 +3056,223 @@
     {
       "type": "row",
       "id": 350,
-      "title": "Data Quality — Files Gone",
+      "title": "Data Quality \u2014 Files Gone",
+      "description": "How many files are gone, and which path found that out. Do not add the stages together: they are different moments in the pipeline.",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 90 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 90
+      },
       "panels": []
     },
     {
       "id": 70,
       "type": "stat",
-      "title": "Files Gone (5m)",
-      "description": "Files gone from the share when the augmenter or the content fetcher returned for them, counted over the last 5 minutes. Decays as the window slides, so it shows current activity rather than a run total. The content half also fires for symlinks and other non-regular files.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 91 },
+      "title": "Gone \u2014 404 on augment re-fetch",
+      "description": "The augment went back for an item it had already discovered and the share no longer had it. Its own stage only \u2014 this used to add the content 404s into the same number, which made a run with no augment at all still show a count.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 5,
+        "x": 0,
+        "y": 91
+      },
       "fieldConfig": {
-        "defaults": { "unit": "short" }
+        "defaults": {
+          "unit": "short"
+        }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "none",
         "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(increase(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[5m])) or vector(0)) + (sum(increase(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[5m])) or vector(0))"
+          "expr": "(sum(max_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[$__range])) or vector(0))"
         }
       ]
     },
     {
-      "id": 72,
+      "id": 355,
       "type": "stat",
-      "title": "Files Gone \u0025 (augment)",
-      "description": "Share of augmented items whose file was already gone, over the selected range. Augment only: content fetches one file per request and has no comparable denominator.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 91 },
+      "title": "Gone \u2014 404 on content fetch",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 5,
+        "x": 5,
+        "y": 91
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
-          "decimals": 2,
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 5 }
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
             ]
           }
         }
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "background",
-        "graphMode": "none"
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(max_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[$__range])) or vector(0))"
+        }
+      ],
+      "description": "The latest window of all: content went to download the file and it was no longer there, so it disappeared between the scan and the fetch. Do NOT add this to the other stages \u2014 content runs on demand over a subset, not over the whole share, so it has a different denominator. It is here because a 404 on fetch is evidence a file is gone, and until now that evidence only showed up as a content error. On CIFS this code also covers non-regular files (symlinks, sockets, devices), so it is evidence the content is not retrievable rather than proof the file was deleted."
+    },
+    {
+      "id": 357,
+      "type": "stat",
+      "title": "Augment Items (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 10,
+        "y": 91
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(max_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+        }
+      ],
+      "description": "The denominator for the percentage beside it. A ratio with no denominator cannot be read: 50% of 6 items and 50% of 60,000 are the same number and completely different news. This counts only what augment visited, never the whole share."
+    },
+    {
+      "id": 72,
+      "type": "stat",
+      "title": "Files Gone % (augment)",
+      "description": "Share of augmented items whose file was already gone, over the selected range. Augment only: content fetches one file per request and has no comparable denominator.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 5,
+        "x": 14,
+        "y": 91
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "unit": "percent",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "graphMode": "none",
+        "colorMode": "background"
       },
       "targets": [
         {
@@ -1683,10 +3286,20 @@
       "type": "timeseries",
       "title": "Files Gone by stage (rate, 5m)",
       "description": "Missing files split by the stage that found them missing; augment and content fetch are different moments and are diagnosed differently. The content series counts FETCH_ERROR_NOT_FOUND, which also fires for non-regular files.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 91 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 5,
+        "x": 19,
+        "y": 91
+      },
       "fieldConfig": {
-        "defaults": { "unit": "ops" }
+        "defaults": {
+          "unit": "ops"
+        }
       },
       "targets": [
         {
@@ -1700,6 +3313,115 @@
           "legendFormat": "content - NOT_FOUND (includes non-regular files)"
         }
       ]
+    },
+    {
+      "id": 351,
+      "type": "row",
+      "title": "Data Loss \u2014 Dead Letter Queue",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 99
+      },
+      "description": "What was lost. The scanner funnel can close perfectly and work can still have been discarded here: a message that exhausts its deliveries ends up in the DLQ leaving no trace in items_processed."
+    },
+    {
+      "id": 352,
+      "type": "stat",
+      "title": "DLQ Depth",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 100
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(nats_stream_total_messages{stream_name=\"DLQ_CONSUME_CIFS\"}) or vector(0)"
+        }
+      ],
+      "description": "Messages the SDK gave up on. Any number above zero is work that was silently dropped: the connector reports success because the folder never made it far enough to be counted as a failure."
+    },
+    {
+      "id": 353,
+      "type": "timeseries",
+      "title": "DLQ Depth over time",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 18,
+        "x": 6,
+        "y": 100
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "fillOpacity": 20
+          }
+        },
+        "overrides": []
+      },
+      "options": {},
+      "targets": [
+        {
+          "refId": "A",
+          "legendFormat": "{{stream_name}}",
+          "expr": "max by (stream_name) (nats_stream_total_messages{stream_name=\"DLQ_CONSUME_CIFS\"})"
+        }
+      ],
+      "description": "A step up here is the moment work was dropped. Line it up against the scanner funnel: the funnel will not show a dip, which is exactly why this row exists."
     }
   ]
 }

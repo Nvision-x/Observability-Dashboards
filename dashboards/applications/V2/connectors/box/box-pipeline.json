@@ -898,7 +898,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "dark-green"
+                  "fixedColor": "blue"
                 }
               }
             ]
@@ -958,7 +958,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "dark-purple"
+                  "fixedColor": "red"
                 }
               }
             ]
@@ -1499,6 +1499,102 @@
       "description": "Runs that promoted themselves to a full scan because the change volume exceeded BOX_INCREMENTAL_MAX_RATIO of the known file count. Expensive, and until now visible only in the logs."
     },
     {
+      "id": 144,
+      "type": "timeseries",
+      "title": "Scan Mode Decisions (increase, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 70,
+            "lineWidth": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "incremental / cursor_fresh"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "full / cursor_stale"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "full / no_cursor"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (mode, reason) (increase(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "{{mode}} / {{reason}}"
+        }
+      ],
+      "description": "Is incremental mode running, and if not, what is stopping it? The three panels to the left say how incremental runs went; this one says whether they were allowed to happen. no_cursor sustained means incremental is broken, not idle - a 400 on the events cursor capture disabled it permanently once while every scan still reported success. cursor_stale sustained means the scan cadence disagrees with BOX_INCREMENTAL_MAX_AGE_HOURS. This counts the decision taken at ScanStart from stored state, so it does not overlap with Bailouts: a run counted here as incremental can still promote itself to full mid-flight, and incremental decisions minus bailouts is what actually stayed incremental."
+    },
+    {
       "type": "row",
       "id": 160,
       "title": "Scanner \u2014 Saturation",
@@ -1507,7 +1603,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 43
       },
       "panels": [],
       "description": "The two things that bound scan speed: per-user admission slots (Box rate-limits per impersonated user and the cap is shared across pods) and the client-side rate limiter against the app-wide ceiling."
@@ -1524,7 +1620,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 36
+        "y": 44
       },
       "fieldConfig": {
         "defaults": {
@@ -1557,7 +1653,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 36
+        "y": 44
       },
       "fieldConfig": {
         "defaults": {
@@ -1619,7 +1715,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 52
       },
       "panels": [],
       "description": "The augment path is the only source of ACLs in the connector: the scanner's collaboration fetch is commented out in folder_work.go to save API tokens."
@@ -1636,7 +1732,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 45
+        "y": 53
       },
       "fieldConfig": {
         "defaults": {
@@ -1946,7 +2042,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 45
+        "y": 53
       },
       "fieldConfig": {
         "defaults": {
@@ -2256,7 +2352,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 45
+        "y": 53
       },
       "fieldConfig": {
         "defaults": {
@@ -2284,7 +2380,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 53
+        "y": 61
       },
       "fieldConfig": {
         "defaults": {
@@ -2322,7 +2418,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 53
+        "y": 61
       },
       "fieldConfig": {
         "defaults": {
@@ -2347,7 +2443,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 61
+        "y": 69
       },
       "panels": [],
       "description": "Filtered by $access_id, not $datasource_id: content mode is handed a URN carrying only access, file_id and user_id, so the datasource_id genuinely does not exist here. The 'unknown' value is the bounded sentinel for failures that happen before the URN is parsed."
@@ -2364,7 +2460,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 62
+        "y": 70
       },
       "fieldConfig": {
         "defaults": {
@@ -2421,7 +2517,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "orange"
+                  "fixedColor": "yellow"
                 }
               }
             ]
@@ -2436,7 +2532,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "blue"
+                  "fixedColor": "orange"
                 }
               }
             ]
@@ -2451,7 +2547,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "dark-purple"
+                  "fixedColor": "red"
                 }
               }
             ]
@@ -2466,7 +2562,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "red"
+                  "fixedColor": "orange"
                 }
               }
             ]
@@ -2530,6 +2626,96 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CREDENTIAL_FAILURE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INVALID_URN"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CONNECTION_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INTERNAL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_READ_ERROR"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CACHE_WRITE_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
           }
         ]
       },
@@ -2554,7 +2740,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 62
+        "y": 70
       },
       "fieldConfig": {
         "defaults": {
@@ -2582,7 +2768,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 62
+        "y": 70
       },
       "fieldConfig": {
         "defaults": {
@@ -2610,7 +2796,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 70
+        "y": 78
       },
       "fieldConfig": {
         "defaults": {
@@ -2648,7 +2834,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 70
+        "y": 78
       },
       "fieldConfig": {
         "defaults": {
@@ -2686,7 +2872,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 70
+        "y": 78
       },
       "fieldConfig": {
         "defaults": {
@@ -2714,7 +2900,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 78
+        "y": 86
       },
       "fieldConfig": {
         "defaults": {
@@ -2743,7 +2929,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 78
+        "y": 86
       },
       "fieldConfig": {
         "defaults": {
@@ -2794,7 +2980,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "orange"
+                  "fixedColor": "yellow"
                 }
               }
             ]
@@ -2809,7 +2995,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "blue"
+                  "fixedColor": "orange"
                 }
               }
             ]
@@ -2824,7 +3010,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "dark-purple"
+                  "fixedColor": "red"
                 }
               }
             ]
@@ -2839,7 +3025,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "red"
+                  "fixedColor": "orange"
                 }
               }
             ]
@@ -2903,6 +3089,96 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CREDENTIAL_FAILURE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INVALID_URN"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CONNECTION_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INTERNAL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_READ_ERROR"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CACHE_WRITE_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
           }
         ]
       },
@@ -2935,7 +3211,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 86
+        "y": 94
       },
       "fieldConfig": {
         "defaults": {
@@ -2963,7 +3239,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 86
+        "y": 94
       },
       "fieldConfig": {
         "defaults": {
