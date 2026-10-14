@@ -3280,6 +3280,196 @@
         }
       ],
       "description": "Firings that produced no job — the pipeline could not be ensured, or the job engine rejected the submission. The error stat for this row is the domain failure rather than a non-2xx rate, because a scan that never starts is what a user notices; the API error ratio is on the component board. Skipped firings are excluded: a skip is a scan already running on the access, which is the rule working, not a fault."
+    },
+    {
+      "id": 1800,
+      "type": "row",
+      "title": "Authz Service",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 82
+      },
+      "panels": []
+    },
+    {
+      "id": 69,
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 83
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "links": [
+            {
+              "title": "Open Authz Service Overview",
+              "url": "/d/apps-v2-authz-service-overview?${namespace:queryparam}"
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*authz-service.*\", namespace=\"$namespace\"})"
+        }
+      ],
+      "description": "nxmain and the nx-pipeline API ask this service who may query what; the UI manages grants and credentials through it. Down, callers in authz-service mode fall back to their own checks, which miss the datasources this service owns, and the UI's grant and credential screens fail."
+    },
+    {
+      "id": 70,
+      "type": "stat",
+      "title": "RPCs (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 83
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m]))"
+        }
+      ],
+      "description": "Every AuthzService RPC, refused calls included. Mostly CanQuery and GetFieldPolicy from the query path when callers run in client.mode authz-service; in local mode only the UI calls, so near zero is normal."
+    },
+    {
+      "id": 71,
+      "type": "stat",
+      "title": "RPC p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 83
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m])))"
+        }
+      ],
+      "description": "Safe to read as a percentile: the service passes SubsecondLatencyBuckets to the gRPC set. Callers time out at 2s and fall back to their own checks, so a p95 near that is callers answering for themselves."
+    },
+    {
+      "id": 72,
+      "type": "stat",
+      "title": "Server Faults (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 83
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.01
+              }
+            ]
+          },
+          "decimals": 3
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\", code=~\"2|4|8|13|14|15\"}[5m]))"
+        }
+      ],
+      "description": "Server-side failures only: Unknown, DeadlineExceeded, ResourceExhausted, Internal, Unavailable, DataLoss. Not every non-OK code, as Credential Manager's row counts, because authz refuses unknown and inactive users with PermissionDenied as part of normal operation. A denied query is not an error at all: it is OK with allowed=false."
     }
   ]
 }

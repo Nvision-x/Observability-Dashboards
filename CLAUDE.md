@@ -193,6 +193,7 @@ Match on the **PodMonitor name suffix**, not the pod label. Current suffixes:
 | NFS | **none — no PodMonitor exists**, so NFS is not scraped at all (not even runtime metrics) |
 | Registration Service | `-registration-service` (note: no `-be-go`) |
 | Request Service | `-request-service` (note: no `-be-go`) |
+| Authz Service | `-authz-service` (note: no `-be-go`) |
 | Knowledge Service | `-knowledge-service-be-go` |
 | Knowledge Hub — standalone | `-knowledge-hub-be-go` |
 | Knowledge Hub — sidecar | `-knowledge-hub-be-go-sidecar` |
