@@ -48,7 +48,7 @@
         "type": "query",
         "label": "Namespace",
         "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "query": "label_values(process_start_time_seconds{job=~\".*request-service.*\"}, namespace)",
+        "query": "label_values(kube_deployment_spec_replicas{deployment=~\".*request-service.*\"}, namespace)",
         "current": { "selected": true, "text": "default", "value": "default" },
         "hide": 0,
         "includeAll": false,
@@ -60,13 +60,12 @@
         "name": "pod",
         "type": "query",
         "label": "Pod",
-        "description": "Applies only to the per-pod panels at the bottom of this dashboard. Aggregate panels deliberately ignore it so pod churn does not gap the graphs.",
         "datasource": { "type": "prometheus", "uid": "${datasource}" },
         "query": "label_values(process_start_time_seconds{job=~\".*request-service.*\", namespace=\"$namespace\"}, pod)",
         "current": { "selected": true, "text": "All", "value": "$__all" },
         "hide": 0,
         "includeAll": true,
-        "allValue": ".*",
+        "allValue": ".+",
         "multi": true,
         "refresh": 2,
         "sort": 1
@@ -119,7 +118,7 @@
         "graphMode": "none"
       },
       "targets": [
-        { "refId": "A", "expr": "sum(up{job=~\".*request-service.*\", namespace=\"$namespace\"})" }
+        { "refId": "A", "expr": "sum(up{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"})" }
       ]
     },
     {
@@ -136,7 +135,7 @@
         "graphMode": "area"
       },
       "targets": [
-        { "refId": "A", "expr": "sum(request_service_sse_active_connections{job=~\".*request-service.*\", namespace=\"$namespace\"})" }
+        { "refId": "A", "expr": "sum(request_service_sse_active_connections{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"})" }
       ]
     },
     {
@@ -152,7 +151,7 @@
         "graphMode": "area"
       },
       "targets": [
-        { "refId": "A", "expr": "sum(increase(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", outcome=\"created\"}[5m]))" }
+        { "refId": "A", "expr": "sum(increase(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", outcome=\"created\"}[5m]))" }
       ]
     },
     {
@@ -182,7 +181,7 @@
         "graphMode": "area"
       },
       "targets": [
-        { "refId": "A", "expr": "sum(increase(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", outcome=\"error\"}[5m]))" }
+        { "refId": "A", "expr": "sum(increase(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", outcome=\"error\"}[5m]))" }
       ]
     },
     {
@@ -199,14 +198,14 @@
         "graphMode": "area"
       },
       "targets": [
-        { "refId": "A", "expr": "sum(increase(request_service_connectiontest_results_total{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m]))" }
+        { "refId": "A", "expr": "sum(increase(request_service_connectiontest_results_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))" }
       ]
     },
     {
       "id": 6,
       "type": "stat",
       "title": "Unmatched Results (5m)",
-      "description": "Results that could not be correlated back to a request (e.g. an empty job id). Sustained non-zero means result pushes are being dropped on the floor.",
+      "description": "Results that could not be correlated to a request: an empty job id, or an envelope of an unexpected type, which is a sign of connector contract drift. Both are discarded, so sustained non-zero means results are being lost.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
       "fieldConfig": {
@@ -229,7 +228,7 @@
         "graphMode": "area"
       },
       "targets": [
-        { "refId": "A", "expr": "sum(increase(request_service_connectiontest_results_unmatched_total{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m]))" }
+        { "refId": "A", "expr": "sum(increase(request_service_connectiontest_results_unmatched_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))" }
       ]
     },
     {
@@ -249,7 +248,7 @@
       "gridPos": { "h": 7, "w": 8, "x": 0, "y": 6 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (outcome) (rate(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "{{outcome}}" }
+        { "refId": "A", "expr": "sum by (outcome) (rate(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{outcome}}" }
       ]
     },
     {
@@ -267,7 +266,7 @@
         }
       },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", outcome=\"error\"}[5m])) / clamp_min(sum(rate(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m])), 0.0001)", "legendFormat": "error ratio" }
+        { "refId": "A", "expr": "sum(rate(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", outcome=\"error\"}[5m])) / clamp_min(sum(rate(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])), 0.0001)", "legendFormat": "error ratio" }
       ]
     },
     {
@@ -279,8 +278,8 @@
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 6 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", outcome=\"created\"}[5m]))", "legendFormat": "created" },
-        { "refId": "B", "expr": "sum(rate(request_service_connectiontest_results_total{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "results received" }
+        { "refId": "A", "expr": "sum(rate(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", outcome=\"created\"}[5m]))", "legendFormat": "created" },
+        { "refId": "B", "expr": "sum(rate(request_service_connectiontest_results_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "results received" }
       ]
     },
     {
@@ -300,7 +299,7 @@
       "gridPos": { "h": 7, "w": 8, "x": 0, "y": 14 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (result) (rate(request_service_connectiontest_results_total{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "{{result}}" }
+        { "refId": "A", "expr": "sum by (result) (rate(request_service_connectiontest_results_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{result}}" }
       ]
     },
     {
@@ -317,19 +316,31 @@
         }
       },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(request_service_connectiontest_results_total{job=~\".*request-service.*\", namespace=\"$namespace\", result=\"success\"}[5m])) / clamp_min(sum(rate(request_service_connectiontest_results_total{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m])), 0.0001)", "legendFormat": "success ratio" }
+        { "refId": "A", "expr": "sum(rate(request_service_connectiontest_results_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", result=\"success\"}[5m])) / clamp_min(sum(rate(request_service_connectiontest_results_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])), 0.0001)", "legendFormat": "success ratio" }
       ]
     },
     {
       "id": 32,
       "type": "timeseries",
       "title": "Unmatched Results (rate)",
-      "description": "Results dropped because they could not be correlated to an outstanding request.",
+      "description": "Results discarded because they could not be correlated to a request: an empty job id, or an envelope of an unexpected type, which is a sign of connector contract drift.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 14 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(request_service_connectiontest_results_unmatched_total{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "unmatched" }
+        { "refId": "A", "expr": "sum(rate(request_service_connectiontest_results_unmatched_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "unmatched" }
+      ]
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Failures by Error Code",
+      "description": "request_service_connectiontest_results_total{result=\"failure\"} by the classification the connector sent. AUTH_FAILED: the datasource rejected the credentials. PERMISSION_DENIED: authenticated, but not authorized for the probe. CONNECTIVITY_FAILED: host unreachable, DNS, TLS or a refused connection. TIMEOUT: the probe exceeded its deadline. JOB_ERROR: the connector itself failed to run the test. UNKNOWN_ERROR: the connector could not classify the failure. An empty code is a failure from a connector that predates the error field; a number is a code newer than this build. Like the outcome panel, this is the health of the target systems and connectors, not of this service.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 21 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (error_code) (rate(request_service_connectiontest_results_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", result=\"failure\"}[5m]))", "legendFormat": "{{error_code}}" }
       ]
     },
     {
@@ -337,7 +348,7 @@
       "id": 350,
       "title": "Connection Tests — Round-Trip Latency",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 },
       "panels": []
     },
     {
@@ -346,12 +357,12 @@
       "title": "Round-Trip Duration (p50 / p95 / p99)",
       "description": "request_service_connectiontest_duration_seconds — wall time from the job being created in the job engine to its result arriving over NATS. Derived from the stored request row's created_at, so it spans the whole round trip including the connector's own network connect, not just this service's work.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 22 },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 29 },
       "fieldConfig": { "defaults": { "unit": "s" } },
       "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(request_service_connectiontest_duration_seconds_bucket{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p50" },
-        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(request_service_connectiontest_duration_seconds_bucket{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p95" },
-        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(request_service_connectiontest_duration_seconds_bucket{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p99" }
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(request_service_connectiontest_duration_seconds_bucket{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(request_service_connectiontest_duration_seconds_bucket{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(request_service_connectiontest_duration_seconds_bucket{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p99" }
       ]
     },
     {
@@ -360,10 +371,10 @@
       "title": "Round-Trip p95 by Connector",
       "description": "The same round trip split by connector. One slow connector shows up here without dragging the aggregate quantiles beside it.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 22 },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 29 },
       "fieldConfig": { "defaults": { "unit": "s" } },
       "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, connector) (rate(request_service_connectiontest_duration_seconds_bucket{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "{{connector}}" }
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, connector) (rate(request_service_connectiontest_duration_seconds_bucket{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "{{connector}}" }
       ]
     },
     {
@@ -372,23 +383,23 @@
       "title": "Round Trips Measured vs Results Received",
       "description": "The histogram only observes results whose request row existed to measure against; a result whose request was never persisted is still stored, but cannot be timed. A persistent gap between these lines means creation-time persistence is failing — look for the 'no stored request to measure against' warning in the service log.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 22 },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 29 },
       "fieldConfig": { "defaults": { "unit": "ops" } },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(request_service_connectiontest_duration_seconds_count{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "measured" },
-        { "refId": "B", "expr": "sum(rate(request_service_connectiontest_results_total{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "results received" }
+        { "refId": "A", "expr": "sum(rate(request_service_connectiontest_duration_seconds_count{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "measured" },
+        { "refId": "B", "expr": "sum(rate(request_service_connectiontest_results_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "results received" }
       ]
     },
     {
       "id": 63,
       "type": "timeseries",
       "title": "In Flight / Stalled",
-      "description": "request_service_connectiontest_inflight — connection tests dispatched with no result recorded yet, read from the pending rows in Postgres at scrape time (so it survives a restart and does not depend on which replica dispatched the job). 'pending' is normal in-flight work and should return to zero between tests; 'stalled' has waited more than 10 minutes and is work the job engine almost certainly never returned. A rising stalled line is the signal the duration histogram cannot give you, because a round trip that never completes is never observed. Reported per pod, so this sums replicas rather than averaging them.",
+      "description": "request_service_connectiontest_inflight — connection tests dispatched with no result recorded yet, read from the pending rows in Postgres at scrape time (so it survives a restart and does not depend on which replica dispatched the job). 'pending' is normal in-flight work and returns to zero between tests; 'stalled' has waited more than 10 minutes and is work the job engine almost certainly never returned. A rising stalled line is the signal the duration histogram cannot give, because a round trip that never completes is never observed. The value is a database-wide count that every pod reports identically, so this takes the max across pods rather than summing them.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 29 },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 36 },
       "fieldConfig": { "defaults": { "unit": "short", "min": 0 } },
       "targets": [
-        { "refId": "A", "expr": "sum by (state) (request_service_connectiontest_inflight{job=~\".*request-service.*\", namespace=\"$namespace\"})", "legendFormat": "{{state}}" }
+        { "refId": "A", "expr": "max by (state) (request_service_connectiontest_inflight{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "{{state}}" }
       ]
     },
     {
@@ -396,7 +407,7 @@
       "id": 400,
       "title": "SSE Result Push",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 36 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 43 },
       "panels": []
     },
     {
@@ -404,10 +415,10 @@
       "type": "timeseries",
       "title": "Active SSE Connections",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 37 },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 44 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "targets": [
-        { "refId": "A", "expr": "sum(request_service_sse_active_connections{job=~\".*request-service.*\", namespace=\"$namespace\"})", "legendFormat": "open connections" }
+        { "refId": "A", "expr": "sum(request_service_sse_active_connections{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "open connections" }
       ]
     },
     {
@@ -416,10 +427,10 @@
       "title": "SSE Connection Churn",
       "description": "Rate of change of the open-connection gauge. Large symmetric swings mean clients are reconnecting rather than holding a stream.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 37 },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 44 },
       "fieldConfig": { "defaults": { "unit": "cps" } },
       "targets": [
-        { "refId": "A", "expr": "sum(deriv(request_service_sse_active_connections{job=~\".*request-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "net change/s" }
+        { "refId": "A", "expr": "sum(deriv(request_service_sse_active_connections{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "net change/s" }
       ]
     },
     {
@@ -427,19 +438,19 @@
       "id": 450,
       "title": "HTTP — Connect API",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 44 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 51 },
       "panels": []
     },
     {
       "id": 70,
       "type": "timeseries",
       "title": "API Request Rate by Route",
-      "description": "Connect RPC traffic. The route label is the raw URL path, which for Connect is the fully-qualified procedure — a bounded set, so no cardinality risk. /metrics, /healthz and /ready are excluded: at a 30s scrape interval they would otherwise dominate the chart. /events is absent by design, since the SSE stream is deliberately left uninstrumented.",
+      "description": "Connect RPC traffic. The route label is the raw URL path, not a route pattern, so it is unbounded: Connect procedures appear by full name, and every request to an unknown path adds its own series with a 404. /metrics, /health, /ready, /readiness, /live and /liveness are excluded so probes and scrapes do not dominate the chart. /events is absent because the SSE stream is not instrumented.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 45 },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 52 },
       "fieldConfig": { "defaults": { "unit": "reqps" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (route) (rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", route!~\"/metrics|/healthz|/ready\"}[5m]))", "legendFormat": "{{route}}" }
+        { "refId": "A", "expr": "sum by (route) (rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/health|/ready|/readiness|/live|/liveness\"}[5m]))", "legendFormat": "{{route}}" }
       ]
     },
     {
@@ -447,10 +458,10 @@
       "type": "timeseries",
       "title": "API Request Rate by Status",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 45 },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 52 },
       "fieldConfig": { "defaults": { "unit": "reqps" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (status) (rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", route!~\"/metrics|/healthz|/ready\"}[5m]))", "legendFormat": "{{status}}" }
+        { "refId": "A", "expr": "sum by (status) (rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/health|/ready|/readiness|/live|/liveness\"}[5m]))", "legendFormat": "{{status}}" }
       ]
     },
     {
@@ -459,18 +470,19 @@
       "title": "API Duration p95 by Route",
       "description": "The service opts into pipeline-lib-go's SubsecondLatencyBuckets for this histogram (0.005s-10s), so histogram_quantile is meaningful. The 10s ceiling fits because /events is excluded from instrumentation and every other route returns promptly — the connection test itself is dispatched asynchronously and its multi-minute round trip is measured separately by request_service_connectiontest_duration_seconds.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 45 },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 52 },
       "fieldConfig": { "defaults": { "unit": "s" } },
       "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=~\".*request-service.*\", namespace=\"$namespace\", route!~\"/metrics|/healthz|/ready\"}[5m])))", "legendFormat": "{{route}}" }
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/health|/ready|/readiness|/live|/liveness\"}[5m])))", "legendFormat": "{{route}}" }
       ]
     },
     {
       "id": 73,
       "type": "timeseries",
-      "title": "API Error Ratio (non-2xx)",
+      "title": "API Error Ratio (non-2xx / 5xx)",
+      "description": "Share of API requests that did not succeed. 'non-2xx' includes client refusals: 401 for a missing or invalid token, 403 for an authz-service refusal, 400 and 404 for invalid or unknown requests. '5xx only' counts server-side failures alone.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 52 },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 59 },
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
@@ -479,19 +491,20 @@
         }
       },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", route!~\"/metrics|/healthz|/ready\", status!~\"2..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", route!~\"/metrics|/healthz|/ready\"}[5m])), 0.0001)", "legendFormat": "error ratio" }
+        { "refId": "A", "expr": "sum(rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/health|/ready|/readiness|/live|/liveness\", status!~\"2..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/health|/ready|/readiness|/live|/liveness\"}[5m])), 0.0001)", "legendFormat": "non-2xx" },
+        { "refId": "B", "expr": "sum(rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/health|/ready|/readiness|/live|/liveness\", status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/health|/ready|/readiness|/live|/liveness\"}[5m])), 0.0001)", "legendFormat": "5xx only" }
       ]
     },
     {
       "id": 74,
       "type": "timeseries",
       "title": "HTTP In Flight",
-      "description": "http_active_requests carries no route or method labels, so this covers the whole instrumented surface including /metrics, /healthz and /ready — it cannot be filtered down to API routes. It should sit near zero: the SSE stream is excluded from instrumentation, so long-lived connections never accumulate here.",
+      "description": "http_active_requests carries no route or method labels, so this covers the whole instrumented surface including /metrics and the health probes — it cannot be filtered down to API routes. It sits near zero: the SSE stream is excluded from instrumentation, so long-lived connections never accumulate here.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 52 },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 59 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "targets": [
-        { "refId": "A", "expr": "sum(http_active_requests{job=~\".*request-service.*\", namespace=\"$namespace\"})", "legendFormat": "in flight" }
+        { "refId": "A", "expr": "sum(http_active_requests{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "in flight" }
       ]
     },
     {
@@ -500,11 +513,48 @@
       "title": "API Payload Throughput",
       "description": "Bytes/s in and out, from the http_request_size_bytes / http_response_size_bytes histogram sums. Only non-zero-length bodies are recorded. Throughput uses _sum, which is independent of bucket layout — worth knowing because the two histograms are bucketed differently: response size opts into BodySizeBuckets (256 B-64 MB), while request size is deliberately left on the SDK default, which is the finer of the two below 256 B and suits the small Connect messages and bare probes this service accepts. Size percentiles are therefore only meaningful on the response side. Health and scrape routes are excluded to match the other panels in this row.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 52 },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 59 },
       "fieldConfig": { "defaults": { "unit": "Bps" } },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(http_request_size_bytes_sum{job=~\".*request-service.*\", namespace=\"$namespace\", route!~\"/metrics|/healthz|/ready\"}[5m]))", "legendFormat": "request" },
-        { "refId": "B", "expr": "sum(rate(http_response_size_bytes_sum{job=~\".*request-service.*\", namespace=\"$namespace\", route!~\"/metrics|/healthz|/ready\"}[5m]))", "legendFormat": "response" }
+        { "refId": "A", "expr": "sum(rate(http_request_size_bytes_sum{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/health|/ready|/readiness|/live|/liveness\"}[5m]))", "legendFormat": "request" },
+        { "refId": "B", "expr": "sum(rate(http_response_size_bytes_sum{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/health|/ready|/readiness|/live|/liveness\"}[5m]))", "legendFormat": "response" }
+      ]
+    },
+    {
+      "id": 76,
+      "type": "timeseries",
+      "title": "API Requests by RPC",
+      "description": "ConnectionTestService calls by method (TestConnection, RerunConnectionTest, ListResults, ListLatestByDatasource), with the service prefix stripped from the route.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 66 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (rpc) (label_replace(rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/request\\\\.connectiontest\\\\.v1\\\\.ConnectionTestService/.*\"}[5m]), \"rpc\", \"$1\", \"route\", \"/request\\\\.connectiontest\\\\.v1\\\\.ConnectionTestService/(.*)\"))", "legendFormat": "{{rpc}}" }
+      ]
+    },
+    {
+      "id": 77,
+      "type": "timeseries",
+      "title": "API Errors by RPC",
+      "description": "Non-2xx responses per ConnectionTestService method, by status. 401 and 403 are authentication and authz-service refusals; 400 and 404 are invalid requests or missing records; 5xx are failures in this service or its dependencies.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 66 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (rpc, status) (label_replace(rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/request\\\\.connectiontest\\\\.v1\\\\.ConnectionTestService/.*\", status!~\"2..\"}[5m]), \"rpc\", \"$1\", \"route\", \"/request\\\\.connectiontest\\\\.v1\\\\.ConnectionTestService/(.*)\"))", "legendFormat": "{{rpc}} {{status}}" }
+      ]
+    },
+    {
+      "id": 78,
+      "type": "timeseries",
+      "title": "API Errors by Status Class",
+      "description": "Error responses on API routes, split into client refusals (4xx) and server failures (5xx). 4xx includes 401 for a missing or invalid token, 403 for an authz-service refusal, 400 for an invalid request and 404 for a missing record or unknown path. 5xx is this service or a dependency failing.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 66 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/health|/ready|/readiness|/live|/liveness\", status=~\"4..\"}[5m]))", "legendFormat": "4xx" },
+        { "refId": "B", "expr": "sum(rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/health|/ready|/readiness|/live|/liveness\", status=~\"5..\"}[5m]))", "legendFormat": "5xx" }
       ]
     },
     {
@@ -512,14 +562,14 @@
       "id": 500,
       "title": "Per-Pod Drill-Down",
       "collapsed": true,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 59 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 73 },
       "panels": [
         {
           "id": 50,
           "type": "timeseries",
           "title": "SSE Active Connections by Pod",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "gridPos": { "h": 7, "w": 8, "x": 0, "y": 60 },
+          "gridPos": { "h": 7, "w": 8, "x": 0, "y": 74 },
           "fieldConfig": { "defaults": { "unit": "short" } },
           "targets": [
             { "refId": "A", "expr": "sum by (pod) (request_service_sse_active_connections{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "{{pod}}" }
@@ -530,7 +580,7 @@
           "type": "timeseries",
           "title": "Test Creation by Pod (rate)",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "gridPos": { "h": 7, "w": 8, "x": 8, "y": 60 },
+          "gridPos": { "h": 7, "w": 8, "x": 8, "y": 74 },
           "fieldConfig": { "defaults": { "unit": "ops" } },
           "targets": [
             { "refId": "A", "expr": "sum by (pod) (rate(request_service_connectiontest_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{pod}}" }
@@ -541,7 +591,7 @@
           "type": "timeseries",
           "title": "Results Received by Pod (rate)",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "gridPos": { "h": 7, "w": 8, "x": 16, "y": 60 },
+          "gridPos": { "h": 7, "w": 8, "x": 16, "y": 74 },
           "fieldConfig": { "defaults": { "unit": "ops" } },
           "targets": [
             { "refId": "A", "expr": "sum by (pod) (rate(request_service_connectiontest_results_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{pod}}" }
@@ -552,10 +602,10 @@
           "type": "timeseries",
           "title": "API Request Rate by Pod",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "gridPos": { "h": 7, "w": 8, "x": 0, "y": 67 },
+          "gridPos": { "h": 7, "w": 8, "x": 0, "y": 81 },
           "fieldConfig": { "defaults": { "unit": "reqps" } },
           "targets": [
-            { "refId": "A", "expr": "sum by (pod) (rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/healthz|/ready\"}[5m]))", "legendFormat": "{{pod}}" }
+            { "refId": "A", "expr": "sum by (pod) (rate(http_requests_total{job=~\".*request-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/health|/ready|/readiness|/live|/liveness\"}[5m]))", "legendFormat": "{{pod}}" }
           ]
         }
       ]

@@ -48,7 +48,7 @@
         "type": "query",
         "label": "Namespace",
         "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "query": "label_values(process_start_time_seconds{job=~\".*registration-service.*\"}, namespace)",
+        "query": "label_values(kube_deployment_spec_replicas{deployment=~\".*registration-service.*\"}, namespace)",
         "current": { "selected": true, "text": "default", "value": "default" },
         "hide": 0,
         "includeAll": false,
@@ -60,13 +60,12 @@
         "name": "pod",
         "type": "query",
         "label": "Pod",
-        "description": "Applies only to the per-pod panels at the bottom of this dashboard. Aggregate panels deliberately ignore it so pod churn does not gap the graphs.",
         "datasource": { "type": "prometheus", "uid": "${datasource}" },
         "query": "label_values(process_start_time_seconds{job=~\".*registration-service.*\", namespace=\"$namespace\"}, pod)",
         "current": { "selected": true, "text": "All", "value": "$__all" },
         "hide": 0,
         "includeAll": true,
-        "allValue": ".*",
+        "allValue": ".+",
         "multi": true,
         "refresh": 2,
         "sort": 1
@@ -118,14 +117,14 @@
         "graphMode": "none"
       },
       "targets": [
-        { "refId": "A", "expr": "sum(up{job=~\".*registration-service.*\", namespace=\"$namespace\"})" }
+        { "refId": "A", "expr": "sum(up{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"})" }
       ]
     },
     {
       "id": 2,
       "type": "stat",
-      "title": "Registrations (5m)",
-      "description": "Successful RegisterConnector calls in the last 5 minutes (increase on connector_registrations_total).",
+      "title": "Registrations (last 5m)",
+      "description": "Successful RegisterConnector calls in the last 5 minutes (increase of connector_registrations_total). Failed calls are not counted here; see Failed Registrations.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } },
@@ -135,13 +134,14 @@
         "graphMode": "area"
       },
       "targets": [
-        { "refId": "A", "expr": "sum(increase(connector_registrations_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))" }
+        { "refId": "A", "expr": "sum(increase(connector_registrations_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))" }
       ]
     },
     {
       "id": 3,
       "type": "stat",
-      "title": "gRPC Requests (5m)",
+      "title": "gRPC Request Rate (5m)",
+      "description": "gRPC calls per second across all methods, averaged over 5m.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2 } },
@@ -151,14 +151,14 @@
         "graphMode": "area"
       },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))" }
+        { "refId": "A", "expr": "sum(rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))" }
       ]
     },
     {
       "id": 4,
       "type": "stat",
-      "title": "gRPC Error Rate (5m)",
-      "description": "Fraction of gRPC calls returning a non-OK status code (code != 0).",
+      "title": "gRPC Error % (5m)",
+      "description": "Share of gRPC calls returning any non-OK code (code != \"0\"). Client errors such as InvalidArgument (3) and NotFound (5) count; gRPC Server Error % shows server-side failures only.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
       "fieldConfig": {
@@ -181,13 +181,14 @@
         "graphMode": "area"
       },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", code!=\"0\"}[5m])) / clamp_min(sum(rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])), 0.0001)" }
+        { "refId": "A", "expr": "sum(rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", code!=\"0\"}[5m])) / clamp_min(sum(rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])), 0.0001)" }
       ]
     },
     {
       "id": 5,
       "type": "stat",
-      "title": "HTTP Requests (5m)",
+      "title": "API Request Rate (5m)",
+      "description": "REST requests per second under /api/v1, averaged over 5m. Health probes (/health, /ready, /live, /readiness, /liveness) and /metrics scrapes are excluded.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
       "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2 } },
@@ -197,14 +198,14 @@
         "graphMode": "area"
       },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))" }
+        { "refId": "A", "expr": "sum(rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\"}[5m]))" }
       ]
     },
     {
       "id": 6,
       "type": "stat",
-      "title": "HTTP 5xx Rate (5m)",
-      "description": "Fraction of REST requests answered with a 5xx status.",
+      "title": "API 5xx % (5m)",
+      "description": "Share of /api/v1 requests answered with a 5xx status. Health probes (/health, /ready, /live, /readiness, /liveness) and /metrics scrapes are excluded.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
       "fieldConfig": {
@@ -227,7 +228,7 @@
         "graphMode": "area"
       },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])), 0.0001)" }
+        { "refId": "A", "expr": "sum(rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\", status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\"}[5m])), 0.0001)" }
       ]
     },
     {
@@ -236,7 +237,7 @@
       "title": "gRPC In Flight",
       "description": "grpc_active_requests — unary calls currently executing inside the metrics interceptor.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 5 },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 5 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
@@ -244,15 +245,16 @@
         "graphMode": "area"
       },
       "targets": [
-        { "refId": "A", "expr": "sum(grpc_active_requests{job=~\".*registration-service.*\", namespace=\"$namespace\"})" }
+        { "refId": "A", "expr": "sum(grpc_active_requests{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"})" }
       ]
     },
     {
       "id": 8,
       "type": "stat",
       "title": "HTTP In Flight",
+      "description": "http_active_requests has no route label, so it includes health probes and /metrics scrapes.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 5 },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 5 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
@@ -260,15 +262,16 @@
         "graphMode": "area"
       },
       "targets": [
-        { "refId": "A", "expr": "sum(http_active_requests{job=~\".*registration-service.*\", namespace=\"$namespace\"})" }
+        { "refId": "A", "expr": "sum(http_active_requests{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"})" }
       ]
     },
     {
       "id": 9,
       "type": "stat",
       "title": "gRPC p95 (5m)",
+      "description": "95th-percentile gRPC call latency over 5m, all methods.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 5 },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 5 },
       "fieldConfig": { "defaults": { "unit": "s", "decimals": 3 } },
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
@@ -276,15 +279,16 @@
         "graphMode": "area"
       },
       "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))" }
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])))" }
       ]
     },
     {
       "id": 10,
       "type": "stat",
-      "title": "HTTP p95 (5m)",
+      "title": "API p95 (5m)",
+      "description": "95th-percentile latency of /api/v1 requests over 5m. Health probes (/health, /ready, /live, /readiness, /liveness) and /metrics scrapes are excluded.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 5 },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 5 },
       "fieldConfig": { "defaults": { "unit": "s", "decimals": 3 } },
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
@@ -292,7 +296,67 @@
         "graphMode": "area"
       },
       "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))" }
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\"}[5m])))" }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "gRPC Server Error % (5m)",
+      "description": "Share of gRPC calls failing with a server-side code: Unknown (2), DeadlineExceeded (4), ResourceExhausted (8), Unimplemented (12), Internal (13), Unavailable (14), DataLoss (15). Client errors are excluded.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.01 },
+              { "color": "red", "value": 0.05 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", code=~\"2|4|8|12|13|14|15\"}[5m])) / clamp_min(sum(rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])), 0.0001)" }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "API 4xx % (5m)",
+      "description": "Share of /api/v1 requests answered with a 4xx status, e.g. 401 from auth or 404 for an unknown connector. Health probes (/health, /ready, /live, /readiness, /liveness) and /metrics scrapes are excluded.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.05 },
+              { "color": "red", "value": 0.25 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\", status=~\"4..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\"}[5m])), 0.0001)" }
       ]
     },
     {
@@ -309,10 +373,22 @@
       "title": "Registrations by Connector (5m increase)",
       "description": "connector_registrations_total counts successful RegisterConnector calls. Connectors re-register on every startup, so steps here usually line up with connector rollouts.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 10 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (connector) (increase(connector_registrations_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "{{connector}}" }
+        { "refId": "A", "expr": "sum by (connector) (increase(connector_registrations_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{connector}}" }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Failed Registrations (5m increase)",
+      "description": "RegisterConnector calls that returned a non-OK gRPC code, by code (from grpc_requests_total). connector_registrations_total counts successes only, so failures show only here.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 10 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (code) (increase(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", method=~\".*/RegisterConnector\", code!=\"0\"}[5m]))", "legendFormat": "code {{code}}" }
       ]
     },
     {
@@ -320,7 +396,7 @@
       "type": "bargauge",
       "title": "Registrations by Connector (dashboard window)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 10 },
       "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 } },
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
@@ -328,7 +404,7 @@
         "orientation": "horizontal"
       },
       "targets": [
-        { "refId": "A", "expr": "sum by (connector) (increase(connector_registrations_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[$__range]))", "legendFormat": "{{connector}}", "instant": true }
+        { "refId": "A", "expr": "sum by (connector) (increase(connector_registrations_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))", "legendFormat": "{{connector}}", "instant": true }
       ]
     },
     {
@@ -347,7 +423,7 @@
       "gridPos": { "h": 7, "w": 8, "x": 0, "y": 19 },
       "fieldConfig": { "defaults": { "unit": "reqps" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (method) (rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "{{method}}" }
+        { "refId": "A", "expr": "sum by (method) (rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{method}}" }
       ]
     },
     {
@@ -359,7 +435,7 @@
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 19 },
       "fieldConfig": { "defaults": { "unit": "reqps" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (code) (rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "code {{code}}" }
+        { "refId": "A", "expr": "sum by (code) (rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "code {{code}}" }
       ]
     },
     {
@@ -370,7 +446,7 @@
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 19 },
       "fieldConfig": { "defaults": { "unit": "short" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (method) (grpc_active_requests{job=~\".*registration-service.*\", namespace=\"$namespace\"})", "legendFormat": "{{method}}" }
+        { "refId": "A", "expr": "sum by (method) (grpc_active_requests{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"})", "legendFormat": "{{method}}" }
       ]
     },
     {
@@ -378,24 +454,36 @@
       "type": "timeseries",
       "title": "gRPC Duration — p50 / p95 / p99",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 26 },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 26 },
       "fieldConfig": { "defaults": { "unit": "s" } },
       "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p50" },
-        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p95" },
-        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p99" }
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "p99" }
       ]
     },
     {
       "id": 34,
       "type": "timeseries",
       "title": "gRPC Mean Duration by Method",
-      "description": "sum/count over the 5m window — unaffected by the coarse default histogram bucket boundaries, so it is the more trustworthy latency signal for sub-second calls.",
+      "description": "Mean call duration per method: rate of the duration sum over rate of the count, 5m window.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 26 },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 26 },
       "fieldConfig": { "defaults": { "unit": "s" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (method) (rate(grpc_request_duration_seconds_sum{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])) / clamp_min(sum by (method) (rate(grpc_request_duration_seconds_count{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])), 0.0001)", "legendFormat": "{{method}}" }
+        { "refId": "A", "expr": "sum by (method) (rate(grpc_request_duration_seconds_sum{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])) / clamp_min(sum by (method) (rate(grpc_request_duration_seconds_count{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])), 0.0001)", "legendFormat": "{{method}}" }
+      ]
+    },
+    {
+      "id": 35,
+      "type": "timeseries",
+      "title": "gRPC Errors by Method and Code",
+      "description": "Non-OK gRPC calls per second, by method and numeric code. Grouped by code, never by the free-text status label.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 26 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (method, code) (rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", code!=\"0\"}[5m]))", "legendFormat": "{{method}} code {{code}}" }
       ]
     },
     {
@@ -410,60 +498,120 @@
       "id": 40,
       "type": "timeseries",
       "title": "HTTP Request Rate by Route",
-      "description": "Route is chi's matched pattern (e.g. /api/v1/connectors/{name}/config-schema). Requests matching no route collapse to \"unmatched\".",
+      "description": "Requests per second by chi route pattern, e.g. /api/v1/connectors/{name}/config-schema. Health probes (/health, /ready, /live, /readiness, /liveness) and /metrics scrapes are excluded. \"unmatched\" is a request that matched no route; /api/v1/* is one answered by auth or CORS before routing.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 12, "x": 0, "y": 34 },
       "fieldConfig": { "defaults": { "unit": "reqps" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (route) (rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "{{route}}" }
+        { "refId": "A", "expr": "sum by (route) (rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/health|/ready|/readiness|/live|/liveness\"}[5m]))", "legendFormat": "{{route}}" }
       ]
     },
     {
       "id": 41,
       "type": "timeseries",
       "title": "HTTP Request Rate by Status",
+      "description": "Requests per second by HTTP status. Health probes (/health, /ready, /live, /readiness, /liveness) and /metrics scrapes are excluded. Unmatched routes are included, so 404s from stray paths show here.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 12, "x": 12, "y": 34 },
       "fieldConfig": { "defaults": { "unit": "reqps" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (status) (rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "{{status}}" }
+        { "refId": "A", "expr": "sum by (status) (rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route!~\"/metrics|/health|/ready|/readiness|/live|/liveness\"}[5m]))", "legendFormat": "{{status}}" }
       ]
     },
     {
       "id": 42,
       "type": "timeseries",
-      "title": "HTTP Duration — p50 / p95 / p99",
+      "title": "API Duration — p50 / p95 / p99",
+      "description": "Latency percentiles of /api/v1 requests over 5m. Health probes (/health, /ready, /live, /readiness, /liveness) and /metrics scrapes are excluded.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 0, "y": 41 },
       "fieldConfig": { "defaults": { "unit": "s" } },
       "targets": [
-        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p50" },
-        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p95" },
-        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])))", "legendFormat": "p99" }
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\"}[5m])))", "legendFormat": "p95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\"}[5m])))", "legendFormat": "p99" }
       ]
     },
     {
       "id": 43,
       "type": "timeseries",
-      "title": "HTTP Mean Duration by Route",
+      "title": "API Mean Duration by Route",
+      "description": "Mean request duration per /api/v1 route: rate of the duration sum over rate of the count, 5m window. Health probes (/health, /ready, /live, /readiness, /liveness) and /metrics scrapes are excluded.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 41 },
       "fieldConfig": { "defaults": { "unit": "s" } },
       "targets": [
-        { "refId": "A", "expr": "sum by (route) (rate(http_request_duration_seconds_sum{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])) / clamp_min(sum by (route) (rate(http_request_duration_seconds_count{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m])), 0.0001)", "legendFormat": "{{route}}" }
+        { "refId": "A", "expr": "sum by (route) (rate(http_request_duration_seconds_sum{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\"}[5m])) / clamp_min(sum by (route) (rate(http_request_duration_seconds_count{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\"}[5m])), 0.0001)", "legendFormat": "{{route}}" }
       ]
     },
     {
       "id": 44,
       "type": "timeseries",
-      "title": "HTTP Payload Throughput",
-      "description": "Bytes/s in and out, from the http_request_size_bytes / http_response_size_bytes histogram sums. Only non-zero-length bodies are recorded.",
+      "title": "API Payload Throughput",
+      "description": "Bytes/s in and out of /api/v1, from the http_request_size_bytes / http_response_size_bytes sums. The request series stays near 0: the REST API is GET-only and request size is recorded only when ContentLength > 0. Health probes (/health, /ready, /live, /readiness, /liveness) and /metrics scrapes are excluded.",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 41 },
       "fieldConfig": { "defaults": { "unit": "Bps" } },
       "targets": [
-        { "refId": "A", "expr": "sum(rate(http_request_size_bytes_sum{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "request" },
-        { "refId": "B", "expr": "sum(rate(http_response_size_bytes_sum{job=~\".*registration-service.*\", namespace=\"$namespace\"}[5m]))", "legendFormat": "response" }
+        { "refId": "A", "expr": "sum(rate(http_request_size_bytes_sum{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\"}[5m]))", "legendFormat": "request" },
+        { "refId": "B", "expr": "sum(rate(http_response_size_bytes_sum{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\"}[5m]))", "legendFormat": "response" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 450,
+      "title": "API — Per Route",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 48 },
+      "panels": []
+    },
+    {
+      "id": 45,
+      "type": "timeseries",
+      "title": "API Status by Route",
+      "description": "Requests per second by /api/v1 route and HTTP status. /api/v1/connectors/manifest and /api/v1/connectors/{name}/forms/config are the routes datasource-service's ConnectorService calls.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 49 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (route, status) (rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\"}[5m]))", "legendFormat": "{{status}} {{route}}" }
+      ]
+    },
+    {
+      "id": 46,
+      "type": "timeseries",
+      "title": "API p95 by Route",
+      "description": "95th-percentile latency per /api/v1 route over 5m. /api/v1/connectors/manifest and /api/v1/connectors/{name}/forms/config are the routes datasource-service's ConnectorService calls.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 49 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\"}[5m])))", "legendFormat": "{{route}}" }
+      ]
+    },
+    {
+      "id": 47,
+      "type": "timeseries",
+      "title": "API 4xx vs 5xx Rate",
+      "description": "/api/v1 client (4xx) and server (5xx) errors per second. 4xx is mostly 401 from auth and 404 for unknown connectors; 5xx is a service fault.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 56 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\", status=~\"4..\"}[5m]))", "legendFormat": "4xx" },
+        { "refId": "B", "expr": "sum(rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\", status=~\"5..\"}[5m]))", "legendFormat": "5xx" }
+      ]
+    },
+    {
+      "id": 48,
+      "type": "timeseries",
+      "title": "Response Size p95 by Route",
+      "description": "95th-percentile response body size per /api/v1 route, from http_response_size_bytes (buckets 256 B to 64 MB). Empty responses are not recorded. /api/v1/connectors/manifest and /api/v1/connectors/{name}/forms/config are the routes datasource-service's ConnectorService calls.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 56 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_response_size_bytes_bucket{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\", route=~\"/api/v1/.*\"}[5m])))", "legendFormat": "{{route}}" }
       ]
     },
     {
@@ -471,14 +619,14 @@
       "id": 500,
       "title": "Per-Pod Drill-Down",
       "collapsed": true,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 48 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 63 },
       "panels": [
         {
           "id": 50,
           "type": "timeseries",
           "title": "gRPC Request Rate by Pod",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "gridPos": { "h": 7, "w": 8, "x": 0, "y": 49 },
+          "gridPos": { "h": 7, "w": 8, "x": 0, "y": 64 },
           "fieldConfig": { "defaults": { "unit": "reqps" } },
           "targets": [
             { "refId": "A", "expr": "sum by (pod) (rate(grpc_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{pod}}" }
@@ -487,12 +635,13 @@
         {
           "id": 51,
           "type": "timeseries",
-          "title": "HTTP Request Rate by Pod",
+          "title": "API Request Rate by Pod",
+          "description": "/api/v1 requests per second by pod. Health probes (/health, /ready, /live, /readiness, /liveness) and /metrics scrapes are excluded.",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "gridPos": { "h": 7, "w": 8, "x": 8, "y": 49 },
+          "gridPos": { "h": 7, "w": 8, "x": 8, "y": 64 },
           "fieldConfig": { "defaults": { "unit": "reqps" } },
           "targets": [
-            { "refId": "A", "expr": "sum by (pod) (rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{pod}}" }
+            { "refId": "A", "expr": "sum by (pod) (rate(http_requests_total{job=~\".*registration-service.*\", namespace=\"$namespace\", route=~\"/api/v1/.*\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{pod}}" }
           ]
         },
         {
@@ -500,7 +649,7 @@
           "type": "timeseries",
           "title": "Registrations by Pod (5m increase)",
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "gridPos": { "h": 7, "w": 8, "x": 16, "y": 49 },
+          "gridPos": { "h": 7, "w": 8, "x": 16, "y": 64 },
           "fieldConfig": { "defaults": { "unit": "short" } },
           "targets": [
             { "refId": "A", "expr": "sum by (pod) (increase(connector_registrations_total{job=~\".*registration-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))", "legendFormat": "{{pod}}" }
