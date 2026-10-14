@@ -287,7 +287,7 @@
       "id": 20,
       "type": "timeseries",
       "title": "Goroutines",
-      "description": "The cron scheduler holds a goroutine per registered schedule plus one per in-flight firing. A floor that climbs with the number of schedules is expected; a floor that climbs while the schedule count is flat is a firing that never returns.",
+      "description": "The scheduler is a single goroutine that fires due schedules one at a time, so the count does not grow with the number of schedules. Above the idle floor there is one goroutine per in-flight Connect request. A floor that climbs and does not recede is a request or firing that never returns.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -456,7 +456,7 @@
       "id": 40,
       "type": "timeseries",
       "title": "Process Uptime",
-      "description": "Time since process start, and the panel to read before believing a gap in the firing graphs. Cron timers live in memory and are rebuilt from Postgres at startup, so a restart means no schedule fired for the length of the gap — the definitions survive, the firings inside the window do not.",
+      "description": "Time since process start, and the panel to read before believing a gap in the firing graphs. Schedules live in Postgres and every replica polls them, so a graceful restart of one pod loses no firing while another is up: a firing already claimed is finished before the process exits. A crash is different. A firing is claimed before it runs, so a pod that dies between the claim and the run loses that one firing; it is not retried. With every pod down, a schedule that came due in the gap fires once when a pod returns and the rest of its missed firings are skipped.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"

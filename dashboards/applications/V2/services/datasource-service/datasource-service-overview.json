@@ -72,7 +72,6 @@
         "name": "pod",
         "type": "query",
         "label": "Pod",
-        "description": "Applies only to the per-pod panels at the bottom. Aggregate panels ignore it so pod churn does not gap the graphs.",
         "datasource": {
           "type": "prometheus",
           "uid": "${datasource}"
@@ -151,7 +150,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(up{job=~\".*datasource-service.*\", namespace=\"$namespace\"})"
+          "expr": "sum(up{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"})"
         }
       ]
     },
@@ -200,7 +199,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "min(api_enabled{job=~\".*datasource-service.*\", namespace=\"$namespace\"})"
+          "expr": "min(api_enabled{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"})"
         }
       ]
     },
@@ -249,7 +248,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "min(auth_jwks_available{job=~\".*datasource-service.*\", namespace=\"$namespace\"})"
+          "expr": "min(auth_jwks_available{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"})"
         }
       ]
     },
@@ -257,7 +256,7 @@
       "id": 4,
       "type": "stat",
       "title": "Firings (5m)",
-      "description": "Every firing, scheduled and manual, whatever became of it. Counted where the run row is written, so this and the run history in Postgres cannot disagree.",
+      "description": "Every firing, scheduled and manual, whatever became of it. Skipped and failed firings are counted after their run row is written, so those agree with ListRuns. A submitted firing is the job engine's record rather than a run row, and a not_run firing leaves no record at all.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -294,7 +293,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\"}[5m]))"
+          "expr": "sum(increase(job_firings_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"}[5m]))"
         }
       ]
     },
@@ -302,7 +301,7 @@
       "id": 5,
       "type": "stat",
       "title": "Skipped (5m)",
-      "description": "A skipped firing is the rule that a definition never runs twice at once, working — not a fault. The definition's schedule came due, or someone pressed Run now, while a ScanStart job was still active on the datasource access. Deliberately not coloured as an error. Skips climbing while submissions fall is the signal to read the Skip Reasons panel: it usually means a schedule fires faster than its scans complete.",
+      "description": "A skipped firing is the rule that a definition never runs twice at once, working — not a fault. The definition's schedule came due, or someone pressed Run now, while a ScanStart job, or a job whose kind could not be read, was still active on the datasource access. Deliberately not coloured as an error. Skips climbing while submissions fall is the signal to read the Skip Reasons panel: it usually means a schedule fires faster than its scans complete.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -339,7 +338,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", outcome=\"skipped\"}[5m]))"
+          "expr": "sum(increase(job_firings_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", outcome=\"skipped\"}[5m]))"
         }
       ]
     },
@@ -347,7 +346,7 @@
       "id": 6,
       "type": "stat",
       "title": "Failed (5m)",
-      "description": "Firings that were attempted and did not produce a job: the pipeline could not be ensured, or the job engine rejected the submission. Unlike a skip, nothing ran and nothing will retry until the schedule comes due again.",
+      "description": "Firings that were attempted and produced no job, with a run row saying why:\n\n- pipeline_unavailable: the definition has no pipeline, and the connector's scan pipeline could not be resolved or created.\n- datasource_unavailable: the access's datasource is not recorded on the definition and could not be looked up.\n- invalid_definition: the definition holds a reserved key the job would drop.\n- job_engine_rejected: the job engine refused the submission.\n- submission_unknown: the submission's result could not be read, so the job may exist.\n\nUnlike a skip, nothing ran, and a scheduled firing does not retry until its schedule next comes due.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -392,591 +391,115 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", outcome=\"failed\"}[5m]))"
+          "expr": "sum(increase(job_firings_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", outcome=\"failed\"}[5m]))"
         }
       ]
     },
     {
-      "type": "row",
-      "id": 200,
-      "title": "API Surface & Token Verification",
-      "collapsed": false,
+      "id": 7,
+      "type": "stat",
+      "title": "Not run, faults (5m)",
+      "description": "Firings that ended before they could run or be recorded, for a reason that is a fault: abandoned, store_unavailable, record_failed or dependency_unavailable. They leave no run row, so this is the only place they appear. The benign reasons, inactive and deleted, are left out so a routine definition edit does not colour this tile; Not-run Reasons shows every reason.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "gridPos": {
-        "h": 1,
-        "w": 24,
+        "h": 4,
+        "w": 6,
         "x": 0,
         "y": 5
       },
-      "panels": []
-    },
-    {
-      "id": 10,
-      "type": "timeseries",
-      "title": "API Enabled",
-      "description": "Aggregated with min, so one pod dropping to 0 pulls the line down rather than being averaged away by its healthy peers. The per-pod split is at the bottom of this board.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 6
-      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": {
-            "lineWidth": 2,
-            "fillOpacity": 20,
-            "showPoints": "never",
-            "thresholdsStyle": {
-              "mode": "area"
-            }
-          },
-          "min": 0,
-          "max": 1,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "green",
+                "color": "orange",
                 "value": 1
               }
             ]
           }
-        },
-        "overrides": []
+        }
       },
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "min(api_enabled{job=~\".*datasource-service.*\", namespace=\"$namespace\"})",
-          "legendFormat": "enabled"
-        }
-      ]
-    },
-    {
-      "id": 11,
-      "type": "timeseries",
-      "title": "JWKS Availability",
-      "description": "Also aggregated with min. Alert on this rather than on a probe: reaching the JWKS is deliberately not a health check, because a 503 on /health restarts the pod and an unready pod leaves the Service, which would take the scheduler down over a dependency cron does not use.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 6
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "lineWidth": 2,
-            "fillOpacity": 20,
-            "showPoints": "never",
-            "thresholdsStyle": {
-              "mode": "area"
-            }
-          },
-          "min": 0,
-          "max": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "min(auth_jwks_available{job=~\".*datasource-service.*\", namespace=\"$namespace\"})",
-          "legendFormat": "available"
-        }
-      ]
-    },
-    {
-      "id": 12,
-      "type": "timeseries",
-      "title": "Pods Serving the API vs Pods Up",
-      "description": "The two lines diverging is the case a single gauge hides: pods running and scraped, but not all of them serving the UI. Since api_enabled is decided once at startup from configuration, a gap that appears after a rollout means the new pods came up with different configuration from the old ones.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 6
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 8,
-            "showPoints": "never"
-          },
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(api_enabled{job=~\".*datasource-service.*\", namespace=\"$namespace\"})",
-          "legendFormat": "serving the API"
-        },
-        {
-          "refId": "B",
-          "expr": "sum(up{job=~\".*datasource-service.*\", namespace=\"$namespace\"})",
-          "legendFormat": "pods up"
-        }
-      ]
-    },
-    {
-      "type": "row",
-      "id": 250,
-      "title": "Connect API — Requests",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 14
-      },
-      "panels": []
-    },
-    {
-      "id": 50,
-      "type": "timeseries",
-      "title": "Request Rate by Route",
-      "description": "One series per RPC. The route label is the Connect procedure path and carries no identifiers, so this cannot fan out with traffic — the series count is the number of RPCs in the proto. OPTIONS preflights appear here too, because the middleware wraps outside the CORS handler on purpose: a preflight rejected for a missing allowed header breaks every browser call before it reaches a handler, and instrumented inside the wrapper that outage would leave no trace at all.\n\nOPTIONS is excluded so this counts RPCs rather than round trips: under cross-origin use a browser sends a preflight and then the real call, which would read as double the true rate. Preflights are still counted, and are visible on Request Rate by Status as 204 when allowed and 405 when refused — 405s on a route are the CORS signal to watch, not a general non-2xx rate.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 15
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 8,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (route) (rate(http_requests_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m]))",
-          "legendFormat": "{{route}}"
-        }
-      ]
-    },
-    {
-      "id": 51,
-      "type": "timeseries",
-      "title": "Request Rate by Status",
-      "description": "Non-2xx here is the UI being refused. Cross-read it against JWKS Availability above: a wall of 401s with that gauge at 0 is a JWT authority outage rather than bad callers.\n\nThis panel keeps OPTIONS, unlike the rate-by-route and latency panels beside it. That is where preflights belong: 204 is an allowed one, 405 is a refused one, and a rising 405 line against a route means browsers are being turned away before they reach a handler.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 15
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 8,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (status) (rate(http_requests_total{job=~\".*datasource-service.*\", namespace=\"$namespace\"}[5m]))",
-          "legendFormat": "{{status}}"
-        }
-      ]
-    },
-    {
-      "id": 52,
-      "type": "timeseries",
-      "title": "Duration p50 / p95 / p99",
-      "description": "Trustworthy percentiles, which is not automatic: pipeline-lib applies no bucket boundaries for you, and its fallback is the OTel SDK ladder tuned for milliseconds. Against a seconds unit every real request would land in one bucket and every percentile would be interpolation noise. The service passes SubsecondLatencyBuckets explicitly, so the ladder runs 0.005s to 10s.\n\nOne failure these cannot show: a request that never completes is never observed, because the histogram records on return. Nothing on this board would move — not the percentiles, not the error ratio, since no status is ever written. http_active_requests is where a hung request shows, as a gauge that climbs and does not come back down; it has no panel because at this traffic shape its correct value is 0 and a graph of a constant is not worth a slot. Query it directly if requests are disappearing rather than failing.\n\nOPTIONS is excluded. A CORS preflight is instrumented deliberately — a refused one is a 405 and is how a cross-origin outage becomes visible — but an allowed one is a near-zero 204 sharing this route label, which would drag the percentile down towards it. It does not arise in the deployed configuration, where the UI is same-origin through the Kong prefix and no preflight is sent.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 15
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 8,
-            "showPoints": "never"
-          },
-          "decimals": 3
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*datasource-service.*\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m])))",
-          "legendFormat": "p50"
-        },
-        {
-          "refId": "B",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*datasource-service.*\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m])))",
-          "legendFormat": "p95"
-        },
-        {
-          "refId": "C",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*datasource-service.*\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m])))",
-          "legendFormat": "p99"
-        }
-      ]
-    },
-    {
-      "id": 53,
-      "type": "timeseries",
-      "title": "Duration p95 by Route",
-      "description": "Which RPC is slow. The write paths go through Postgres and, for a firing, the job engine as well, so RunJobNow and StartScan sit on a different timescale from a list call and should not be read against one another.\n\nOPTIONS is excluded. A CORS preflight is instrumented deliberately — a refused one is a 405 and is how a cross-origin outage becomes visible — but an allowed one is a near-zero 204 sharing this route label, which would drag the percentile down towards it. It does not arise in the deployed configuration, where the UI is same-origin through the Kong prefix and no preflight is sent.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 23
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 8,
-            "showPoints": "never"
-          },
-          "decimals": 3
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
+        "reduceOptions": {
           "calcs": [
-            "max"
+            "lastNotNull"
           ]
         },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
+        "colorMode": "background",
+        "graphMode": "none"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=~\".*datasource-service.*\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m])))",
-          "legendFormat": "{{route}}"
+          "expr": "sum(increase(job_firings_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", outcome=\"not_run\", reason!~\"inactive|deleted\"}[5m]))"
         }
       ]
     },
     {
-      "id": 54,
-      "type": "timeseries",
-      "title": "Error Ratio (non-2xx)",
-      "description": "Share of requests answered outside 2xx. clamp_min keeps the ratio defined while the API is idle rather than returning NaN.",
+      "id": 8,
+      "type": "stat",
+      "title": "API Request Rate (5m)",
+      "description": "Connect requests per second across JobService, OverviewService, AccessService and ConnectorService, CORS preflights left out. Only the Connect handlers are instrumented, so probes and scrapes are not in it.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 23
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 5
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 8,
-            "showPoints": "never"
-          },
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 0.05
-              },
-              {
-                "color": "red",
-                "value": 0.25
-              }
-            ]
-          }
-        },
-        "overrides": []
+          "unit": "reqps",
+          "decimals": 2
+        }
       },
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
         },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
+        "colorMode": "value",
+        "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(http_requests_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", status!~\"2..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=~\".*datasource-service.*\", namespace=\"$namespace\"}[5m])), 0.001)",
-          "legendFormat": "error ratio"
+          "expr": "sum(rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m]))"
         }
       ]
     },
     {
-      "id": 56,
-      "type": "timeseries",
-      "title": "Payload Size p95",
-      "description": "Both percentiles are trustworthy, on deliberately different ladders. Response size uses BodySizeBuckets (256B to 4MB) because a ListRuns page is measured in kilobytes. Request size keeps the SDK default, which resolves 0 to 10000 bytes with seven boundaries below 256 — the right ladder for the small Connect messages this API accepts, where BodySizeBuckets would collapse every one of them into its first bucket.\n\nWatch the request-size ceiling: above 10000 bytes everything piles into +Inf and that percentile saturates. scan_config is arbitrary caller JSON, so a request p95 sitting flat at the top of the ladder means the ladder needs changing, not that payloads are exactly that size.\n\nThese histograms count fewer requests than http_requests_total, because a request with no body records no size sample. Do not read their _count series as a request rate.",
+      "id": 9,
+      "type": "stat",
+      "title": "API 5xx % (5m)",
+      "description": "Share of Connect requests answered 5xx: server faults, chiefly Unavailable (503) when the job engine, authz-service, request-service or registration-service cannot be reached. Client refusals (400, 401, 403) are not counted here; see Errors by Status Class.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 23
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 8,
-            "showPoints": "never"
-          },
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_size_bytes_bucket{job=~\".*datasource-service.*\", namespace=\"$namespace\"}[5m])))",
-          "legendFormat": "request p95"
-        },
-        {
-          "refId": "B",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_response_size_bytes_bucket{job=~\".*datasource-service.*\", namespace=\"$namespace\"}[5m])))",
-          "legendFormat": "response p95"
-        }
-      ]
-    },
-    {
-      "id": 57,
-      "type": "timeseries",
-      "title": "Errors by Route & Status (rate)",
-      "description": "Which RPC is failing, and how. One series per route and non-2xx status, so a 404 on GetJobDefinition and a 502 on RunJobNow read as different problems rather than one error ratio. Connect maps its error codes onto HTTP statuses for the Connect protocol the UI uses, so the status here is the RPC outcome, not only transport failure.\n\nOPTIONS is kept, as on Request Rate by Status: a refused preflight is a 405 against the route it was guarding, and that is the CORS signal.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 31
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 8,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (route, status) (rate(http_requests_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", status!~\"2..\"}[5m]))",
-          "legendFormat": "{{route}} {{status}}"
-        }
-      ]
-    },
-    {
-      "id": 58,
-      "type": "timeseries",
-      "title": "Error Ratio by Route (non-2xx)",
-      "description": "Error Ratio split by RPC. Read it with Errors by Route & Status beside it: on a route called a handful of times in the window one failure is a large share, so a high ratio with a tiny rate is a single refused call, not an outage. A route with no errors in the window draws no line. clamp_min keeps each ratio defined while its route is idle.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 4,
+        "w": 6,
         "x": 12,
-        "y": 31
+        "y": 5
       },
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 8,
-            "showPoints": "never"
-          },
-          "min": 0,
+          "decimals": 2,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -985,34 +508,67 @@
                 "value": null
               },
               {
-                "color": "orange",
-                "value": 0.05
+                "color": "yellow",
+                "value": 0.01
               },
               {
                 "color": "red",
-                "value": 0.25
+                "value": 0.05
               }
             ]
           }
-        },
-        "overrides": []
+        }
       },
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
         },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
+        "colorMode": "background",
+        "graphMode": "area"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (route) (rate(http_requests_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", status!~\"2..\"}[5m])) / clamp_min(sum by (route) (rate(http_requests_total{job=~\".*datasource-service.*\", namespace=\"$namespace\"}[5m])), 0.001)",
-          "legendFormat": "{{route}}"
+          "expr": "sum(rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", method!=\"OPTIONS\", status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m])), 0.0001)"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "API p95 (5m)",
+      "description": "95th-percentile Connect request duration, CORS preflights left out. RunJobNow and the overview listings call other services, so they set the tail.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m])))"
         }
       ]
     },
@@ -1025,7 +581,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 39
+        "y": 9
       },
       "panels": []
     },
@@ -1033,7 +589,7 @@
       "id": 20,
       "type": "timeseries",
       "title": "Firings by Outcome (rate)",
-      "description": "submitted, skipped and failed, the three outcomes a firing can have. Read them together: total firings holding steady while submitted falls and skipped rises is not a fault, it is scans taking longer than the interval between them.",
+      "description": "submitted, skipped, failed and not_run, the four outcomes a firing can have. Read them together: total firings holding steady while submitted falls and skipped rises is not a fault, it is scans taking longer than the interval between them.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1042,7 +598,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 40
+        "y": 10
       },
       "fieldConfig": {
         "defaults": {
@@ -1115,7 +671,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (outcome) (rate(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\"}[5m]))",
+          "expr": "sum by (outcome) (rate(job_firings_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"}[5m]))",
           "legendFormat": "{{outcome}}"
         }
       ]
@@ -1124,7 +680,7 @@
       "id": 21,
       "type": "timeseries",
       "title": "Firings by Trigger (rate)",
-      "description": "schedule is cron firing on its own; manual is somebody pressing the button in the UI or a StartScan call. Scheduled firings should be a regular comb whose spacing matches the cron expressions in use — a flat line at zero while definitions carry schedules means the timers were never rebuilt, which is what a restart looks like here.",
+      "description": "schedule is the scheduler firing a due schedule; manual is a RunJobNow call, the UI's Run now. RunAugmentScan starts its job without a firing and is not counted. Scheduled firings should be a regular comb whose spacing matches the cron expressions in use. Every replica polls Postgres for due schedules every 30 seconds, so a flat line at zero while definitions carry enabled schedules means no pod is running, or the scheduler's own reads are failing (logged as \"scheduler tick failed\").",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1133,7 +689,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 40
+        "y": 10
       },
       "fieldConfig": {
         "defaults": {
@@ -1160,7 +716,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (trigger) (rate(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\"}[5m]))",
+          "expr": "sum by (trigger) (rate(job_firings_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"}[5m]))",
           "legendFormat": "{{trigger}}"
         }
       ]
@@ -1169,7 +725,7 @@
       "id": 22,
       "type": "timeseries",
       "title": "Outcome Share",
-      "description": "The same three outcomes as a share of all firings, which is what makes them comparable across a quiet period and a busy one. clamp_min keeps the ratio defined when nothing is firing rather than returning NaN and breaking the stack.",
+      "description": "The same four outcomes as a share of all firings, which is what makes them comparable across a quiet period and a busy one. clamp_min keeps the ratio defined when nothing is firing rather than returning NaN and breaking the stack.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1178,7 +734,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 40
+        "y": 10
       },
       "fieldConfig": {
         "defaults": {
@@ -1211,7 +767,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (outcome) (rate(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\"}[5m])) / clamp_min(scalar(sum(rate(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\"}[5m]))), 0.001)",
+          "expr": "sum by (outcome) (rate(job_firings_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"}[5m])) / clamp_min(scalar(sum(rate(job_firings_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"}[5m]))), 0.001)",
           "legendFormat": "{{outcome}}"
         }
       ]
@@ -1219,13 +775,13 @@
     {
       "type": "row",
       "id": 400,
-      "title": "Why Firings Are Skipped or Failed",
+      "title": "Why Firings Are Skipped, Failed or Not Run",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 18
       },
       "panels": []
     },
@@ -1233,16 +789,16 @@
       "id": 30,
       "type": "timeseries",
       "title": "Skip Reasons (rate)",
-      "description": "scan_in_progress is the only skip: a ScanStart job was already active on the datasource access when the firing came due. Usually it is the definition's own previous scan still running; it can also be a scan some other service started on the same access, which the job engine reports just the same. Augments and connection tests never cause a skip. It is policy, not error — what matters is the trend, because a skip that never clears means a schedule is set faster than its scans take.",
+      "description": "scan_in_progress is the only skip: a ScanStart job was already active on the datasource access when the firing came due. A job whose kind could not be read blocks the same way and is recorded under the same reason, since a job nobody can classify is still running against the datasource. Usually it is the definition's own previous scan still running; it can also be a scan some other service started on the same access, which the job engine reports just the same. Augments and connection tests never cause a skip. It is policy, not error — what matters is the trend, because a skip that never clears means a schedule is set faster than its scans take.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 6,
         "x": 0,
-        "y": 49
+        "y": 19
       },
       "fieldConfig": {
         "defaults": {
@@ -1272,7 +828,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (reason) (rate(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", outcome=\"skipped\"}[5m]))",
+          "expr": "sum by (reason) (rate(job_firings_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", outcome=\"skipped\"}[5m]))",
           "legendFormat": "{{reason}}"
         }
       ]
@@ -1281,16 +837,16 @@
       "id": 31,
       "type": "timeseries",
       "title": "Failure Reasons (rate)",
-      "description": "pipeline_unavailable is this service failing to ensure the connector's pipeline before it could submit, so the fault is upstream of the job engine. job_engine_rejected is the engine refusing the submission it was handed. The two point at different services, which is the whole reason the reason label exists.",
+      "description": "- pipeline_unavailable: the definition has no pipeline, and the connector's scan pipeline could not be resolved or created.\n- datasource_unavailable: the access's datasource is not recorded on the definition and could not be looked up.\n- invalid_definition: the definition holds a reserved key the job would drop.\n- job_engine_rejected: the job engine refused the submission.\n- submission_unknown: the submission's result could not be read, so the job may exist.\n\nA RunJobNow caller gets the first three as FailedPrecondition (400) and the last two as Unavailable (503).",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 49
+        "w": 6,
+        "x": 6,
+        "y": 19
       },
       "fieldConfig": {
         "defaults": {
@@ -1320,7 +876,55 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (reason) (rate(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", outcome=\"failed\"}[5m]))",
+          "expr": "sum by (reason) (rate(job_firings_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", outcome=\"failed\"}[5m]))",
+          "legendFormat": "{{reason}}"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Not-run Reasons (rate)",
+      "description": "Firings that ended with no job and no run row:\n\n- inactive: a scheduled firing whose definition was made inactive, or whose schedule was disabled, after the scheduler claimed it. Benign.\n- deleted: the definition or schedule was deleted before the firing could read it or write its run row. Benign.\n- abandoned: the caller went away, or the firing timed out, before submission.\n- store_unavailable: reading the definition or schedule from Postgres failed.\n- record_failed: the firing produced no job and its run row could not be written, so the skip or failure is missing from ListRuns.\n- dependency_unavailable: a RunJobNow call whose pipeline or datasource lookup failed because a service it asks could not answer or refused the token. The caller gets that service's code instead of a run row.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 19
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (reason) (rate(job_firings_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", outcome=\"not_run\"}[5m]))",
           "legendFormat": "{{reason}}"
         }
       ]
@@ -1329,16 +933,16 @@
       "id": 32,
       "type": "timeseries",
       "title": "Failure Ratio",
-      "description": "Failed firings as a share of all firings. Skips are excluded from the numerator on purpose — folding them in would make a correctly throttled schedule look like a broken one.",
+      "description": "Failed firings as a share of firings that reached a submission decision, submitted plus failed. Skips are left out of both sides: in the numerator they would make a correctly throttled schedule look broken, and in the denominator a burst of them would dilute real failures. not_run is left out of both sides too: it mixes benign reasons with faults, and has its own panel.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 49
+        "w": 6,
+        "x": 18,
+        "y": 19
       },
       "fieldConfig": {
         "defaults": {
@@ -1383,8 +987,909 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", outcome=\"failed\"}[5m])) / clamp_min(sum(rate(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\"}[5m])), 0.001)",
+          "expr": "sum(rate(job_firings_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", outcome=\"failed\"}[5m])) / clamp_min(sum(rate(job_firings_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", outcome=~\"submitted|failed\"}[5m])), 0.001)",
           "legendFormat": "failure ratio"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "API Surface & Token Verification",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "API Enabled",
+      "description": "Aggregated with min, so one pod dropping to 0 pulls the line down rather than being averaged away by its healthy peers. The per-pod split is at the bottom of this board.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "showPoints": "never",
+            "thresholdsStyle": {
+              "mode": "area"
+            }
+          },
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min(api_enabled{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"})",
+          "legendFormat": "enabled"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "JWKS Availability",
+      "description": "Also aggregated with min. The key set is part of readiness but not liveness: a pod at 0 fails /readyz and leaves the Service, so the UI stops reaching it, but it is not restarted and its scheduler keeps firing, because scheduled firings never present a token.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "showPoints": "never",
+            "thresholdsStyle": {
+              "mode": "area"
+            }
+          },
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min(auth_jwks_available{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"})",
+          "legendFormat": "available"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Pods Serving the API vs Pods Up",
+      "description": "The two lines diverging is the case a single gauge hides: pods running and scraped, but not all of them serving the UI. Since api_enabled is decided once at startup from configuration, a gap that appears after a rollout means the new pods came up with different configuration from the old ones.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(api_enabled{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"})",
+          "legendFormat": "serving the API"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(up{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"})",
+          "legendFormat": "pods up"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 250,
+      "title": "Connect API — Requests",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "panels": []
+    },
+    {
+      "id": 50,
+      "type": "timeseries",
+      "title": "Request Rate by Route",
+      "description": "One series per RPC. The route label is the raw request path, not a pattern: the middleware is mounted on each Connect service's path prefix, so a request for a procedure that does not exist under a prefix (a typo, a stale client, a scanner) is recorded as a 404 under its own route. Real RPCs carry no identifiers, so in normal use the series count is the number of RPCs in the proto, but it is not bounded by it. OPTIONS preflights appear here too, because the middleware wraps outside the CORS handler on purpose: a preflight rejected for a missing allowed header breaks every browser call before it reaches a handler, and instrumented inside the wrapper that outage would leave no trace at all.\n\nOPTIONS is excluded so this counts RPCs rather than round trips: under cross-origin use a browser sends a preflight and then the real call, which would read as double the true rate. Preflights are still counted, and are visible on Request Rate by Status as 204 when allowed and 405 when refused — 405s on a route are the CORS signal to watch, not a general non-2xx rate.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (route) (rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m]))",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "type": "timeseries",
+      "title": "Request Rate by Status",
+      "description": "Non-2xx here is the UI being refused. Cross-read it against JWKS Availability above: a wall of 401s with that gauge at 0 is a JWT authority outage rather than bad callers.\n\nThis panel keeps OPTIONS, unlike the rate-by-route and latency panels beside it. That is where preflights belong: 204 is an allowed one, 405 is a refused one, and a rising 405 line against a route means browsers are being turned away before they reach a handler.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "type": "timeseries",
+      "title": "Duration p50 / p95 / p99",
+      "description": "Trustworthy percentiles, which is not automatic: pipeline-lib applies no bucket boundaries for you, and its fallback is the OTel SDK ladder tuned for milliseconds. Against a seconds unit every real request would land in one bucket and every percentile would be interpolation noise. The service passes SubsecondLatencyBuckets explicitly, so the ladder runs 0.005s to 10s.\n\nOne failure these cannot show: a request that never completes is never observed, because the histogram records on return. Nothing on this board would move — not the percentiles, not the error ratio, since no status is ever written. A hung request shows only on HTTP In Flight, as a value that climbs and does not come back down.\n\nOPTIONS is excluded. A CORS preflight is instrumented deliberately — a refused one is a 405 and is how a cross-origin outage becomes visible — but an allowed one is a near-zero 204 sharing this route label, which would drag the percentile down towards it. It does not arise in the deployed configuration, where the UI is same-origin through the Kong prefix and no preflight is sent.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 53,
+      "type": "timeseries",
+      "title": "Duration p95 by Route",
+      "description": "Which RPC is slow. The write paths go through Postgres, and RunJobNow and RunAugmentScan call the job engine as well, so they sit on a different timescale from a list call and should not be read against one another.\n\nOPTIONS is excluded. A CORS preflight is instrumented deliberately — a refused one is a 405 and is how a cross-origin outage becomes visible — but an allowed one is a near-zero 204 sharing this route label, which would drag the percentile down towards it. It does not arise in the deployed configuration, where the UI is same-origin through the Kong prefix and no preflight is sent.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 45
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m])))",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "id": 54,
+      "type": "timeseries",
+      "title": "Error Ratio (non-2xx)",
+      "description": "Share of requests answered outside 2xx, with the 5xx share as a second line. Most non-2xx here are refusals, not faults: Connect answers FailedPrecondition and InvalidArgument with 400 (a skipped RunJobNow, or CreateJobDefinition refused because the access's latest connection test did not succeed), Unauthenticated with 401 and PermissionDenied with 403. Server faults are the 5xx line. Errors by Status Class splits the two over time. clamp_min keeps both ratios defined while the API is idle.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 45
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.05
+              },
+              {
+                "color": "red",
+                "value": 0.25
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", status!~\"2..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"}[5m])), 0.001)",
+          "legendFormat": "error ratio"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"}[5m])), 0.001)",
+          "legendFormat": "5xx ratio"
+        }
+      ]
+    },
+    {
+      "id": 56,
+      "type": "timeseries",
+      "title": "Payload Size (request mean, response p95)",
+      "description": "Request size is a mean, _sum over _count. Its histogram keeps the SDK default ladder, which ends at 10000 bytes, and scan_config is arbitrary caller JSON, so a request percentile would saturate in +Inf as soon as one grew past it. Response size is a p95 on BodySizeBuckets (256B to 4MB), wide enough for a ListRuns page.\n\nBoth histograms count fewer requests than http_requests_total, because a request with no body records no size sample. Do not read their _count series as a request rate.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 45
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_request_size_bytes_sum{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"}[5m])) / clamp_min(sum(rate(http_request_size_bytes_count{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"}[5m])), 0.001)",
+          "legendFormat": "request mean"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_response_size_bytes_bucket{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "response p95"
+        }
+      ]
+    },
+    {
+      "id": 57,
+      "type": "timeseries",
+      "title": "Errors by Route & Status (rate)",
+      "description": "Which RPC is failing, and how. One series per route and non-2xx status, so a 404 on GetJobDefinition and a 502 on RunJobNow read as different problems rather than one error ratio. Connect maps its error codes onto HTTP statuses for the Connect protocol the UI uses, so the status here is the RPC outcome, not only transport failure.\n\nOPTIONS is kept, as on Request Rate by Status: a refused preflight is a 405 against the route it was guarding, and that is the CORS signal.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 53
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (route, status) (rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", status!~\"2..\"}[5m]))",
+          "legendFormat": "{{route}} {{status}}"
+        }
+      ]
+    },
+    {
+      "id": 58,
+      "type": "timeseries",
+      "title": "Error Ratio by Route (non-2xx)",
+      "description": "Error Ratio split by RPC. Read it with Errors by Route & Status beside it: on a route called a handful of times in the window one failure is a large share, so a high ratio with a tiny rate is a single refused call, not an outage. A route with no errors in the window draws no line. clamp_min keeps each ratio defined while its route is idle.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 53
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.05
+              },
+              {
+                "color": "red",
+                "value": 0.25
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (route) (rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", status!~\"2..\"}[5m])) / clamp_min(sum by (route) (rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"}[5m])), 0.001)",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 260,
+      "title": "Connect API — By Service & Status Class",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 61
+      },
+      "panels": []
+    },
+    {
+      "id": 60,
+      "type": "timeseries",
+      "title": "Request Rate by Service",
+      "description": "Requests per Connect service, taken from the route with label_replace. JobService carries definitions, schedules, runs and the two write RPCs, RunJobNow and RunAugmentScan; OverviewService the dashboard reads; AccessService access registration and users; ConnectorService the connector list and scanner forms. OPTIONS is excluded, as on Request Rate by Route.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 62
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (service) (label_replace(rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m]), \"service\", \"$1\", \"route\", \"/nvisionx\\\\.datasource\\\\.v1\\\\.([A-Za-z]+)/.*\"))",
+          "legendFormat": "{{service}}"
+        }
+      ]
+    },
+    {
+      "id": 61,
+      "type": "timeseries",
+      "title": "Errors by Service",
+      "description": "Non-2xx per Connect service. OPTIONS is kept, as on Errors by Route & Status, so a refused preflight shows as a 405 against its service. Most of these are refusals rather than faults: Errors by Status Class gives the split, Errors by Route & Status the RPC.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 62
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (service) (label_replace(rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", status!~\"2..\"}[5m]), \"service\", \"$1\", \"route\", \"/nvisionx\\\\.datasource\\\\.v1\\\\.([A-Za-z]+)/.*\"))",
+          "legendFormat": "{{service}}"
+        }
+      ]
+    },
+    {
+      "id": 62,
+      "type": "timeseries",
+      "title": "Duration p95 by Service",
+      "description": "p95 per Connect service. JobService includes RunJobNow and RunAugmentScan, which call the job engine, so it sits above the read-only services. OPTIONS is excluded, as on Duration p95 by Route.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 62
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, service) (label_replace(rate(http_request_duration_seconds_bucket{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", method!=\"OPTIONS\"}[5m]), \"service\", \"$1\", \"route\", \"/nvisionx\\\\.datasource\\\\.v1\\\\.([A-Za-z]+)/.*\")))",
+          "legendFormat": "{{service}}"
+        }
+      ]
+    },
+    {
+      "id": 63,
+      "type": "timeseries",
+      "title": "Errors by Status Class",
+      "description": "Non-2xx split into client refusals and server faults. 4xx is the caller being refused: 400 is FailedPrecondition or InvalidArgument, which includes a skipped RunJobNow and CreateJobDefinition refused for invalid credentials (no separate series; it shares 400 with every other precondition), 401 a missing or rejected token, 403 a caller not allowed the access, 404 a missing definition, 405 a refused CORS preflight. 5xx is this service or a dependency failing: 500 Internal, 503 Unavailable, such as the job engine refusing a firing or not answering. A wall of 401s with JWKS Availability at 0 is the key set being unreachable, not bad callers.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 70
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "4xx client refusals"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5xx server faults"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", status=~\"4..\"}[5m]))",
+          "legendFormat": "4xx client refusals"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(http_requests_total{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\", status=~\"5..\"}[5m]))",
+          "legendFormat": "5xx server faults"
+        }
+      ]
+    },
+    {
+      "id": 64,
+      "type": "timeseries",
+      "title": "HTTP In Flight",
+      "description": "Connect requests being handled right now, summed across pods. A request that never completes is never recorded by the duration histogram or the error panels, so this is the only place it shows: a value that climbs and does not come back down. At this traffic the normal value is 0 or 1. The gauge has no route or method label, so OPTIONS preflights are included.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 70
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(http_active_requests{job=~\".*datasource-service.*\", pod=~\"$pod\", namespace=\"$namespace\"})",
+          "legendFormat": "in flight"
         }
       ]
     },
@@ -1392,196 +1897,197 @@
       "type": "row",
       "id": 500,
       "title": "Per-Pod Drill-Down",
-      "collapsed": false,
+      "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 57
+        "y": 78
       },
-      "panels": []
-    },
-    {
-      "id": 40,
-      "type": "timeseries",
-      "title": "Firings by Pod (rate)",
-      "description": "Where firings are actually originating. Scheduled firings come from whichever pods hold the cron timers, so an uneven split here is normal rather than a load-balancing problem — the useful reading is a pod that stops contributing while staying up, which means its timers are gone but the process is not.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 0,
-        "y": 58
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 8,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
+      "panels": [
         {
-          "refId": "A",
-          "expr": "sum by (pod) (rate(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "{{pod}}"
-        }
-      ]
-    },
-    {
-      "id": 43,
-      "type": "timeseries",
-      "title": "API Request Rate by Pod",
-      "description": "Which replicas the UI is actually reaching. A pod that is up and serving the API but receiving nothing points at the Service or its endpoints rather than at the application.\n\nExcludes OPTIONS, matching Request Rate by Route above, so the two panels count the same thing.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 6,
-        "y": 58
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 8,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (pod) (rate(http_requests_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", method!=\"OPTIONS\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "{{pod}}"
-        }
-      ]
-    },
-    {
-      "id": 41,
-      "type": "timeseries",
-      "title": "API Enabled by Pod",
-      "description": "One pod at 0 while the others are at 1 is that replica's configuration, not the JWKS being down.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 12,
-        "y": 58
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 8,
-            "showPoints": "never"
+          "id": 40,
+          "type": "timeseries",
+          "title": "Firings by Pod (rate)",
+          "description": "Where firings originate. Every replica runs the scheduler loop and claims due schedules with a conditional update, so a scheduled firing lands on whichever pod claims it first and an uneven split is normal. A manual firing lands on the pod that served the RunJobNow call.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
           },
-          "min": 0,
-          "max": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "api_enabled{job=~\".*datasource-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}",
-          "legendFormat": "{{pod}}"
-        }
-      ]
-    },
-    {
-      "id": 42,
-      "type": "timeseries",
-      "title": "JWKS Availability by Pod",
-      "description": "A single pod reporting 0 is that replica's key set, not the authority being down. Every pod at 0 together is the authority.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 18,
-        "y": 58
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 8,
-            "showPoints": "never"
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 0,
+            "y": 79
           },
-          "min": 0,
-          "max": 1
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 8,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (pod) (rate(job_firings_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+              "legendFormat": "{{pod}}"
+            }
+          ]
         },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
         {
-          "refId": "A",
-          "expr": "auth_jwks_available{job=~\".*datasource-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}",
-          "legendFormat": "{{pod}}"
+          "id": 43,
+          "type": "timeseries",
+          "title": "API Request Rate by Pod",
+          "description": "Which replicas the UI is actually reaching. A pod that is up and serving the API but receiving nothing points at the Service or its endpoints rather than at the application.\n\nExcludes OPTIONS, matching Request Rate by Route above, so the two panels count the same thing.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 6,
+            "y": 79
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 8,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (pod) (rate(http_requests_total{job=~\".*datasource-service.*\", namespace=\"$namespace\", method!=\"OPTIONS\", pod=~\"$pod\"}[5m]))",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 41,
+          "type": "timeseries",
+          "title": "API Enabled by Pod",
+          "description": "One pod at 0 while the others are at 1 is that replica's configuration, not the JWKS being down.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 12,
+            "y": 79
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 8,
+                "showPoints": "never"
+              },
+              "min": 0,
+              "max": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "api_enabled{job=~\".*datasource-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 42,
+          "type": "timeseries",
+          "title": "JWKS Availability by Pod",
+          "description": "A single pod reporting 0 is that replica's key set, not the authority being down. Every pod at 0 together is the authority.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 79
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 8,
+                "showPoints": "never"
+              },
+              "min": 0,
+              "max": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "auth_jwks_available{job=~\".*datasource-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}",
+              "legendFormat": "{{pod}}"
+            }
+          ]
         }
       ]
     }
