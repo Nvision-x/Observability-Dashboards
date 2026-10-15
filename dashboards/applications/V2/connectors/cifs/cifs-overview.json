@@ -115,6 +115,26 @@
   },
   "panels": [
     {
+      "type": "text",
+      "title": "How to read this board",
+      "options": {
+        "mode": "markdown",
+        "content": "**Totals count only what happened inside the time range.** A wide range adds up every scan in it; narrow it to one scan to describe one share.\n\n**Bars and stats say _how many_. The line charts beside them say _when_.** A scan shorter than ~30 seconds can be invisible on a line chart and still be fully counted in the bars.\n\n**Splitting by datasource:** this board shows everything together; the Pipeline board has a datasource selector for the per-datasource view.\n\nHover the \u24d8 on any panel for what it counts, what is normal, and where to look next.",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        }
+      },
+      "id": 358,
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
       "type": "row",
       "id": 80,
       "title": "Totals in Window",
@@ -124,7 +144,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 5
       },
       "panels": []
     },
@@ -132,7 +152,7 @@
       "id": 81,
       "type": "stat",
       "title": "Files Discovered (total)",
-      "description": "Files the scanner discovered, totalled over the selected range rather than averaged as a rate. Reads 0 when nothing ran in the window; the backlog panels tell idle from stuck.",
+      "description": "**Files the scanner found and read the metadata of, in the selected range.** A file is counted once its basic metadata was read; files that could not even be read are not counted and show up as errors in the logs instead.\n\n**Normal:** the file count of every share scanned in the range. 0 means nothing ran; the backlog panels tell idle from stuck.\n\n**Next:** 'Items Sent (total)' beside it \u2014 the two should match.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -141,7 +161,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
@@ -161,7 +181,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ]
     },
@@ -169,7 +189,7 @@
       "id": 82,
       "type": "stat",
       "title": "Items Sent (total)",
-      "description": "Items the scanner handed to the batch sender, totalled over the selected range. Compare against Files Discovered; the difference is in Item Loss.",
+      "description": "**Files handed on for indexing in the selected range.**\n\n**Normal:** equal to Files Discovered. Anything less is shown in 'Item Loss'.\n\n**Next:** 'Item Loss (total)' beside it.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -178,7 +198,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
@@ -198,7 +218,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[15s]) - last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ]
     },
@@ -206,7 +226,7 @@
       "id": 83,
       "type": "stat",
       "title": "Item Loss (total)",
-      "description": "Files discovered minus items sent over the selected range. Should be 0. A non-zero value is broken down by cause in Items Failed.",
+      "description": "**Files found but not handed on for indexing: Files Discovered minus Items Sent.** Each such file either could not be turned into a document (bad data) or could not be handed to the sender (sender or NATS problem).\n\n**Normal:** 0. Above 0 means those files are missing from the index while the scan still finishes.\n\n**Next:** 'Items Failed (window)' in the Scanner row, and 'Scanner Items by Outcome' on the Pipeline board for the cause.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -215,7 +235,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
@@ -261,7 +281,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)) - (sum(max_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)) - (sum(sum_over_time(((last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[15s]) - last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ]
     },
@@ -269,7 +289,7 @@
       "id": 84,
       "type": "stat",
       "title": "Directories Forked (total)",
-      "description": "Directories published to NATS as separate work, totalled over the selected range. One per subdirectory found, so it tracks the shape of the tree rather than its file count.",
+      "description": "**Subfolders handed off as separate work items in the selected range.** Every subfolder found is published as its own message so other pods can scan it in parallel; this tracks the shape of the tree (number of folders), not the number of files.\n\n**Normal:** roughly the number of folders in the scanned shares.\n\n**Next:** 'Directories Forked vs Local' on the Pipeline board \u2014 folders that could not be handed off are walked by the same pod instead.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -278,7 +298,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
@@ -298,7 +318,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_scanner_directories_forked_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_scanner_directories_forked_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_directories_forked_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_directories_forked_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ]
     },
@@ -306,7 +326,7 @@
       "id": 85,
       "type": "stat",
       "title": "Content Fetches (total)",
-      "description": "Content fetch attempts, totalled over the selected range. Counts every outcome including failures, since the counter is partitioned by error_code.",
+      "description": "**Content downloads requested in the selected range, whatever their outcome.** Content runs on its own pods and only for files someone asked to read (classification, See Content), not for the whole share.\n\n**Normal:** whatever downstream asked for; 0 when nobody requested content.\n\n**Next:** the Content row, and 'Content Fetches by Outcome (window)' for how they ended.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -315,7 +335,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
@@ -335,7 +355,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ]
     },
@@ -343,7 +363,7 @@
       "id": 86,
       "type": "stat",
       "title": "Augmenter Items (total)",
-      "description": "Items the augmenter processed, totalled over the selected range. All outcomes summed; the per-outcome breakdown is in the Augmenter row.",
+      "description": "**Items the augmenter processed in the selected range, all outcomes together.** Augment goes back to files already discovered to add permissions (ACL) and owner details.\n\n**Normal:** the number of items sent for augment; 0 when no augment ran.\n\n**Next:** 'Augmenter Items by Outcome (window)' in the Augmenter row.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -352,7 +372,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
@@ -372,7 +392,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ]
     },
@@ -386,7 +406,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 5
+        "y": 10
       },
       "panels": []
     },
@@ -394,7 +414,7 @@
       "id": 91,
       "type": "stat",
       "title": "Cost per File Discovered",
-      "description": "Directory-processing time per file discovered, from the scan duration total divided by files discovered over the selected range. Includes each directory's fan-out, so trees with more directories read higher.",
+      "description": "**Average scanner time per file found: total folder-processing time divided by files discovered, in the selected range.** Folder time includes listing, reading each file's metadata, the permissions query when enabled, and handing off subfolders \u2014 so trees with many folders read higher.\n\n**Normal:** milliseconds per file. A rise with the same share means the file server or the permissions queries got slower.\n\n**Next:** 'Directory Processing \u2014 p50 / p95 / p99' in the Scanner row.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -403,7 +423,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 6
+        "y": 11
       },
       "fieldConfig": {
         "defaults": {
@@ -422,7 +442,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_scanner_scan_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)) / clamp_min((sum(max_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)), 1)"
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_scanner_scan_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_scan_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_scan_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)) / clamp_min((sum(sum_over_time(((last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)), 1)"
         }
       ]
     },
@@ -430,7 +450,7 @@
       "id": 92,
       "type": "stat",
       "title": "ACL Cost per Item Augmented",
-      "description": "Average duration of one ACL query during augment, from the ACL duration total divided by items processed. One query per item; the statx and URN resolve each item also needs are not included.",
+      "description": "**Average permissions (ACL) query time per augmented item, in the selected range.** Total ACL query time divided by all items augmented \u2014 items that never reached the query (file gone, mount failed, no SMB target) are in the denominator too, so it reads lower than the true per-query cost when many items end early.\n\n**Normal:** milliseconds. A rise means the file server is slower to answer permission queries.\n\n**Next:** 'Augmenter ACL Query Duration \u2014 p50 / p95 / p99' in the Augmenter row.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -439,7 +459,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 6
+        "y": 11
       },
       "fieldConfig": {
         "defaults": {
@@ -458,7 +478,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_augmenter_acl_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)) / clamp_min((sum(max_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)), 1)"
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_augmenter_acl_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_augmenter_acl_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_augmenter_acl_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)) / clamp_min((sum(sum_over_time(((last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)), 1)"
         }
       ]
     },
@@ -466,7 +486,7 @@
       "id": 93,
       "type": "stat",
       "title": "Cost per Content Fetch",
-      "description": "Mean duration of one content fetch, from the fetch duration total divided by the fetch count. Scales with file size rather than file count.",
+      "description": "**Average time of one content download, start to finish, in the selected range.** Failed downloads are included. It grows with file size, not file count.\n\n**Normal:** well under a second for small files; read it together with 'Content Transfer Rate' to tell bigger files from a real slowdown.\n\n**Next:** 'Content Transfer Rate' beside it.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -475,7 +495,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 6
+        "y": 11
       },
       "fieldConfig": {
         "defaults": {
@@ -494,7 +514,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)) / clamp_min((sum(max_over_time(cifs_content_fetch_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)), 1)"
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)) / clamp_min((sum(sum_over_time(((last_over_time(cifs_content_fetch_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_content_fetch_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_content_fetch_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)), 1)"
         }
       ]
     },
@@ -510,7 +530,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 6
+        "y": 11
       },
       "fieldConfig": {
         "defaults": {
@@ -542,10 +562,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)) / clamp_min(sum(max_over_time(cifs_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])), 0.001)"
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)) / clamp_min(sum(sum_over_time(((last_over_time(cifs_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])), 0.001)"
         }
       ],
-      "description": "Bytes per second of actual transfer time \u2014 bytes moved divided by time spent fetching, not by wall clock. Read it against 'Cost per Content Fetch': if the cost per fetch rises while this stays flat, the files got bigger and nothing is wrong; if this falls, something genuinely got slower. Each number alone is ambiguous. Distinct from 'Upload Throughput', which is bytes per second of elapsed time and drops to zero whenever nothing is running."
+      "description": "**Bytes delivered per second of download time: bytes uploaded divided by the time spent in content requests, not by wall clock.** The time includes mounting the share and failed requests, so it slightly understates the raw link speed.\n\n**Normal:** steady for the same share. Cost per fetch up with this flat = the files got bigger, nothing wrong; this falling = something genuinely got slower. Each number alone is ambiguous. Unlike 'Upload Throughput', it does not drop to zero when nothing is running.\n\n**Next:** 'Content Upload Duration' on the Pipeline board to tell a slow share read from a slow content service."
     },
     {
       "type": "row",
@@ -557,7 +577,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 15
       },
       "panels": []
     },
@@ -573,11 +593,11 @@
         "h": 4,
         "w": 3,
         "x": 0,
-        "y": 11
+        "y": 16
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -607,7 +627,8 @@
           "refId": "A",
           "expr": "sum(up{job=~\".*cifs-connector-be-go\", namespace=\"$namespace\", pod=~\"$pod\"})"
         }
-      ]
+      ],
+      "description": "**Scanner pods currently up and being scraped.**\n\n**Normal:** 0 between jobs is normal: the scanner scales to zero when its queue is empty (KEDA, min 0, max 10). 0 while the backlog grows means pods are not starting.\n\n**Next:** 'Replicas' and 'NATS \u2014 Scanner Backlog' in the Backlog & Autoscaling row."
     },
     {
       "id": 7,
@@ -621,7 +642,7 @@
         "h": 4,
         "w": 3,
         "x": 3,
-        "y": 11
+        "y": 16
       },
       "fieldConfig": {
         "defaults": {
@@ -638,7 +659,7 @@
               }
             }
           ],
-          "unit": "short",
+          "unit": "locale",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -672,7 +693,8 @@
           "refId": "A",
           "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", container=\"cifs-connector-be-go\"}[1h]))"
         }
-      ]
+      ],
+      "description": "**Scanner container restarts in the last hour.**\n\n**Normal:** 0. Restarts usually mean the pod ran out of memory (limit 1Gi) or failed its health check; a restart mid-scan can leave folders unscanned.\n\n**Next:** the Runtime board for memory and CPU."
     },
     {
       "id": 2,
@@ -686,11 +708,11 @@
         "h": 4,
         "w": 3,
         "x": 6,
-        "y": 11
+        "y": 16
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "locale"
         }
       },
       "options": {
@@ -707,7 +729,8 @@
           "refId": "A",
           "expr": "sum(cifs_scanner_mount_active{namespace=\"$namespace\", pod=~\"$pod\"})"
         }
-      ]
+      ],
+      "description": "**Network shares currently mounted by the selected pods.**\n\n**Normal:** one per datasource being worked on, back to 0 shortly after a job (mounts idle out after 60s). Stuck above 0 long after the work ended means mounts are not being released.\n\n**Next:** 'Mount Release After Evict' on the Pipeline board."
     },
     {
       "id": 3,
@@ -721,11 +744,11 @@
         "h": 4,
         "w": 3,
         "x": 9,
-        "y": 11
+        "y": 16
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 2
         }
       },
@@ -741,15 +764,16 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(max_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))"
         }
-      ]
+      ],
+      "description": "**Files the scanner found in the selected range.** Same count as 'Files Discovered (total)' above, kept here next to its outcomes.\n\n**Normal:** the file count of the scanned shares; 0 when nothing ran.\n\n**Next:** 'Items Sent' and 'Items Failed' beside it."
     },
     {
       "id": 4,
       "type": "stat",
       "title": "Items Failed (window)",
-      "description": "Rate of items that never reached the batch sender, both causes summed. marshal_failed is bad data, batch_send_failed is the sender or NATS; the split is on the pipeline board.",
+      "description": "**Files found but not handed on for indexing in the selected range, both causes together.** Either the file's metadata could not be turned into a document (bad data) or the batch sender / NATS refused it (infrastructure).\n\n**Normal:** 0. Any value means files missing from the index.\n\n**Next:** 'Scanner Items by Outcome' on the Pipeline board splits the two causes.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -758,7 +782,7 @@
         "h": 4,
         "w": 3,
         "x": 12,
-        "y": 11
+        "y": 16
       },
       "fieldConfig": {
         "defaults": {
@@ -775,7 +799,7 @@
               }
             }
           ],
-          "unit": "short",
+          "unit": "locale",
           "decimals": 3,
           "thresholds": {
             "mode": "absolute",
@@ -808,7 +832,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(max_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=~\"marshal_failed|batch_send_failed\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=~\"marshal_failed|batch_send_failed\"}[15s]) - last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=~\"marshal_failed|batch_send_failed\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=~\"marshal_failed|batch_send_failed\"}[15s]) * 1)[$__range:15s]))"
         }
       ]
     },
@@ -824,11 +848,11 @@
         "h": 4,
         "w": 3,
         "x": 15,
-        "y": 11
+        "y": 16
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 2
         }
       },
@@ -844,9 +868,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(max_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[15s]) - last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[15s]) * 1)[$__range:15s]))"
         }
-      ]
+      ],
+      "description": "**Files handed on for indexing in the selected range.**\n\n**Normal:** equal to 'Files Discovered (window)'.\n\n**Next:** 'Scanner Throughput' below for when."
     },
     {
       "id": 6,
@@ -860,7 +885,7 @@
         "h": 4,
         "w": 3,
         "x": 18,
-        "y": 11
+        "y": 16
       },
       "fieldConfig": {
         "defaults": {
@@ -877,7 +902,7 @@
               }
             }
           ],
-          "unit": "short",
+          "unit": "locale",
           "decimals": 3,
           "thresholds": {
             "mode": "absolute",
@@ -910,15 +935,16 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(max_over_time(cifs_scanner_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(cifs_scanner_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))"
         }
-      ]
+      ],
+      "description": "**Permissions (ACL) queries the scanner could not complete in the selected range.** The file is still indexed, just without permissions. The scanner only queries permissions when the job enables it (skip_acl=false); the default is off, so 0 is also what a no-ACL scan shows.\n\n**Normal:** 0. A burst points at the file server or the credential's rights to read security information.\n\n**Next:** 'Errors by Source (window)' and the Worker Pool panels on the Pipeline board."
     },
     {
       "id": 8,
       "type": "stat",
       "title": "Dir Processing p95",
-      "description": "Wall-clock to process one directory: listing its entries, statx per file, ACL query when enabled, and publishing the items. Observed once per directory, so it does not measure a whole scan.",
+      "description": "**95% of folders were processed faster than this, over the selected range.** One measurement per folder: listing it, reading each file's metadata, the permissions query when enabled, and handing off its subfolders. It does not measure a whole scan.\n\n**Normal:** milliseconds for ordinary folders. The top folder of a large tree can take seconds because it hands off one message per subfolder.\n\n**Next:** 'Directory Processing \u2014 p50 / p95 / p99' below for when.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -927,7 +953,7 @@
         "h": 4,
         "w": 3,
         "x": 21,
-        "y": 11
+        "y": 16
       },
       "fieldConfig": {
         "defaults": {
@@ -946,7 +972,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))"
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))"
         }
       ]
     },
@@ -954,7 +980,7 @@
       "id": 10,
       "type": "timeseries",
       "title": "Scanner Throughput (rate, 5m)",
-      "description": "Discovered = files that reached processing; sent = items that made it into a batch; failed = items that did not. Discovered equals sent plus failed by construction.",
+      "description": "**How fast files are found, handed on, and lost, over time.** Discovered = files read; sent = handed on for indexing; failed = not handed on. Discovered always equals sent plus failed.\n\n**Normal:** sent on top of discovered, failed at 0. A scan shorter than ~30s may barely show here; the (window) counts above have the exact numbers.\n\n**Next:** 'Scanner Items by Outcome' on the Pipeline board, filterable per datasource.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -963,7 +989,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 15
+        "y": 20
       },
       "fieldConfig": {
         "defaults": {
@@ -989,6 +1015,199 @@
       ]
     },
     {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Directory Processing \u2014 p50 / p95 / p99",
+      "description": "**Time to process one folder, as typical (p50), slow (p95) and worst (p99) values over time.** One measurement per folder \u2014 listing, metadata reads, the permissions query when enabled, and handing off subfolders. It does not measure a whole scan.\n\n**Normal:** milliseconds; p99 spikes on folders with very many entries or subfolders.\n\n**Next:** 'Entries per Directory' and 'File Operation Duration' on the Pipeline board.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (sum_over_time(((last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (sum_over_time(((last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Errors by Source (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Scanner and augmenter errors by where they came from, as counts for the selected range.** Permissions (ACL) queries that failed in the scanner or in augment, SMB worker connections that could not be opened, and connections that were replaced.\n\n**Normal:** all near 0. A few reconnects are normal on a busy share; connect errors mean the share or credential is unreachable. Scanner and augmenter ACL errors are separate counters and do not overlap.\n\n**Next:** the line chart beside it shows when.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "scanner acl errors"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "augmenter acl errors"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "worker connect errors"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "worker reconnects"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_scanner_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))",
+          "legendFormat": "scanner acl errors"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_augmenter_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_augmenter_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_augmenter_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))",
+          "legendFormat": "augmenter acl errors"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_scanner_worker_connect_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_worker_connect_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_worker_connect_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))",
+          "legendFormat": "worker connect errors"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_scanner_worker_reconnects_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_worker_reconnects_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_worker_reconnects_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))",
+          "legendFormat": "worker reconnects"
+        }
+      ],
+      "id": 359,
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 28
+      }
+    },
+    {
       "id": 11,
       "type": "timeseries",
       "title": "Errors by Source (rate, 5m)",
@@ -998,9 +1217,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 15
+        "w": 6,
+        "x": 6,
+        "y": 28
       },
       "fieldConfig": {
         "defaults": {
@@ -1028,45 +1247,8 @@
           "expr": "sum(rate(cifs_scanner_worker_reconnects_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "worker reconnects"
         }
-      ]
-    },
-    {
-      "id": 12,
-      "type": "timeseries",
-      "title": "Directory Processing \u2014 p50 / p95 / p99",
-      "description": "Wall-clock to process one directory: listing its entries, statx per file, ACL query when enabled, and publishing the items. Observed once per directory, so it does not measure a whole scan.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 23
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.50, sum by (le) (max_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
-          "legendFormat": "p50"
-        },
-        {
-          "refId": "B",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
-          "legendFormat": "p95"
-        },
-        {
-          "refId": "C",
-          "expr": "histogram_quantile(0.99, sum by (le) (max_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
-          "legendFormat": "p99"
-        }
-      ]
+      ],
+      "description": "**The same error sources as the bar beside it, over time.**\n\n**Normal:** flat at 0. A short burst can be too small to see on a 5-minute rate; the (window) bar has the exact count.\n\n**Next:** the Worker Pool panels on the Pipeline board."
     },
     {
       "id": 13,
@@ -1080,7 +1262,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 23
+        "y": 28
       },
       "fieldConfig": {
         "defaults": {
@@ -1098,7 +1280,8 @@
           "expr": "sum(cifs_scanner_local_stack_depth{namespace=\"$namespace\", pod=~\"$pod\"})",
           "legendFormat": "sum across pods"
         }
-      ]
+      ],
+      "description": "**Folders a scanner pod is walking itself because it could not hand them off as separate work.** Normally every subfolder is published as its own message; when publishing fails (typically the work stream is full) the pod keeps the folder on its own list instead. One value per pod, not split by datasource.\n\n**Normal:** 0. Above 0 means the work stream is pushing back and the pod is carrying the tree alone \u2014 slower, but nothing is lost.\n\n**Next:** 'Directories Forked vs Local' on the Pipeline board and 'NATS \u2014 Scanner Backlog' below."
     },
     {
       "type": "row",
@@ -1110,7 +1293,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 36
       },
       "panels": []
     },
@@ -1118,7 +1301,7 @@
       "id": 50,
       "type": "stat",
       "title": "NATS \u2014 Scanner Backlog",
-      "description": "Messages waiting on the scanner durable. Scanner and augmenter share this one durable, so it blends fork and item-batch work and the two cannot be separated here. Server-side signal from the NATS exporter, so it carries no namespace or pod labels.",
+      "description": "**Messages waiting in the scanner's queue (JE_CIFS / cifs-scanner-v1).** Scanner and augmenter share this one queue, so folder work and augment batches are blended and cannot be told apart here. Measured on the NATS server, so it ignores the namespace and pod selectors.\n\n**Normal:** 0 between jobs. Growing while pods run means they are not keeping up; growing with 0 pods means scaling is not waking them.\n\n**Next:** 'Replicas' and 'NATS \u2014 Scanner Consumer Backlog'.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1127,7 +1310,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 32
+        "y": 37
       },
       "fieldConfig": {
         "defaults": {
@@ -1144,7 +1327,7 @@
               }
             }
           ],
-          "unit": "short",
+          "unit": "locale",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1180,7 +1363,7 @@
       "id": 51,
       "type": "stat",
       "title": "NATS \u2014 In Flight (unacked)",
-      "description": "Delivered but not yet acked: work currently inside the pods. Also the signal KEDA's ack-capacity trigger scales on. Server-side signal from the NATS exporter (no namespace/pod labels).",
+      "description": "**Messages handed to scanner pods but not yet finished (acknowledged).** This is the work currently inside the pods, and the signal KEDA's ack-capacity trigger scales on. Measured on the NATS server (no namespace/pod filter).\n\n**Normal:** up to about 10 per pod while working (10 concurrent messages per pod), 0 when idle.\n\n**Next:** 'KEDA \u2014 ack-capacity signal vs threshold'.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1189,7 +1372,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 32
+        "y": 37
       },
       "fieldConfig": {
         "defaults": {
@@ -1206,7 +1389,7 @@
               }
             }
           ],
-          "unit": "short",
+          "unit": "locale",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1242,7 +1425,7 @@
       "id": 52,
       "type": "stat",
       "title": "NATS \u2014 Redelivered",
-      "description": "Messages redelivered after an ack timeout. Sustained growth with a flat items-sent rate means the connector is not draining. Server-side signal from the NATS exporter, so it carries no namespace or pod labels.",
+      "description": "**Unfinished messages that have been delivered more than once.** A message is redelivered when a pod fails it or does not finish within the 60s ack wait. Measured on the NATS server (no namespace/pod filter).\n\n**Normal:** 0. Growing while 'Items Sent' stays flat means the pods are not draining; after the 5th attempt a message goes to the dead-letter queue.\n\n**Next:** the Dead Letter Queue row at the bottom.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1251,7 +1434,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 32
+        "y": 37
       },
       "fieldConfig": {
         "defaults": {
@@ -1268,7 +1451,7 @@
               }
             }
           ],
-          "unit": "short",
+          "unit": "locale",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1308,7 +1491,7 @@
       "id": 53,
       "type": "stat",
       "title": "Replicas",
-      "description": "Current replicas of the scanner deployment, from the HPA KEDA manages. minReplicaCount is 0, so 0 replicas with an empty queue is normal.",
+      "description": "**Scanner pods running right now, as KEDA's autoscaler reports.**\n\n**Normal:** 0 with an empty queue is normal (min 0).\n\n**Next:** 'KEDA \u2014 Replicas: current vs desired vs max'.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1317,11 +1500,11 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 32
+        "y": 37
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "locale"
         }
       },
       "options": {
@@ -1344,7 +1527,7 @@
       "id": 54,
       "type": "stat",
       "title": "Max Replicas",
-      "description": "Ceiling from the ScaledObject. Replicas pinned here while the backlog grows means the connector is capped, not idle.",
+      "description": "**The most scanner pods KEDA is allowed to run.**\n\n**Normal:** 10 by chart default. Replicas pinned here while the backlog grows means the connector is capped, not idle.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1353,11 +1536,11 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 32
+        "y": 37
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "locale"
         }
       },
       "options": {
@@ -1380,7 +1563,7 @@
       "id": 55,
       "type": "stat",
       "title": "NATS \u2014 Backlog Slope (2m)",
-      "description": "Per-second growth of the backlog, clamped at 0. Verbatim the query KEDA's trend-based trigger evaluates; above 0.5 it asks for more pods.",
+      "description": "**How fast the scanner queue is growing, in messages per second over the last 2 minutes (shrinking counts as 0).** This is exactly the number KEDA's trend-based trigger evaluates.\n\n**Normal:** 0 when idle or draining. Above 0.5 KEDA asks for more pods.\n\n**Next:** 'KEDA \u2014 trend-based signal vs threshold'.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1389,7 +1572,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 32
+        "y": 37
       },
       "fieldConfig": {
         "defaults": {
@@ -1406,7 +1589,7 @@
               }
             }
           ],
-          "unit": "short",
+          "unit": "locale",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1446,7 +1629,7 @@
       "id": 56,
       "type": "timeseries",
       "title": "NATS \u2014 Scanner Consumer Backlog",
-      "description": "Backlog on JE_CIFS/cifs-scanner-v1 over time. Scanner and augmenter share this durable, so it blends fork and item-batch work. Server-side signal from the NATS exporter, so it carries no namespace or pod labels.",
+      "description": "**The scanner queue over time: waiting, in progress (unacked) and redelivered.** Scanner and augmenter share this queue, so folder work and augment batches are blended. Measured on the NATS server (no namespace/pod filter).\n\n**Normal:** a rise when a job starts, back to 0 when it ends. Waiting flat above 0 with nothing in progress means no pod is consuming.\n\n**Next:** 'KEDA \u2014 Replicas: current vs desired vs max' beside it.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1455,7 +1638,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 36
+        "y": 41
       },
       "fieldConfig": {
         "defaults": {
@@ -1484,7 +1667,7 @@
       "id": 57,
       "type": "timeseries",
       "title": "KEDA \u2014 Replicas: current vs desired vs max",
-      "description": "current below desired means scaling is in progress or blocked; current pinned at max means capped. Scale-down is deliberately slow (cooldown 900s, 600s stabilization window), so a flat line for ten minutes after a burst is configuration, not a stuck HPA.",
+      "description": "**Scanner pods running (current), what the autoscaler wants (desired), and the ceiling (max).**\n\n**Normal:** current follows desired. Current below desired = scaling in progress or blocked; current pinned at max = capped. Scale-down is deliberately slow (cooldown 300s and a 300s stabilisation window in the chart values), so pods lingering for several minutes after a burst is configuration, not a stuck autoscaler.\n\n**Next:** the two KEDA trigger panels beside it.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1493,7 +1676,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 36
+        "y": 41
       },
       "fieldConfig": {
         "defaults": {
@@ -1522,7 +1705,7 @@
       "id": 58,
       "type": "timeseries",
       "title": "KEDA \u2014 ack-capacity signal vs threshold",
-      "description": "KEDA's ack-capacity trigger: replicas = ceil(ack_pending / 1000). The red line is that threshold; crossing it is what asks for another pod.",
+      "description": "**KEDA's ack-capacity trigger: messages in progress against the per-pod threshold.** Pods wanted = in-progress messages \u00f7 1000, rounded up; the red line is that threshold.\n\n**Normal:** well below the line for normal jobs (each pod takes ~10 at a time), so this trigger rarely adds pods on its own.\n\n**Next:** 'KEDA \u2014 trend-based signal vs threshold'.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1531,7 +1714,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 44
+        "y": 49
       },
       "fieldConfig": {
         "defaults": {
@@ -1568,7 +1751,7 @@
       "id": 59,
       "type": "timeseries",
       "title": "KEDA \u2014 trend-based signal vs threshold",
-      "description": "KEDA's trend-based trigger: slope of the backlog over 2m, clamped at 0 so only growth counts. Threshold 0.5, activation 0.1. The pipeline-full trigger is not rendered in dev (capacity is unset), so this plus ack-capacity and pending-wakeup is the whole scaling story.",
+      "description": "**KEDA's trend-based trigger: how fast the queue grew over the last 2 minutes (only growth counts).** Threshold 0.5 messages/s, activation 0.1. The pipeline-full trigger is not created while its capacity is unset (the chart default), so this, ack-capacity and the pending-wakeup trigger are the whole scaling story.\n\n**Normal:** spikes at the start of a large tree, when forked folders pile up faster than pods consume them.\n\n**Next:** 'KEDA \u2014 Replicas: current vs desired vs max'.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1577,7 +1760,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 44
+        "y": 49
       },
       "fieldConfig": {
         "defaults": {
@@ -1620,24 +1803,272 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 57
       },
       "panels": []
+    },
+    {
+      "type": "bargauge",
+      "title": "Augmenter Items by Outcome (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**What happened to every item the augmenter processed, as counts for the selected range.** Success = enriched with permissions; missing = the file is gone; permissions skipped = no SMB target to ask, sent without permissions; mount, stat, build, send, URN and share-mismatch failures; cancelled = dropped by a shutdown.\n\n**Normal:** almost everything green. Yellow (missing, permissions skipped) is expected absence; orange is configuration (e.g. the credential now points at another share); red needs a look. Cancelled spikes on a shutdown and is not a real failure.\n\n**Next:** the line chart beside it shows when; split per datasource on the Pipeline board.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "success"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "missing"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "acl_skipped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "stat_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "acl_error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "build_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "send_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "invalid_urn"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "mount_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unc_mismatch"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cancelled_stat"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cancelled_acl"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (outcome) (sum_over_time(((last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "id": 360,
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 58
+      }
     },
     {
       "id": 20,
       "type": "timeseries",
       "title": "Augmenter Items by Outcome (rate, 5m)",
-      "description": "Terminal outcome per item the augmenter touched. outcome=\"missing\" is also counted by items_skipped_not_found_total for the same event, so never sum the two.",
+      "description": "**The augmenter's item outcomes over time.** 'missing' here is the same event as 'Skipped Not-Found' beside it \u2014 never add the two.\n\n**Normal:** mostly success. A short augment may barely show on a 5-minute rate; the (window) bars have the exact counts.\n\n**Next:** 'Augmenter Items by Outcome (rate, stacked)' on the Pipeline board, per datasource.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 53
+        "w": 6,
+        "x": 6,
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
@@ -1853,9 +2284,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 53
+        "w": 6,
+        "x": 12,
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
@@ -1868,7 +2299,8 @@
           "expr": "sum by (datasource_id) (rate(cifs_augmenter_items_skipped_not_found_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "{{datasource_id}}"
         }
-      ]
+      ],
+      "description": "**Augmented items skipped because the file no longer exists on the share.** Same event as the 'missing' outcome, not an extra one \u2014 do not add them.\n\n**Normal:** a trickle is normal churn (files deleted between scan and augment). A large burst on one datasource suggests a share was moved or emptied.\n\n**Next:** the Data Quality \u2014 Files Gone row."
     },
     {
       "id": 22,
@@ -1880,9 +2312,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 53
+        "w": 6,
+        "x": 18,
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
@@ -1905,7 +2337,8 @@
           "expr": "histogram_quantile(0.99, sum by (le) (rate(cifs_augmenter_acl_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
           "legendFormat": "p99"
         }
-      ]
+      ],
+      "description": "**Time of one permissions (ACL) query during augment: typical (p50), slow (p95) and worst (p99).**\n\n**Normal:** tens of milliseconds. A rise means the file server is slow to answer security queries; augment has no pacing in front of these, so it can load the server harder than the scanner does.\n\n**Next:** 'Augmenter ACL Query Duration' on the Pipeline board, per datasource."
     },
     {
       "type": "row",
@@ -1917,7 +2350,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 61
+        "y": 66
       },
       "panels": []
     },
@@ -1925,7 +2358,7 @@
       "id": 30,
       "type": "stat",
       "title": "Pods Up",
-      "description": "Content pods scale 0\u2194N with KEDA \u2014 0 pods with an empty queue is normal.",
+      "description": "**Content pods currently up and being scraped.**\n\n**Normal:** 0 with an empty queue is normal: content scales 0\u219410 on its own, independently of the scanner.\n\n**Next:** 'NATS \u2014 Fetch Backlog' and 'KEDA \u2014 Content Replicas'.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1934,11 +2367,11 @@
         "h": 4,
         "w": 3,
         "x": 0,
-        "y": 62
+        "y": 67
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1982,7 +2415,7 @@
         "h": 4,
         "w": 3,
         "x": 3,
-        "y": 62
+        "y": 67
       },
       "fieldConfig": {
         "defaults": {
@@ -1999,7 +2432,7 @@
               }
             }
           ],
-          "unit": "short",
+          "unit": "locale",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -2033,7 +2466,8 @@
           "refId": "A",
           "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", container=\"cifs-connector-be-go-content\"}[1h]))"
         }
-      ]
+      ],
+      "description": "**Content container restarts in the last hour.**\n\n**Normal:** 0. Restarts usually mean memory (limit 512Mi) or a failed health check; requests in flight are redelivered.\n\n**Next:** the Runtime board with component = Content."
     },
     {
       "id": 31,
@@ -2047,11 +2481,11 @@
         "h": 4,
         "w": 3,
         "x": 6,
-        "y": 62
+        "y": 67
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 2
         }
       },
@@ -2067,9 +2501,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(max_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))"
         }
-      ]
+      ],
+      "description": "**Content download requests handled in the selected range, any outcome.**\n\n**Normal:** whatever downstream asked for; 0 when nobody requested content.\n\n**Next:** 'Content Fetches by Outcome (window)' for how they ended."
     },
     {
       "id": 32,
@@ -2083,7 +2518,7 @@
         "h": 4,
         "w": 3,
         "x": 9,
-        "y": 62
+        "y": 67
       },
       "fieldConfig": {
         "defaults": {
@@ -2105,13 +2540,14 @@
           "refId": "A",
           "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", success=\"true\"}[5m])))"
         }
-      ]
+      ],
+      "description": "**95% of successful content downloads finished faster than this, over the last 5 minutes.** Failed downloads are measured separately so a hung mount does not distort it.\n\n**Normal:** seconds or less for ordinary files; it grows with file size (cap 100 MiB). A short burst may leave too few samples for a stable value.\n\n**Next:** 'Content Fetch Duration' and 'Content Upload Duration' on the Pipeline board."
     },
     {
       "id": 33,
       "type": "stat",
       "title": "Errors (window)",
-      "description": "Number of content fetch requests that failed in the last 5 minutes. Counter increase on cifs_content_fetch_total{success=\"false\"}.",
+      "description": "**Content download requests that failed in the selected range.** Includes expected cases such as files that no longer exist.\n\n**Normal:** 0 or a few 'not found'. Anything else, or a sudden jump, needs a look.\n\n**Next:** 'Content Fetches by Outcome (window)' for which kind of failure.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2120,7 +2556,7 @@
         "h": 4,
         "w": 3,
         "x": 12,
-        "y": 62
+        "y": 67
       },
       "fieldConfig": {
         "defaults": {
@@ -2137,7 +2573,7 @@
               }
             }
           ],
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
@@ -2170,7 +2606,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(max_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"false\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"false\"}[15s]) - last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"false\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"false\"}[15s]) * 1)[$__range:15s]))"
         }
       ]
     },
@@ -2178,7 +2614,7 @@
       "id": 34,
       "type": "stat",
       "title": "Upload Throughput",
-      "description": "Bytes per second confirmed by the content transfer service (rate over cifs_content_uploaded_bytes_total).",
+      "description": "**Bytes per second delivered to the content service, averaged over the last 5 minutes.** This is per second of wall clock, so it drops to 0 whenever nothing is running.\n\n**Normal:** bursty: high while a download runs, 0 otherwise.\n\n**Next:** 'Content Transfer Rate' at the top for speed while actually transferring.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2187,7 +2623,7 @@
         "h": 4,
         "w": 3,
         "x": 15,
-        "y": 62
+        "y": 67
       },
       "fieldConfig": {
         "defaults": {
@@ -2215,7 +2651,7 @@
       "id": 35,
       "type": "stat",
       "title": "Mount Acquire p95 (5m)",
-      "description": "p95 of successful mount acquires on the content pod. Failed acquires are tracked separately (cifs_content_mount_acquire_failure_duration_seconds).",
+      "description": "**95% of successful share mounts on content pods finished faster than this, over the last 5 minutes.** Failed mounts are measured separately, so a mount that hangs ~120s before failing does not distort this number.\n\n**Normal:** near 0 when the share is already mounted; up to a second or two for a fresh mount.\n\n**Next:** 'Content Mount Acquire p95 \u2014 success vs failure' on the Pipeline board.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2224,7 +2660,7 @@
         "h": 4,
         "w": 3,
         "x": 18,
-        "y": 62
+        "y": 67
       },
       "fieldConfig": {
         "defaults": {
@@ -2260,7 +2696,7 @@
         "h": 4,
         "w": 3,
         "x": 21,
-        "y": 62
+        "y": 67
       },
       "fieldConfig": {
         "defaults": {
@@ -2277,7 +2713,7 @@
               }
             }
           ],
-          "unit": "short",
+          "unit": "locale",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -2307,13 +2743,14 @@
           "refId": "A",
           "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\"content-fetch-cifs.*\"}))"
         }
-      ]
+      ],
+      "description": "**Content requests waiting in the queue, bulk and interactive (See Content) together.** Measured on the NATS server (no namespace/pod filter).\n\n**Normal:** 0 between requests. Growing with 0 content pods means scaling is not waking them.\n\n**Next:** 'NATS \u2014 Content Consumer Backlog'."
     },
     {
       "id": 40,
       "type": "timeseries",
       "title": "Content Fetches by Outcome (rate, 5m)",
-      "description": "Shape over time: when fetches happened and how the outcomes were interleaved. Read the x axis for timing; the y axis is a rate and will look vanishingly small, because this connector works in bursts \u2014 a handful of fetches inside seconds divided by a five-minute window is a fraction of an op per second, arithmetically correct and of no use to anyone. For HOW MANY fetches ended in each outcome, read 'Content Fetches by Outcome (window)' beside it. error_code=NONE is what the connector emits on success and is displayed here as 'success'. Counting per time bucket was tried on the Box board and rejected: increase() and max_over_time minus min_over_time both under-count, because the whole burst lands inside a single bucket on a series created in that same bucket.",
+      "description": "**When content downloads happened and how the outcomes interleaved.** Read the time axis; the height is a rate and looks vanishingly small, because a burst of a few downloads in seconds divided over five minutes is a fraction per second. 'NONE' from the connector is shown as success.\n\n**Normal:** mostly success. For how many ended each way, read the bar beside it. Counting per time bucket was tried on the Box board and rejected: it under-counts when the whole burst lands in one bucket.\n\n**Next:** 'Content Fetches by Outcome (window)' beside it.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2322,7 +2759,7 @@
         "h": 8,
         "w": 10,
         "x": 0,
-        "y": 66
+        "y": 71
       },
       "fieldConfig": {
         "defaults": {
@@ -2588,7 +3025,7 @@
         "h": 8,
         "w": 6,
         "x": 10,
-        "y": 66
+        "y": 71
       },
       "fieldConfig": {
         "defaults": {
@@ -2857,10 +3294,10 @@
         {
           "refId": "A",
           "legendFormat": "{{error_code}}",
-          "expr": "sum by (error_code) (max_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
+          "expr": "(sum by (error_code) (sum_over_time(((last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))) > 0"
         }
       ],
-      "description": "Where the fetches ended up, as counts. This is the panel that answers 'I ran N fetches \u2014 what happened to them?': the total is in 'Fetches', and this says how it split. Colour carries the verdict: green fine, yellow expected (the file is gone, nothing to do), orange back-pressure, red needs action."
+      "description": "**How the content downloads in the selected range ended, as counts.** This answers 'I ran N downloads \u2014 what happened to them?'; the total is in 'Fetches'.\n\n**Normal:** green (success) dominates. Yellow is expected (the file is gone, nothing to do), orange is back-pressure or a transient problem that is retried, red needs action (permissions, credentials, internal errors).\n\n**Next:** 'Fetch Errors by error_code' on the Pipeline board, per datasource."
     },
     {
       "id": 41,
@@ -2874,7 +3311,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 66
+        "y": 71
       },
       "fieldConfig": {
         "defaults": {
@@ -2887,13 +3324,14 @@
           "expr": "sum(rate(cifs_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "uploaded bytes/s"
         }
-      ]
+      ],
+      "description": "**Bytes per second delivered to the content service, over time.**\n\n**Normal:** bursts while downloads run, 0 between them.\n\n**Next:** 'Content Transfer Rate' at the top."
     },
     {
       "id": 42,
       "type": "timeseries",
       "title": "Content Requests In-Flight",
-      "description": "Requests currently inside the handler \u2014 content-mode saturation signal (the counterpart of the scanner's worker_busy). Authoritative backlog (num_pending) lives on the NATS server.",
+      "description": "**Content requests being worked on right now, per pod.** The content side's saturation signal; the real queue is on the NATS server.\n\n**Normal:** up to 10 per pod (10 workers). Pinned at 10 while the queue grows means the pods are at capacity and KEDA should be adding more.\n\n**Next:** 'NATS \u2014 Content Consumer Backlog'.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2902,7 +3340,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 74
+        "y": 79
       },
       "fieldConfig": {
         "defaults": {
@@ -2929,7 +3367,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 74
+        "y": 79
       },
       "fieldConfig": {
         "defaults": {
@@ -2947,13 +3385,14 @@
           "expr": "max by (consumer_name) (nats_consumer_num_ack_pending{consumer_name=~\"content-fetch-cifs.*\"})",
           "legendFormat": "{{consumer_name}} ack pending"
         }
-      ]
+      ],
+      "description": "**The content queue over time: requests waiting and in progress (unacked).** Bulk and interactive (See Content) queues together. Measured on the NATS server (no namespace/pod filter).\n\n**Normal:** rises when downloads are requested, back to 0 when done.\n\n**Next:** 'KEDA \u2014 Content Replicas' and 'Content Requests In-Flight'."
     },
     {
       "id": 43,
       "type": "timeseries",
       "title": "NATS \u2014 Content Consumer Redelivery",
-      "description": "nats_consumer_num_redelivered for the content durable (content-fetch-cifs). Rising = fetch requests failing and being retried; sustained growth toward MaxDeliver=3 means messages are about to be dropped as poison. Server-side signal from the NATS exporter (no namespace/pod labels).",
+      "description": "**Content requests delivered more than once.** Transient failures (timeout, connection, read or upload errors) are retried. Measured on the NATS server (no namespace/pod filter).\n\n**Normal:** 0. Growing means downloads are failing and retrying; after 3 deliveries (maxDeliver 3) a request is dropped for good.\n\n**Next:** 'Content Fetches by Outcome (window)' for why.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2962,7 +3401,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 74
+        "y": 79
       },
       "fieldConfig": {
         "defaults": {
@@ -2981,7 +3420,7 @@
       "id": 45,
       "type": "timeseries",
       "title": "KEDA \u2014 Content Replicas: current vs desired vs max",
-      "description": "The content deployment scales independently of the scanner, off its own ScaledObject watching CONTENT_FETCH/content-fetch-cifs.",
+      "description": "**Content pods running (current), what the autoscaler wants (desired), and the ceiling (max).** Content scales on its own trigger, watching the content queue, independently of the scanner.\n\n**Normal:** current follows desired, 0 when idle. Pinned at max (10) while the queue grows means capped. Scale-down is slow by design (cooldown 300s, 300s stabilisation).\n\n**Next:** 'KEDA \u2014 Content Trigger Signals'.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2990,7 +3429,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 82
+        "y": 87
       },
       "fieldConfig": {
         "defaults": {
@@ -3019,7 +3458,7 @@
       "id": 46,
       "type": "timeseries",
       "title": "KEDA \u2014 Content Trigger Signals",
-      "description": "Signals behind the content ScaledObject. The consumer_name regex covers both the batch durable and the interactive one used by See Content, which has its own interactive-wakeup trigger. Server-side signal from the NATS exporter (no namespace/pod labels).",
+      "description": "**The numbers behind the content autoscaler: requests in progress, queue growth over 2 minutes, and requests waiting.** Bulk and interactive queues together; the interactive one has its own wake-up trigger so a single See Content click wakes a pod. Measured on the NATS server (no namespace/pod filter).\n\n**Normal:** all 0 when idle. Waiting above 0 should bring a pod up within a polling interval (30s).\n\n**Next:** 'KEDA \u2014 Content Replicas'.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3028,7 +3467,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 82
+        "y": 87
       },
       "fieldConfig": {
         "defaults": {
@@ -3063,7 +3502,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 90
+        "y": 95
       },
       "panels": []
     },
@@ -3071,7 +3510,7 @@
       "id": 70,
       "type": "stat",
       "title": "Gone \u2014 404 on augment re-fetch",
-      "description": "The augment went back for an item it had already discovered and the share no longer had it. Its own stage only \u2014 this used to add the content 404s into the same number, which made a run with no augment at all still show a count.",
+      "description": "**Items augment went back for and found gone from the share, in the selected range.** Its own stage only \u2014 content 404s are no longer added in, which used to make a run with no augment still show a count.\n\n**Normal:** a small number is normal churn between scan and augment.\n\n**Next:** 'Files Gone % (augment)' for the share of the total.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3080,11 +3519,11 @@
         "h": 8,
         "w": 5,
         "x": 0,
-        "y": 91
+        "y": 96
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "locale"
         }
       },
       "options": {
@@ -3099,7 +3538,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[15s]) - last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ]
     },
@@ -3115,11 +3554,11 @@
         "h": 8,
         "w": 5,
         "x": 5,
-        "y": 91
+        "y": 96
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "mappings": [
             {
@@ -3160,10 +3599,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[15s]) - last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "The latest window of all: content went to download the file and it was no longer there, so it disappeared between the scan and the fetch. Do NOT add this to the other stages \u2014 content runs on demand over a subset, not over the whole share, so it has a different denominator. It is here because a 404 on fetch is evidence a file is gone, and until now that evidence only showed up as a content error. On CIFS this code also covers non-regular files (symlinks, sockets, devices), so it is evidence the content is not retrievable rather than proof the file was deleted."
+      "description": "**Content downloads that found the file gone, in the selected range.** The latest point of all: the file disappeared between the scan and the download. On CIFS this code also covers things that are not regular files (symlinks, sockets, devices), so it shows the content is not retrievable rather than proving deletion.\n\n**Normal:** a few. Do not add this to the augment count \u2014 content runs on demand over a subset of files, so it has a different denominator.\n\n**Next:** 'Files Gone by stage' for when."
     },
     {
       "id": 357,
@@ -3177,11 +3616,11 @@
         "h": 8,
         "w": 4,
         "x": 10,
-        "y": 91
+        "y": 96
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "mappings": [
             {
@@ -3209,16 +3648,16 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "The denominator for the percentage beside it. A ratio with no denominator cannot be read: 50% of 6 items and 50% of 60,000 are the same number and completely different news. This counts only what augment visited, never the whole share."
+      "description": "**Items augment visited in the selected range: the denominator for the percentage beside it.** 50% of 6 items and 50% of 60,000 are the same number and very different news. This counts only what augment visited, never the whole share.\n\n**Normal:** the size of the augment batches run in the range.\n\n**Next:** 'Files Gone % (augment)' beside it."
     },
     {
       "id": 72,
       "type": "stat",
       "title": "Files Gone % (augment)",
-      "description": "Share of augmented items whose file was already gone, over the selected range. Augment only: content fetches one file per request and has no comparable denominator.",
+      "description": "**Share of augmented items whose file was already gone, in the selected range.** Augment only: content fetches one file per request and has no comparable denominator.\n\n**Normal:** a few percent at most. A high value on one datasource suggests the share was reorganised or emptied since the scan.\n\n**Next:** 'Augment Items (window)' beside it for the count behind the percentage.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3227,7 +3666,7 @@
         "h": 8,
         "w": 5,
         "x": 14,
-        "y": 91
+        "y": 96
       },
       "fieldConfig": {
         "defaults": {
@@ -3277,7 +3716,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * ((sum(max_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[$__range])) or vector(0)) / clamp_min((sum(max_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)), 1))"
+          "expr": "100 * ((sum(sum_over_time(((last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[15s]) - last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[15s]) * 1)[$__range:15s])) or vector(0)) / clamp_min((sum(sum_over_time(((last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)), 1))"
         }
       ]
     },
@@ -3285,7 +3724,7 @@
       "id": 71,
       "type": "timeseries",
       "title": "Files Gone by stage (rate, 5m)",
-      "description": "Missing files split by the stage that found them missing; augment and content fetch are different moments and are diagnosed differently. The content series counts FETCH_ERROR_NOT_FOUND, which also fires for non-regular files.",
+      "description": "**Files found missing, split by the stage that noticed, over time.** Augment and content are different moments and are diagnosed differently. The content line also counts non-regular files (symlinks, sockets, devices).\n\n**Normal:** near 0. A short burst may barely show on a 5-minute rate; the stats beside it have the exact counts.\n\n**Next:** 'Skipped Not-Found' in the Augmenter row.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3294,7 +3733,7 @@
         "h": 8,
         "w": 5,
         "x": 19,
-        "y": 91
+        "y": 96
       },
       "fieldConfig": {
         "defaults": {
@@ -3324,7 +3763,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 99
+        "y": 104
       },
       "description": "What was lost. The scanner funnel can close perfectly and work can still have been discarded here: a message that exhausts its deliveries ends up in the DLQ leaving no trace in items_processed."
     },
@@ -3340,11 +3779,11 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 100
+        "y": 105
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "mappings": [
             {
@@ -3388,7 +3827,83 @@
           "expr": "max(nats_stream_total_messages{stream_name=\"DLQ_CONSUME_CIFS\"}) or vector(0)"
         }
       ],
-      "description": "Messages the SDK gave up on. Any number above zero is work that was silently dropped: the connector reports success because the folder never made it far enough to be counted as a failure."
+      "description": "**Messages currently stored in the dead-letter queue: work the system gave up on after 5 failed attempts.** Each one is a folder (with everything below it) or an augment batch that was dropped, while the scan still reports success because it never got far enough to count as a failure. The stored count can fall when the queue is purged or trimmed at its size limit.\n\n**Normal:** 0. Any value above 0 is silently lost work.\n\n**Next:** 'Lost to DLQ (window)' for what was added in the range."
+    },
+    {
+      "type": "stat",
+      "title": "Lost to DLQ (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Messages that failed every attempt and were given up on in the selected range.** Each one is a folder \u2014 and everything below it \u2014 or an augment batch that was not processed, while its scan still reported success.\n\n**Normal:** 0. Each message carries the directory or batch and the last error: `nats stream get DLQ_CONSUME_CIFS <seq>`. Counted from the stream's sequence number, so a purge or the queue's size limit does not hide anything.\n\n**Next:** 'DLQ Depth over time' beside it, for when it started.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((max_over_time(max(nats_stream_last_seq{stream_name=\"DLQ_CONSUME_CIFS\"})[$__range:30s]) - min_over_time(max(nats_stream_last_seq{stream_name=\"DLQ_CONSUME_CIFS\"})[$__range:30s])) or vector(0))"
+        }
+      ],
+      "id": 361,
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 105
+      }
     },
     {
       "id": 353,
@@ -3400,9 +3915,9 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 18,
-        "x": 6,
-        "y": 100
+        "w": 12,
+        "x": 12,
+        "y": 105
       },
       "fieldConfig": {
         "defaults": {
@@ -3421,7 +3936,7 @@
           "expr": "max by (stream_name) (nats_stream_total_messages{stream_name=\"DLQ_CONSUME_CIFS\"})"
         }
       ],
-      "description": "A step up here is the moment work was dropped. Line it up against the scanner funnel: the funnel will not show a dip, which is exactly why this row exists."
+      "description": "**The dead-letter queue size over time.** A step up is the moment work was dropped.\n\n**Normal:** flat at 0. Line a step up against the scanner throughput: that chart will not show a dip, which is exactly why this row exists.\n\n**Next:** 'NATS \u2014 Redelivered' to see the retries that came before."
     }
   ]
 }

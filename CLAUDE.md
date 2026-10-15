@@ -213,6 +213,8 @@ Rules that come with it:
 - **Every board opens with a short text panel** saying how to read it and what it cannot answer: that totals add up every run in the range, that count panels say *how many* and the line charts beside them say *when*, and which splits are impossible (e.g. no datasource label). A limit discovered in a description hover is a limit nobody discovers.
 - **Don't combine unrelated counters in one stat.** Two values that answer different questions get two stats, each with its own name.
 
+- **Panel ids are unique within a board.** Grafana uses the id for "View panel", direct links and editing; two panels sharing an id overwrite each other in those views. `box-overview` shipped with five duplicated ids (fixed); check with `jq '[.panels[].id] | group_by(.) | map(select(length > 1))'` after hand-editing a board.
+
 ### Panel descriptions
 
 Descriptions are read in a hover by someone who does not know the code. Write them in plain English — no metric names, no internal function names — in three short parts, separated by blank lines (the field renders Markdown):
