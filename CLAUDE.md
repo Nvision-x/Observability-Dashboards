@@ -154,6 +154,85 @@ Two traps when verifying the fix: a kickoff **hides** the bug (once the pod is a
 
 Pipeline dashboards add view-specific variables when needed (e.g., `$query_type` for Snowflake/PostgreSQL, `$datasource_id` for CIFS).
 
+### Panel types — which visualization answers which question
+
+Start from the question an operator asks, then pick the panel. A board built by graphing whatever is emitted ends up with a timeseries for everything, and a timeseries is the wrong answer to most of the questions that matter on a scale-to-zero connector.
+
+| Question | Panel | Query idiom |
+|---|---|---|
+| "How many in this window?" — one number | `stat` | in-range count (below) |
+| "What happened to those N?" — a known total split into 2–6 categories | `bargauge`, horizontal | in-range count `sum by (label)`, `> 0`; or one target per category |
+| Same, but more than ~6 categories, or two label dimensions | `table` | instant query + `labelsToFields` |
+| "When did it happen / how fast is it going?" | `timeseries` | `rate(x[5m])`, title ends in `(rate, 5m)` |
+| "How is it distributed?" (latency, size, per-unit cost) | `heatmap` over time **plus** a `bargauge` of the same buckets for the whole range, and a `stat` with **mean / p95** | per-cell counts with the in-range idiom over `[$__interval:30s]`, panel `interval: 30s`, cell values as a plain count; bar gauge = consecutive `le` differences, `> 0` |
+| "How close to the ceiling did it get?" (pool, in-flight, queue) | `stat` with the **peak** + `timeseries` with the ceiling as a threshold line | `max_over_time(…[$__range])` |
+
+Rules that come with it:
+
+- **Pair "how many" with "when".** Every outcome breakdown that matters gets a bar gauge (counts in the window) **and** a stacked rate timeseries (when), side by side, with the same colours. The timeseries alone cannot answer "how many": a scan shorter than a scrape interval reads 0 on `rate()` and is still real work.
+- **Counts in a range: add up the counter's step-by-step increments.**
+
+  ```
+  sum(sum_over_time((
+      (last_over_time(x[15s]) - last_over_time(x[1d] offset 15s)) >= 0
+    or last_over_time(x[15s]) * 1
+  )[$__range:15s]))
+  ```
+
+  Every 15s take current minus previous (the sum telescopes exactly for any step; the step is how far behind "now" the panel can lag). If the counter went down, the process restarted and the increment is the new value; if there is no previous value, the series was just born and the whole value counts. `* 1` drops the metric name so both sides of `or` share a label set (without it Prometheus fails with "vector cannot contain metrics with the same labelset").
+
+  Each simpler idiom was tried and is wrong in a case that happens:
+  - **`max_over_time` alone** returns the counter's *value* — everything since the process started. Pods outlive a scan (KEDA keeps them 15 minutes, and scans from different datasources share a pod), so narrowing the range to one scan adds the earlier ones. Measured: a 13-owner scan read 65.
+  - **Max in the range minus the last value before it** goes negative across a restart under the same pod name (a container crash in the cluster, any restart in local compose) and reads 0.
+  - **`increase()`** extrapolates (67 read as 69, a day read 2948 for 3623) and reads 0 for a burst finished before the first scrape.
+  - **A short lookback for the previous value** (`[5m]`) finds nothing after a scrape gap and counts the whole cumulative value again: 91 for 26 after a 2-hour gap. `[1d]` costs the same (13ms on a 6h range).
+
+  **Known blind spot:** a counter with labels (a CounterVec child) does not exist until its first increment. If the process restarts under the *same* pod name and the child comes back with exactly its old value (or more), no drop is visible and that restart's increments are lost. In the cluster a new pod has a new name, so this only bites on a container restart inside a pod — and in local compose, where `docker compose restart` keeps the labels: **don't restart connector containers between local test runs.** The real fix is in the connector: create every label combination at 0 at startup (as Box's `InitUserSlots` does).
+
+  Verified on Oracle against four ranges — one fresh pod, one warm pod, one across a restart, one across a 2h gap — all exact. The same idiom feeds window means and percentiles (`_sum`, `_count`, `_bucket` before dividing or `histogram_quantile`). Breakdowns add `> 0`, so categories that only happened outside the range do not show as empty bars.
+- **Wrap zero-able terms as `((expr) or vector(0))`, fully parenthesised.** `a + b or vector(0)` parses as `(a + b) or vector(0)` and silently drops the whole sum to 0.
+- **Window totals add up every run in the range.** Two scans of the same 67 tables read 134. A title that implies distinct objects is wrong; say so in the description, and narrow the range to one run to count what exists (which only works with the in-range idiom above).
+- **Say in the title what is counted.** Attempts are not items: a fork redelivered five times is five attempts and one owner. `Owner Fork Attempts`, not `Owners Forked`.
+- **Bar gauge vs bar chart.** Grafana's docs recommend the `barchart` panel for categorical data and describe `bargauge` as "a value against a min and max". We use `bargauge` anyway because it renders a plain PromQL instant result without transformations. The cost: bars scale against the largest value in the panel, so a panel with a single series always draws a full bar — use a `stat` for one value, never a one-bar gauge.
+- **No pie charts.** Similar slices are hard to compare; bars say the same thing more clearly.
+- **More than ~5 lines in a timeseries is a table.** Open-ended labels (`query_type`, `data_type`, error codes) can grow past that.
+- **Semantic colour on every categorical panel**, via `fieldConfig.overrides` `byName` + `fixedColor` — never palette order, which reassigns colours when a series appears or disappears:
+
+  | Class | Colour |
+  |---|---|
+  | Success | `dark-green` / `green` |
+  | Expected absence (`not_found`, `skipped`, `empty`) | `yellow` |
+  | Configuration or degraded (`invalid_*`, `permission_denied`, fallbacks, permanent errors) | `orange` |
+  | Real failure (`*_failed`, `*_error`, transient errors) | `red`; panics `dark-red` |
+  | Neutral split (document kinds, lanes) | `blue` / `purple`, fixed |
+
+- **A heatmap's cell value is a count, not the axis unit.** Format it as a plain number — formatting it in seconds made "3 owners" read as "3.60 s" — and say in the description how to read it: colour = how many fell in that box, not one colour per item. For a single run, the bar gauge of the same buckets beside it is what people can actually read.
+- **Anything measured from scrapes has the scrape interval as resolution.** A scan that finishes between two scrapes (a small Oracle database: 5 s, parallel owners) cannot be timed more precisely than that. Say the precision in the title — `Scan Duration (window, ±15 s)` — and keep the number. Do **not** replace small values with text through value mappings: it was tried, read as nonsense ("Objects Failed: < 30 s"), and a mapping added to a list shared between panels leaked into every stat on the board.
+- **Gauges sampled at scrape time miss bursts.** A peak stat over a gauge reads 0 for a pool that was saturated for five seconds between scrapes. Say so in the description.
+- **One question, one board.** The overview gives the verdict; the pipeline board is the drill-down for the same component. A panel that would be identical on both lives on one of them only — copies drift, because a fix lands on one and not the other (Grafana's own guidance warns against copying). The overview keeps the counts and the story; the pipeline keeps distributions, per-type breakdowns and unit cost.
+- **Every board opens with a short text panel** saying how to read it and what it cannot answer: that totals add up every run in the range, that count panels say *how many* and the line charts beside them say *when*, and which splits are impossible (e.g. no datasource label). A limit discovered in a description hover is a limit nobody discovers.
+- **Don't combine unrelated counters in one stat.** Two values that answer different questions get two stats, each with its own name.
+
+- **Panel ids are unique within a board.** Grafana uses the id for "View panel", direct links and editing; two panels sharing an id overwrite each other in those views. `box-overview` shipped with five duplicated ids (fixed); check with `jq '[.panels[].id] | group_by(.) | map(select(length > 1))'` after hand-editing a board.
+
+### Panel descriptions
+
+Descriptions are read in a hover by someone who does not know the code. Write them in plain English — no metric names, no internal function names — in three short parts, separated by blank lines (the field renders Markdown):
+
+1. **What it counts**, in one sentence a newcomer understands.
+2. **Normal / worry** — what a healthy value looks like and what a bad one means.
+3. **Next** — which panel or board to look at to go further.
+
+```
+**Errors the connector found but could not report.** When a table fails, the connector adds it to the job's error list — what the UI shows. This counts the ones that never got there.
+
+**Normal:** 0. Anything else means the job's error list is incomplete: the failures happened, nobody will see them.
+
+**Next:** the breakdown by reason beside it.
+```
+
+Configuration values a reader needs to judge a number (a pool ceiling, maxDeliver, a cooldown) go in the title or the description, with the setting that controls them — a reader should never have to open the chart's values to know whether 14 is a lot.
+
 ### Job-label conventions
 
 **The `job` label is not the pod's `app.kubernetes.io/name`.** No PodMonitor in `nx-application-helm/charts/applications/templates` sets `spec.jobLabel` (checked: all 28), and none set `podTargetLabels` or custom `relabelings`. Prometheus Operator therefore uses its default and sets:
@@ -190,6 +269,7 @@ Match on the **PodMonitor name suffix**, not the pod label. Current suffixes:
 | PostgreSQL | `-postgresql-connector-be-go`, `-postgresql-connector-be-go-content` |
 | Box | `-box-connector-be-go`, `-box-connector-be-go-content` |
 | SharePoint | `-sharepoint-connector-be-go`, `-sharepoint-connector-be-go-content` |
+| Oracle | `-oracle-connector-be-go`, `-oracle-connector-be-go-content` |
 | NFS | **none — no PodMonitor exists**, so NFS is not scraped at all (not even runtime metrics) |
 | Registration Service | `-registration-service` (note: no `-be-go`) |
 | Request Service | `-request-service` (note: no `-be-go`) |
@@ -251,7 +331,7 @@ Every non-root dashboard must include the root link. Use `${var:queryparam}` to 
 `applications-overview.json` is the exception: as the root it has an empty `links` array, and reaches components through the `fieldConfig.defaults.links` drill-down on each row's `Pods Up` stat.
 
 ### Metric naming
-Native Prometheus connectors emit `<connector>_connector_*` (e.g., `snowflake_connector_items_sent_total`). CIFS and Box use a per-subsystem shape instead — `cifs_scanner_*` / `cifs_augmenter_*` / `cifs_content_*`, and `box_scanner_*` / `box_augmenter_*` / `box_api_*` / `box_content_*` — which is the current convention for new work, because it lets a query be reused across connectors with a namespace swap. SharePoint is the last one still on the OTel meter and emits `graph_*`. Histograms use `_seconds` suffix and exponential buckets — **note that bucket ranges differ across connectors**, so latency panels are connector-specific (no shared library panel for histograms today).
+Native Prometheus connectors emit `<connector>_connector_*` (e.g., `snowflake_connector_items_sent_total`). Oracle uses `oracle_scanner_*` / `oracle_content_*`, and — like every database connector today (MySQL, PostgreSQL, Snowflake) — carries **no `datasource_id` label**, so its boards cannot split anything by datasource; only CIFS and Box can. CIFS and Box use a per-subsystem shape instead — `cifs_scanner_*` / `cifs_augmenter_*` / `cifs_content_*`, and `box_scanner_*` / `box_augmenter_*` / `box_api_*` / `box_content_*` — which is the current convention for new work, because it lets a query be reused across connectors with a namespace swap. SharePoint is the last one still on the OTel meter and emits `graph_*`. Histograms use `_seconds` suffix and exponential buckets — **note that bucket ranges differ across connectors**, so latency panels are connector-specific (no shared library panel for histograms today).
 
 Services differ from connectors here:
 - **Domain metrics are per-service and not prefixed by the service name automatically.** Request service names its own instruments `request_service_*`; registration service does not, and emits a bare `connector_registrations_total`. The `Namespace` field on `pipeline-lib-go/metrics.Config` sets the OTel *meter* name (instrumentation scope), **not** a Prometheus metric prefix — the exporter is created with a plain `prometheus.New()`. Do not assume a service prefix.

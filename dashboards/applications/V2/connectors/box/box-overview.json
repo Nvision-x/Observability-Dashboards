@@ -116,6 +116,26 @@
   },
   "panels": [
     {
+      "type": "text",
+      "title": "How to read this board",
+      "options": {
+        "mode": "markdown",
+        "content": "**Totals count only what happened inside the time range.** A wide range adds up every scan in it; narrow it to one scan to describe one Box tenant.\n\n**Bars and stats say _how many_. The line charts beside them say _when_.** A scan shorter than ~30 seconds can be invisible on a line chart and still be fully counted in the bars.\n\n**Splitting by datasource:** this board shows everything together; the Pipeline board has a datasource selector for the per-datasource view.\n\nHover the \u24d8 on any panel for what it counts, what is normal, and where to look next.",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        }
+      },
+      "id": 300,
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
       "type": "row",
       "id": 80,
       "title": "Totals in Window",
@@ -124,7 +144,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 5
       },
       "panels": [],
       "description": "Counters totalled over the selected range, not averaged as a rate. Box scales to zero: a scan that finishes inside one scrape interval moves the counter 0 to N entirely between scrapes, and rate() over it is exactly 0 \u2014 not a small number. Read this row first, then the backlog row to tell idle from stuck."
@@ -141,7 +161,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
@@ -161,10 +181,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "File entries seen in folder listings, before any filtering. The funnel's denominator."
+      "description": "**Files the scanner saw in Box folder listings, before any filtering.** This is the start of the file funnel: every file seen here should end in exactly one outcome (sent, already in trash, or failed).\n\n**Normal:** roughly the number of files in the scanned Box accounts, once per full scan in the range. An incremental scan only lists what changed, so it adds far less.\n\n**Next:** 'Items Sent' beside it, and 'Item Loss' to check the funnel adds up."
     },
     {
       "id": 82,
@@ -178,7 +198,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
@@ -198,10 +218,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[15s]) - last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "Files the scanner handed to the item sender. The only success path out of the scan."
+      "description": "**Files the scanner handed on for indexing.** This is the only success path out of the scan.\n\n**Normal:** close to Files Discovered, minus files already in Box's trash and any failures.\n\n**Next:** 'Items Failed (window)' in the Scanner row, and 'Scanner Items by Outcome' for the split."
     },
     {
       "id": 83,
@@ -215,7 +235,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
@@ -261,10 +281,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)) - (sum(max_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)) - (sum(sum_over_time(((last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "Discovered minus every terminal outcome. Should be zero: a non-zero value means an exit path in processFolder is uninstrumented, not that files were lost."
+      "description": "**Files seen minus files that reached any recorded ending (sent, in trash, or failed).** It checks the funnel against itself.\n\n**Normal:** 0. A non-zero value does NOT mean files were lost: it means the connector has a code path that ends a file without recording it, which is a connector bug to report.\n\n**Next:** 'Scanner Items by Outcome' to see which endings are being recorded."
     },
     {
       "id": 7,
@@ -278,11 +298,11 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "mappings": [
             {
@@ -323,10 +343,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(max_over_time(box_scanner_folders_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"skipped_collab\"}[$__range])) or vector(0)"
+          "expr": "sum(sum_over_time(((last_over_time(box_scanner_folders_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"skipped_collab\"}[15s]) - last_over_time(box_scanner_folders_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"skipped_collab\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folders_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"skipped_collab\"}[15s]) * 1)[$__range:15s])) or vector(0)"
         }
       ],
-      "description": "Folders the scanner walked past without forking. skipped_collab is the owner filter \u2014 a folder owned by another user, left for that user's own fork so it is enumerated exactly once. Expected to be non-zero on a shared tenant; it is here so 'forked' is never mistaken for 'all folders'."
+      "description": "**Folders the scanner deliberately did not open, because they belong to another Box user.** That folder is left for its owner's own scan so it is listed exactly once.\n\n**Normal:** above 0 on any tenant with shared folders. It is shown so that 'Folders Forked' is never mistaken for all the folders in Box.\n\n**Next:** 'Folders by Outcome' in the Scanner row."
     },
     {
       "id": 85,
@@ -340,7 +360,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
@@ -360,10 +380,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_scanner_folders_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"forked\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(box_scanner_folders_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"forked\"}[15s]) - last_over_time(box_scanner_folders_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"forked\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folders_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"forked\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "Subfolders published to NATS as box.folder. Every subfolder becomes its own message, so this is the number of traversal units the scan created \u2014 and it is NOT proportional to files: a deep tree of empty folders still produces messages here."
+      "description": "**Subfolders queued as their own unit of work.** Every subfolder becomes one queue message, so this is how many pieces of work the scan created.\n\n**Normal:** proportional to the number of folders, NOT files: a deep tree of empty folders still produces many messages here.\n\n**Next:** 'Folder Duration \u2014 mean / p95' to turn this count into time."
     },
     {
       "id": 86,
@@ -377,7 +397,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
@@ -397,10 +417,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "ContentFetchRequest deliveries resolved by the content pods, success and failure together."
+      "description": "**File downloads requested from the content pods, any outcome.** Content runs on its own pods, on demand, separately from scans.\n\n**Normal:** whatever the downstream classifier or a 'See content' request asked for; 0 when nothing requested files.\n\n**Next:** the Content row."
     },
     {
       "type": "row",
@@ -411,7 +431,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 5
+        "y": 10
       },
       "panels": [],
       "description": "Box's own failure mode, with no equivalent in a per-directory connector: the unit of fan-out is the user, so each skip costs one person's entire content while the rest of the scan still reports success. None of it shows up in the file funnel below \u2014 those files were never discovered."
@@ -428,7 +448,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 6
+        "y": 11
       },
       "fieldConfig": {
         "defaults": {
@@ -448,10 +468,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_scanner_users_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(box_scanner_users_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_users_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_users_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "GET /users, paged. The denominator."
+      "description": "**Box enterprise users listed at the start of a full scan.** In Box the unit of work is the user: each one gets their own scan of their files. Incremental scans do not list users, so they add nothing here.\n\n**Normal:** the number of users in the Box enterprise, once per full scan in the range.\n\n**Next:** 'Users Skipped' and 'Skip Rate' beside it."
     },
     {
       "id": 92,
@@ -465,7 +485,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 6
+        "y": 11
       },
       "fieldConfig": {
         "defaults": {
@@ -485,10 +505,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_scanner_users_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)) - (sum(max_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(box_scanner_users_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_users_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_users_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)) - (sum(sum_over_time(((last_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "Enumerated minus skipped: the users a box.fork was actually published for."
+      "description": "**Users listed minus users skipped: the users whose files were actually scanned.** It is a subtraction; nothing counts a successful user directly.\n\n**Normal:** close to Users Enumerated. Note it can read a little low: a user whose scan fails temporarily is counted as skipped on every failed attempt (up to 5), even if a later retry succeeds.\n\n**Next:** 'Users Skipped by Reason'."
     },
     {
       "id": 93,
@@ -502,7 +522,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 6
+        "y": 11
       },
       "fieldConfig": {
         "defaults": {
@@ -548,10 +568,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "Users whose content was not scanned at all, any reason. Counted once per user \u2014 the per-folder TOS path is deliberately excluded, since one TOS-blocked person has thousands of folders and would read as thousands of skipped users."
+      "description": "**Users whose files were not scanned at all, for any reason.** Counted once per user, not once per folder: a user blocked by Box's terms of service has thousands of folders and would otherwise look like thousands of skipped users.\n\n**Normal:** a few deactivated users is normal. Each skipped user is that person's entire content missing from a scan that still reports success.\n\n**Next:** 'Users Skipped by Reason' for why."
     },
     {
       "id": 94,
@@ -565,7 +585,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 6
+        "y": 11
       },
       "fieldConfig": {
         "defaults": {
@@ -585,38 +605,41 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * ((sum(max_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)) / clamp_min((sum(max_over_time(box_scanner_users_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)), 1))"
+          "expr": "100 * ((sum(sum_over_time(((last_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)) / clamp_min((sum(sum_over_time(((last_over_time(box_scanner_users_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_users_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_users_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)), 1))"
         }
       ],
-      "description": "Share of the enterprise whose content this scan did not cover."
+      "description": "**Share of the enterprise's users whose content this scan did not cover.**\n\n**Normal:** low single digits, mostly deactivated accounts. A sudden jump usually means a configuration problem such as lost impersonation rights.\n\n**Next:** 'Users Skipped by Reason'."
     },
     {
-      "id": 95,
-      "type": "timeseries",
-      "title": "Users Skipped by Reason (total in window)",
+      "type": "bargauge",
+      "title": "Users Skipped by Reason (window)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 10
-      },
+      "description": "**Why users were skipped, counted over the selected time range.** All six reasons are always reported, at 0 when nobody is skipped, so an empty chart means a clean scan, not missing data. Deactivated = the account is inactive in Box; deactivated mid-scan = it was deactivated while the scan ran; not found = deleted during the scan; terms of service = the user has not accepted Box's terms; permission denied = the service account can no longer act as that user; traverse failed = a genuine error.\n\n**Normal:** only deactivated and terms-of-service, which are expected. Permission denied is broken configuration. Traverse failed is the only connector failure, and it is counted again on each retry (up to 5), so it can overstate the number of distinct users.\n\n**Next:** 'NATS \u2014 Redelivered' for the retries; the Pipeline board breaks this down per datasource.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": {
-            "stacking": {
-              "mode": "normal"
-            },
-            "fillOpacity": 70,
-            "lineWidth": 0
-          },
+          "decimals": 0,
+          "min": 0,
           "color": {
-            "mode": "palette-classic"
-          }
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
         },
         "overrides": [
           {
@@ -711,14 +734,35 @@
           }
         ]
       },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (reason) (max_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))",
+          "expr": "(sum by (reason) (sum_over_time(((last_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))) > 0",
           "legendFormat": "{{reason}}"
         }
       ],
-      "description": "All six reasons are exported at 0 even when nobody is skipped (InitUserSkipReasons), so an empty stack means the scan ran clean rather than that the series is missing. Only traverse_failed is a connector failure; permission_denied is broken config, and the other four are expected absence."
+      "id": 301,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      }
     },
     {
       "id": 96,
@@ -732,7 +776,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 15
       },
       "fieldConfig": {
         "defaults": {
@@ -751,7 +795,7 @@
           "legendFormat": "skipped"
         }
       ],
-      "description": "Only legible under sustained load. With a burst that finishes inside a scrape interval both lines read 0 \u2014 use the stats above for that case."
+      "description": "**When users were listed and skipped**, as a rate.\n\n**Normal:** only readable under sustained load. A burst that finishes in under ~30 seconds reads 0 on both lines \u2014 the counts in the stats above still include it.\n\n**Next:** the stats above for how many."
     },
     {
       "type": "row",
@@ -762,7 +806,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 23
       },
       "panels": [],
       "description": "In: consumer backlog, in-flight and redelivered, plus the replicas that caused. In the middle: discovered \u2192 failed \u2192 sent, with per-folder latency and per-user admission saturation. KEDA signals against their thresholds last."
@@ -779,11 +823,11 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 19
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "mappings": [
             {
@@ -906,20 +950,20 @@
         {
           "refId": "A",
           "legendFormat": "incremental",
-          "expr": "sum(max_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"incremental\", reason=\"cursor_fresh\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"incremental\", reason=\"cursor_fresh\"}[15s]) - last_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"incremental\", reason=\"cursor_fresh\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"incremental\", reason=\"cursor_fresh\"}[15s]) * 1)[$__range:15s]))"
         },
         {
           "refId": "B",
           "legendFormat": "full \u00b7 stale cursor",
-          "expr": "sum(max_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"full\", reason=\"cursor_stale\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"full\", reason=\"cursor_stale\"}[15s]) - last_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"full\", reason=\"cursor_stale\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"full\", reason=\"cursor_stale\"}[15s]) * 1)[$__range:15s]))"
         },
         {
           "refId": "C",
           "legendFormat": "full \u00b7 no cursor",
-          "expr": "sum(max_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"full\", reason=\"no_cursor\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"full\", reason=\"no_cursor\"}[15s]) - last_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"full\", reason=\"no_cursor\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", mode=\"full\", reason=\"no_cursor\"}[15s]) * 1)[$__range:15s]))"
         }
       ],
-      "description": "Which mode each scan ran in, and why. A tile at 0 in grey means that path did not happen \u2014 it stays on screen on purpose, because 'did not happen' and 'no data' are different answers. green = incremental ran; yellow = the cursor aged past BOX_INCREMENTAL_MAX_AGE_HOURS so a full scan re-baselined; red = no usable cursor at all, which sustained means incremental is broken rather than idle."
+      "description": "**Which mode each scan ran in, and why.** Incremental = only what changed since the last scan, read from Box's event stream. Full because the cursor is stale = the last full scan is older than BOX_INCREMENTAL_MAX_AGE_HOURS (168 h by default), so the scan re-baselines. Full because there is no cursor = there is nothing to read changes from. A tile at 0 means that path did not happen; it stays on screen because 'did not happen' and 'no data' are different answers.\n\n**Normal:** incremental most of the time, with an occasional stale-cursor full scan. 'No cursor' sustained means incremental mode is broken, not idle \u2014 that once disabled incremental scans for good while every scan still reported success.\n\n**Next:** 'Scan Mode Decisions' and 'Incremental Bailouts' on the Pipeline board."
     },
     {
       "id": 121,
@@ -933,11 +977,11 @@
         "h": 4,
         "w": 3,
         "x": 6,
-        "y": 19
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         }
       },
@@ -955,7 +999,8 @@
           "refId": "A",
           "expr": "max(nats_consumer_num_pending{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})"
         }
-      ]
+      ],
+      "description": "**Work waiting in the scanner's queue** (stream JE_BOX): scan requests, users and folders not picked up yet. This is 'how far behind is it?', and it is readable even while the connector is asleep.\n\n**Normal:** 0 between scans. Growing with no pods running means the connector is not waking up.\n\n**Next:** 'NATS \u2014 Scanner Consumer Backlog' below for the shape over time."
     },
     {
       "id": 122,
@@ -969,11 +1014,11 @@
         "h": 4,
         "w": 3,
         "x": 9,
-        "y": 19
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         }
       },
@@ -991,7 +1036,8 @@
           "refId": "A",
           "expr": "max(nats_consumer_num_ack_pending{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})"
         }
-      ]
+      ],
+      "description": "**Work handed to a pod and not finished yet.**\n\n**Normal:** a few while a scan runs, 0 otherwise. Stuck high while Items Sent stays at 0 is the signature of a hung connector.\n\n**Next:** 'Pods Up' and 'Restarts (1h)'."
     },
     {
       "id": 123,
@@ -1005,11 +1051,11 @@
         "h": 4,
         "w": 3,
         "x": 12,
-        "y": 19
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
@@ -1054,7 +1100,7 @@
           "expr": "max(nats_consumer_num_redelivered{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})"
         }
       ],
-      "description": "A connector that fails and retries in a loop shows up here and nowhere else."
+      "description": "**Work being retried after a failure.** A message is retried up to 5 times (JOBENGINE_MAX_DELIVER) before it is moved to the dead-letter queue.\n\n**Normal:** 0. A connector that fails and retries in a loop shows up here and nowhere else.\n\n**Next:** 'Slot Deferrals' (a saturated user also spends retries) and the Dead Letter Queue row."
     },
     {
       "id": 124,
@@ -1068,11 +1114,11 @@
         "h": 4,
         "w": 3,
         "x": 15,
-        "y": 19
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         }
       },
@@ -1090,7 +1136,8 @@
           "refId": "A",
           "expr": "max(kube_horizontalpodautoscaler_status_current_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*box-connector-be-go\"})"
         }
-      ]
+      ],
+      "description": "**Scanner pods running now**, as the autoscaler reports them.\n\n**Normal:** 0 between scans, 1\u20133 during one.\n\n**Next:** 'KEDA \u2014 Replicas' below for the history."
     },
     {
       "id": 125,
@@ -1104,11 +1151,11 @@
         "h": 4,
         "w": 3,
         "x": 18,
-        "y": 19
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         }
       },
@@ -1127,7 +1174,7 @@
           "expr": "max(kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*box-connector-be-go\"})"
         }
       ],
-      "description": "The KEDA ceiling as the HPA reports it. The value comes from the chart (autoscaling.maxReplicas) and differs per environment, so read it off the panel rather than assuming one. Desired-equals-max is not by itself a sign of trouble \u2014 read it together with the backlog: at a low ceiling it is reached routinely."
+      "description": "**The most scanner pods the autoscaler may start** (chart setting autoscaling.maxReplicas, 3 by default, and it can differ per environment).\n\n**Normal:** read it against Replicas and the backlog: at the ceiling with a growing backlog means the scanner cannot go faster. Being at the ceiling with a draining backlog is routine with a low ceiling, not trouble.\n\n**Next:** 'NATS \u2014 Scanner Backlog'."
     },
     {
       "id": 126,
@@ -1141,11 +1188,11 @@
         "h": 4,
         "w": 3,
         "x": 21,
-        "y": 19
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 2
         }
       },
@@ -1164,7 +1211,7 @@
           "expr": "clamp_min(max(deriv(nats_consumer_num_pending{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"}[2m])), 0)"
         }
       ],
-      "description": "The trend-based trigger's own signal: messages per second the backlog is growing by."
+      "description": "**How fast the scanner's backlog is growing**, in messages per second. This is exactly what one of the autoscaler's rules looks at.\n\n**Normal:** 0. Above 0.5 the autoscaler adds pods.\n\n**Next:** 'KEDA \u2014 trend-based signal vs threshold' below."
     },
     {
       "id": 127,
@@ -1178,7 +1225,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 23
+        "y": 28
       },
       "fieldConfig": {
         "defaults": {
@@ -1252,7 +1299,7 @@
           "legendFormat": "redelivered"
         }
       ],
-      "description": "Stream JE_BOX, durable box-scanner-v1. Sustained ack_pending with items_sent at zero is the signature of a stuck connector."
+      "description": "**The scanner's queue over time.** Pending = waiting, ack pending = being worked on, redelivered = being retried. Each message is a scan request, a user or a folder, so a small number can hide a lot of work.\n\n**Normal:** spikes at the start of a scan that drain to 0. Ack pending held up while Items Sent stays at 0 means the connector is stuck.\n\n**Next:** 'Scanner Throughput' to compare with the work actually done."
     },
     {
       "id": 128,
@@ -1266,7 +1313,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 23
+        "y": 28
       },
       "fieldConfig": {
         "defaults": {
@@ -1290,7 +1337,7 @@
           "legendFormat": "max"
         }
       ],
-      "description": "cooldownPeriod 900s and scaleDown stabilizationWindowSeconds 600s. 'It scaled ten minutes ago and is still the same' is config, not a bug."
+      "description": "**Scanner pods running, pods wanted, and the ceiling.**\n\n**Normal:** pods stay up ~15 minutes after the work ends (cooldown 900s, scale-down window 600s). 'It scaled ten minutes ago and is still the same' is configuration, not a bug.\n\n**Next:** the three KEDA signal panels below show why it scaled."
     },
     {
       "id": 101,
@@ -1304,11 +1351,11 @@
         "h": 4,
         "w": 3,
         "x": 0,
-        "y": 31
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
@@ -1353,7 +1400,7 @@
           "expr": "(sum(up{job=~\".*box-connector-be-go\", namespace=\"$namespace\", pod=~\"$pod\"})) or vector(0)"
         }
       ],
-      "description": "With minReplicaCount 0 the connector sleeps when there is no work, so 0 pods is the normal resting state, not an outage. That is why 0 is neutral rather than red \u2014 \"should be running and is not\" is 0 pods WITH backlog, which the backlog panels in this same row show."
+      "description": "**Scanner pods answering right now.**\n\n**Normal:** 0 when idle \u2014 the scanner scales to zero when there is no work, so 0 is the normal resting state, not an outage. 'Should be running and is not' is 0 pods WITH a backlog, which the queue panels in this row show.\n\n**Next:** 'NATS \u2014 Scanner Backlog'."
     },
     {
       "id": 102,
@@ -1367,11 +1414,11 @@
         "h": 4,
         "w": 3,
         "x": 3,
-        "y": 31
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
@@ -1415,7 +1462,8 @@
           "refId": "A",
           "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", container=\"box-connector-be-go\"}[1h]))"
         }
-      ]
+      ],
+      "description": "**Scanner container restarts in the last hour.**\n\n**Normal:** 0. Restarts usually mean the pod ran out of memory (limit 256 MiB) or failed its health check.\n\n**Next:** the Runtime board, memory panels."
     },
     {
       "id": 103,
@@ -1429,11 +1477,11 @@
         "h": 4,
         "w": 3,
         "x": 6,
-        "y": 31
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         }
       },
@@ -1449,10 +1497,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(max_over_time(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))"
         }
       ],
-      "description": "Rate, not a total: this answers how fast it is going right now. The count for the window is in the Totals row. Count for the dashboard's time range. A rate would read zero here: this connector works in bursts, so by the time anyone looks the burst is over."
+      "description": "**Files the scanner saw, counted over the selected time range.** Same number as in Totals, repeated so this row reads on its own.\n\n**Normal:** see Totals. Unlike a rate, this does not drop to 0 after a short scan ends.\n\n**Next:** 'Scanner Throughput' for when it happened."
     },
     {
       "id": 105,
@@ -1466,11 +1514,11 @@
         "h": 4,
         "w": 3,
         "x": 9,
-        "y": 31
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
@@ -1512,10 +1560,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(max_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=~\"build_failed|upsert_failed\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=~\"build_failed|upsert_failed\"}[15s]) - last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=~\"build_failed|upsert_failed\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=~\"build_failed|upsert_failed\"}[15s]) * 1)[$__range:15s]))"
         }
       ],
-      "description": "Total items the scanner discovered but could not deliver: build_failed and upsert_failed added together. This is the headline loss count. For WHICH of the two it was, see 'Scanner Items by Outcome' \u2014 build_failed is bad data, upsert_failed is the sender or NATS."
+      "description": "**Files the scanner found but could not hand on for indexing**: bad file data plus failures to send, added together. This is the headline loss count.\n\n**Normal:** 0. Which of the two it was matters: bad data is a problem with what Box returned; a failed send is the sender or the message queue.\n\n**Next:** 'Scanner Items by Outcome' for the split."
     },
     {
       "id": 104,
@@ -1529,11 +1577,11 @@
         "h": 4,
         "w": 3,
         "x": 12,
-        "y": 31
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         }
       },
@@ -1549,10 +1597,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(max_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[15s]) - last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[15s]) * 1)[$__range:15s]))"
         }
       ],
-      "description": "Rate, not a total: this answers how fast it is going right now. The count for the window is in the Totals row. Count for the dashboard's time range. A rate would read zero here: this connector works in bursts, so by the time anyone looks the burst is over."
+      "description": "**Files handed on for indexing, counted over the selected time range.** Same number as in Totals.\n\n**Normal:** close to Files Discovered (window). Unlike a rate, this does not drop to 0 after a short scan ends.\n\n**Next:** 'Scanner Throughput' for when it happened."
     },
     {
       "id": 106,
@@ -1566,7 +1614,7 @@
         "h": 4,
         "w": 6,
         "x": 15,
-        "y": 31
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -1588,15 +1636,15 @@
         {
           "refId": "A",
           "legendFormat": "mean",
-          "expr": "sum(max_over_time(box_scanner_folder_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) / clamp_min(sum(max_over_time(box_scanner_folder_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])), 1)"
+          "expr": "sum(sum_over_time(((last_over_time(box_scanner_folder_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_folder_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folder_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) / clamp_min(sum(sum_over_time(((last_over_time(box_scanner_folder_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_folder_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folder_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])), 1)"
         },
         {
           "refId": "B",
           "legendFormat": "p95",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))"
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))"
         }
       ],
-      "description": "Two different questions about the same histogram. The mean is total time divided by folder count, and it is the one that multiplies: mean x folder count estimates a larger tenant. The p95 is how bad it gets for the slowest 5%, and it does not multiply. The gap between them is the tail."
+      "description": "**How long one folder takes: listing it in Box plus queuing and sending what it contains.** This is the connector's real unit of work. The mean is the typical folder \u2014 multiply it by a folder count to estimate a bigger tenant. The p95 is how slow the slowest 5% were, and it does not multiply.\n\n**Normal:** around half a second to one second, most of it Box's own response time (measured: mean 0.62 s over 33,000 folders). A p95 far above the mean means a few very large or slow folders.\n\n**Next:** 'Folder Duration \u2014 p50 / p95 / p99' below, and 'API Call Duration p95 by Endpoint' to see whether Box is the slow part."
     },
     {
       "id": 108,
@@ -1610,11 +1658,11 @@
         "h": 4,
         "w": 3,
         "x": 21,
-        "y": 31
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         }
       },
@@ -1633,7 +1681,7 @@
           "expr": "sum(box_scanner_user_slots_held{namespace=\"$namespace\", pod=~\"$pod\"})"
         }
       ],
-      "description": "Cross-pod per-user admission slots held. Read against the deferral counter in the API row: slots at the cap with deferrals rising means BOX_USER_MAX_CONCURRENCY is what binds."
+      "description": "**Per-user work slots this connector holds right now, across all scanner pods.** Box limits traffic per user, so the connector lets at most BOX_USER_MAX_CONCURRENCY (5 by default) folders of the same user run at once, shared by every pod.\n\n**Normal:** 0 when idle. Slots near the cap with deferrals rising means that cap is what limits speed.\n\n**Next:** 'Per-user Contention' below and 'Slot Deferrals' in the Box API row."
     },
     {
       "id": 109,
@@ -1647,7 +1695,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 35
+        "y": 40
       },
       "fieldConfig": {
         "defaults": {
@@ -1946,7 +1994,421 @@
           "legendFormat": "failed"
         }
       ],
-      "description": "Three near-parallel lines; the question is the gap between them. The pipeline board graphs that difference explicitly, which is the only way funnel loss is actually visible."
+      "description": "**How fast files are seen, sent and failed**, as a rate. Three near-parallel lines; the question is the gap between them.\n\n**Normal:** sent tracks discovered and failed stays at 0. A scan shorter than ~30 seconds may not show here at all \u2014 the stats above still count it.\n\n**Next:** the Pipeline board graphs the gap explicitly ('Item Loss')."
+    },
+    {
+      "id": 111,
+      "type": "timeseries",
+      "title": "Folder Duration \u2014 p50 / p95 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (sum_over_time(((last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (sum_over_time(((last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "description": "**Folder time as percentiles, computed over the whole selected time range.** One folder = one listing plus what it queues and sends.\n\n**Normal:** p50 and p95 under about a second. The latest value is the one to read; it uses everything in the range, so it works for short scans too.\n\n**Next:** 'Folder Duration \u2014 mean / p95' for the mean, which is the number to multiply."
+    },
+    {
+      "id": 114,
+      "type": "timeseries",
+      "title": "Scan Durations \u2014 three different units",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_fanout_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_fanout_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_fanout_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "fan-out p95"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "incremental p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_root_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_root_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_root_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "root folder p95"
+        }
+      ],
+      "description": "**Three different timings, drawn together for scale only \u2014 they are not comparable.** Fan-out = logging in, listing all users and queuing one scan per user; it does NOT include scanning their folders. Incremental = one whole incremental scan, including its enrichment. Root folder = one user's top-level folder only, not their whole tree.\n\n**Normal:** fan-out in seconds, root folder under a few seconds, incremental from seconds to minutes. 'How long did the whole scan take' cannot be answered by the connector: a full scan is many messages on many pods with no single owner.\n\n**Next:** the Pipeline board's Cost & Prediction row."
+    },
+    {
+      "type": "bargauge",
+      "title": "Scanner Items by Outcome (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**What happened to every file the scanner handled**, as counts for the whole range \u2014 same colours as the line chart beside it.\n\n**Normal:** almost everything green (sent). Yellow is expected absence (the file was already in the trash or gone); red needs a look.\n\n**Next:** the line chart beside it shows when; the Pipeline board splits it by datasource.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "forked"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upserted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "discovered"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_inactive"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent_without_acl"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "missing"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "miss"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deleted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_collab"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "getfile_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "build_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upsert_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "publish_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "delete_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (outcome) (sum_over_time(((last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "id": 302,
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 48
+      }
     },
     {
       "id": 110,
@@ -1958,9 +2420,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 35
+        "w": 6,
+        "x": 6,
+        "y": 48
       },
       "fieldConfig": {
         "defaults": {
@@ -2256,45 +2718,345 @@
           "legendFormat": "{{outcome}}"
         }
       ],
-      "description": "skipped_inactive is the scanner's half of Files Gone: the file was already in Box's trash when we listed its parent. A different moment from the incremental path's deleted outcome \u2014 see the Files Gone row, and do not add them."
+      "description": "**When files ended in each outcome**, as a rate. 'Skipped inactive' means the file was already in Box's trash when its folder was listed \u2014 the scanner's part of Files Gone.\n\n**Normal:** mostly sent. Do not add 'skipped inactive' to the event stream's deletions: they are different moments for possibly the same file.\n\n**Next:** the Data Quality \u2014 Files Gone row."
     },
     {
-      "id": 111,
-      "type": "timeseries",
-      "title": "Folder Duration \u2014 p50 / p95 / p99",
+      "type": "bargauge",
+      "title": "Folders by Outcome (window)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 35
-      },
+      "description": "**What happened to every folder the scanner visited**, as counts for the whole range.\n\n**Normal:** mostly forked (its subfolders were queued) and sent. A publish failure loses the whole subtree below that folder.\n\n**Next:** the line chart beside it shows when.",
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "forked"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upserted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "discovered"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_inactive"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent_without_acl"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "missing"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "miss"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deleted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_collab"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "getfile_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "build_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upsert_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "publish_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "delete_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         }
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.50, sum by (le) (max_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
-          "legendFormat": "p50"
-        },
-        {
-          "refId": "B",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
-          "legendFormat": "p95"
-        },
-        {
-          "refId": "C",
-          "expr": "histogram_quantile(0.99, sum by (le) (max_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
-          "legendFormat": "p99"
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (outcome) (sum_over_time(((last_over_time(box_scanner_folders_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_folders_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folders_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "{{outcome}}"
         }
       ],
-      "description": "One BoxFolderWork message: one folder listing plus the publishes and upserts it produces. This is the connector's real unit of work \u2014 multiply its mean by a folder count to estimate a larger tenant."
+      "id": 303,
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 48
+      }
     },
     {
       "id": 112,
@@ -2306,9 +3068,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 43
+        "w": 6,
+        "x": 18,
+        "y": 48
       },
       "fieldConfig": {
         "defaults": {
@@ -2604,7 +3366,7 @@
           "legendFormat": "{{outcome}}"
         }
       ],
-      "description": "Every subfolder is forked as its own message. skipped_collab is the owner filter: a folder owned by another user, left for that user's own fork so it is enumerated exactly once."
+      "description": "**When subfolders were queued, skipped or failed to queue**, as a rate. Every subfolder becomes its own message; 'skipped collab' is a folder owned by another user, left for that user's own scan.\n\n**Normal:** forked and skipped collab only. 'Publish failed' is the worst silent failure: until that message is retried, the folder's whole subtree is not scanned.\n\n**Next:** 'Folders Forked (total)' and 'Folders Skipped (total)' for the counts."
     },
     {
       "id": 113,
@@ -2616,9 +3378,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 43
+        "w": 6,
+        "x": 0,
+        "y": 56
       },
       "fieldConfig": {
         "defaults": {
@@ -2679,45 +3441,7 @@
           "legendFormat": "slot requeues /s"
         }
       ],
-      "description": "Where the scanner throttles itself. Box rate-limits per impersonated user, so the connector holds a fixed number of slots per user shared across every pod. A folder that finds no free slot waits, then is RE-PUBLISHED with its delivery count reset \u2014 'requeues' is that path and is the normal sign of contention. 'deferrals' is the fallback once a folder exhausts BOX_USER_SLOT_MAX_REQUEUE: it NAKs, spends a delivery, and is the last step before the SDK discards the folder and its whole subtree. Requeues climbing with deferrals at zero is healthy; deferrals above zero is not."
-    },
-    {
-      "id": 114,
-      "type": "timeseries",
-      "title": "Scan Durations \u2014 three different units",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 43
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_scanner_fanout_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
-          "legendFormat": "fan-out p95"
-        },
-        {
-          "refId": "B",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
-          "legendFormat": "incremental p95"
-        },
-        {
-          "refId": "C",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_scanner_root_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
-          "legendFormat": "root folder p95"
-        }
-      ],
-      "description": "Three genuinely different measurements, plotted together for scale only \u2014 they are not comparable. fan-out is authenticate plus paged GET /users plus publishing one box.fork per user, and EXCLUDES the traversal. incremental is a whole run including its inline augment. root_folder is one BoxFork: a user's root level only, not their tree. 'How long did the scan take end to end' is not answerable from the connector at all \u2014 a scan is a fan-out of messages with no owner."
+      "description": "**Where the scanner holds itself back.** Box limits traffic per user, so each user gets a fixed number of slots shared by all pods. A folder that finds no free slot waits (BOX_USER_SLOT_WAIT_SEC, 10 s), then is re-queued as a fresh message \u2014 'requeues', the normal sign of contention. After BOX_USER_SLOT_MAX_REQUEUE (50) re-queues it is instead put back for retry \u2014 a 'deferral' \u2014 which spends one of its 5 attempts.\n\n**Normal:** requeues climbing with deferrals at 0 is healthy. Deferrals above 0 is the last step before a folder and everything below it is thrown away.\n\n**Next:** 'Slot Deferrals (window)' and the Dead Letter Queue row."
     },
     {
       "id": 129,
@@ -2729,9 +3453,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 51
+        "w": 6,
+        "x": 6,
+        "y": 56
       },
       "fieldConfig": {
         "defaults": {
@@ -2763,7 +3487,7 @@
           "legendFormat": "ack pending"
         }
       ],
-      "description": "replicas = ceil(ack_pending / threshold), with the threshold set by the ScaledObject. The red line is that threshold as configured in this environment; crossing it is what asks for another pod."
+      "description": "**One autoscaler rule: work in progress on the scanner queue, against its threshold** (red line, 1000). Pods wanted = in-progress messages divided by the threshold, rounded up.\n\n**Normal:** far below the line.\n\n**Next:** 'KEDA \u2014 Replicas' above."
     },
     {
       "id": 130,
@@ -2775,9 +3499,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 51
+        "w": 6,
+        "x": 12,
+        "y": 56
       },
       "fieldConfig": {
         "defaults": {
@@ -2809,7 +3533,7 @@
           "legendFormat": "backlog slope"
         }
       ],
-      "description": "Threshold 0.5, activation 0.1. Positive slope means the backlog is growing."
+      "description": "**Another autoscaler rule: is the queue growing?** Above 0.5 messages per second it adds pods; it becomes active at 0.1.\n\n**Normal:** 0 most of the time, short positive bumps at the start of a scan.\n\n**Next:** 'NATS \u2014 Backlog Slope (2m)'."
     },
     {
       "id": 131,
@@ -2821,9 +3545,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 51
+        "w": 6,
+        "x": 18,
+        "y": 56
       },
       "fieldConfig": {
         "defaults": {
@@ -2855,7 +3579,7 @@
           "legendFormat": "pending"
         }
       ],
-      "description": "The trigger that wakes the pod from zero: its activation threshold is 0, so a single pending message is enough. The red line is the scale threshold as configured here. The fourth trigger, pipeline-full, is NOT rendered in dev \u2014 pipelineFull.capacity is empty in the chart and the environment does not override it \u2014 so it is deliberately absent rather than drawn as a flat panel."
+      "description": "**The rule that wakes the scanner from zero:** a single waiting message is enough. The red line is the scale threshold (1000). A fourth rule, 'pipeline full', is not configured in this chart (its capacity is empty), so it is deliberately not drawn.\n\n**Normal:** spikes when a scan is requested that drain to 0. Pending above 0 with no pods running for more than a minute or two means the wake-up is not working.\n\n**Next:** 'Pods Up'."
     },
     {
       "type": "row",
@@ -2866,7 +3590,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 59
+        "y": 64
       },
       "panels": [],
       "description": "In an API connector the scarce resource is Box's rate limit: roughly 16.67 req/s for the whole app, shared across every pod. None of these series carries a tenant label \u2014 the HTTP client has no datasource_id in scope \u2014 so this row cannot be filtered by datasource. Attribution lives in the scanner funnel instead."
@@ -2883,11 +3607,11 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 60
+        "y": 65
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         }
       },
@@ -2903,10 +3627,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(max_over_time(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))"
         }
       ],
-      "description": "HTTP attempts, not logical calls: doJSON retries up to BOX_MAX_RETRIES, so one GetFile can be four requests. Calls rising faster than items means we are retrying."
+      "description": "**Requests sent to the Box API, counted over the selected time range \u2014 attempts, not logical calls.** A failed request is retried up to BOX_MAX_RETRIES (3), so one file lookup can be four requests. Includes both scanner and content pods.\n\n**Normal:** roughly one request per folder page plus one per enriched file. Requests growing faster than files means the connector is retrying. Box allows about 16.7 requests per second for the whole app, shared across all pods.\n\n**Next:** 'API Calls by Endpoint (window)' for where they went."
     },
     {
       "id": 142,
@@ -2920,7 +3644,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 60
+        "y": 65
       },
       "fieldConfig": {
         "defaults": {
@@ -2943,7 +3667,7 @@
           "expr": "histogram_quantile(0.95, sum by (le) (rate(box_api_rate_limiter_wait_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))"
         }
       ],
-      "description": "The LEADING saturation signal: time spent waiting on our own token bucket before a request goes out. Lowering BOX_RATE_LIMIT_PER_SEC must move this first \u2014 if it does not, the signal is not wired."
+      "description": "**How long requests waited on the connector's own speed limit before going out** (95th percentile, last 5 minutes). This is the early warning: the connector is holding itself back before Box has to.\n\n**Normal:** near 0. Rising means pods are hitting BOX_RATE_LIMIT_PER_SEC (8 per pod); lowering that setting must move this first \u2014 if it does not, the signal is broken.\n\n**Next:** 'Back-pressure \u2014 ours vs Box's'."
     },
     {
       "id": 143,
@@ -2957,11 +3681,11 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 60
+        "y": 65
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
@@ -3003,10 +3727,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_api_rate_limit_hits_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))) or vector(0)"
+          "expr": "(sum(sum_over_time(((last_over_time(box_api_rate_limit_hits_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_api_rate_limit_hits_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_api_rate_limit_hits_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))) or vector(0)"
         }
       ],
-      "description": "The LAGGING half: Box has already refused us. Known blind spot \u2014 only doJSON counts here, so a 429 on the content download path (GetFileContent, probeGet) is invisible on this series today."
+      "description": "**Times Box refused a request for going too fast (HTTP 429), over the selected time range.** This is the late signal: Box has already said no. Each one is retried after the wait Box asks for.\n\n**Normal:** 0. Known blind spot: 429s on the file download path used by content pods are not counted here, so this is scanner and enrichment traffic only.\n\n**Next:** 'API Calls by Status' and 'Limiter Wait p95'."
     },
     {
       "id": 144,
@@ -3017,14 +3741,14 @@
         "uid": "${datasource}"
       },
       "gridPos": {
-        "x": 18,
-        "y": 60,
+        "h": 4,
         "w": 3,
-        "h": 4
+        "x": 18,
+        "y": 65
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         }
       },
@@ -3040,10 +3764,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(max_over_time(box_scanner_user_slot_deferrals_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(box_scanner_user_slot_deferrals_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_user_slot_deferrals_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_user_slot_deferrals_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))"
         }
       ],
-      "description": "Folders that exhausted BOX_USER_SLOT_MAX_REQUEUE and fell back to a NAK. Each one spends a delivery, and past JOBENGINE_MAX_DELIVER the SDK discards the folder AND its subtree. Anything above zero means the requeue bound is too low for this tenant."
+      "description": "**Scan messages put back for retry because their user had no free slot, over the selected time range.** For a folder this only happens after it has already been re-queued BOX_USER_SLOT_MAX_REQUEUE (50) times; a user's first top-level scan has no re-queue path and is put back straight after waiting. Each one spends one of the message's 5 attempts (JOBENGINE_MAX_DELIVER), and past that the folder and everything below it is thrown away.\n\n**Normal:** 0. Anything above zero means the per-user limits are too tight for this tenant.\n\n**Next:** 'NATS \u2014 Redelivered' and the Dead Letter Queue row."
     },
     {
       "id": 206,
@@ -3054,14 +3778,14 @@
         "uid": "${datasource}"
       },
       "gridPos": {
-        "x": 21,
-        "y": 60,
+        "h": 4,
         "w": 3,
-        "h": 4
+        "x": 21,
+        "y": 65
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         }
       },
@@ -3077,44 +3801,47 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(max_over_time(box_scanner_user_slot_requeues_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(box_scanner_user_slot_requeues_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_user_slot_requeues_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_user_slot_requeues_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))"
         }
       ],
-      "description": "Folders re-published because their user was saturated. This is back-pressure working: a re-publish resets the delivery count, so waiting never walks a folder toward the DLQ. Non-zero is normal under load."
+      "description": "**Folders re-queued as a fresh message because their user had no free slot, over the selected time range.** This is back-pressure working: a fresh message starts with a full set of attempts, so waiting never pushes a folder toward being thrown away.\n\n**Normal:** above 0 under load is normal. Worry only if 'Slot Deferrals' beside it also rises.\n\n**Next:** 'Per-user Contention' in the Scanner row."
     },
     {
-      "id": 145,
-      "type": "timeseries",
-      "title": "API Calls by Endpoint (rate, 5m)",
+      "type": "bargauge",
+      "title": "API Calls by Status (window)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 64
-      },
+      "description": "**Box API responses by HTTP status**, as counts for the whole range \u2014 same colours as the line chart beside it.\n\n**Normal:** nearly all 200. 404 is expected (an item removed between listing and reading); 429 means Box is rate-limiting us; 4xx/5xx need a look.\n\n**Next:** 'Back-pressure \u2014 ours vs Box's' below for rate limiting.",
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps",
-          "custom": {
-            "stacking": {
-              "mode": "normal"
-            },
-            "fillOpacity": 70,
-            "lineWidth": 0
-          },
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
           "color": {
-            "mode": "palette-classic"
-          }
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
         },
         "overrides": [
           {
             "matcher": {
               "id": "byName",
-              "options": "folder_items"
+              "options": "200"
             },
             "properties": [
               {
@@ -3129,14 +3856,14 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "users"
+              "options": "204"
             },
             "properties": [
               {
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "blue"
+                  "fixedColor": "dark-green"
                 }
               }
             ]
@@ -3144,7 +3871,22 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "token"
+              "options": "304"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "404"
             },
             "properties": [
               {
@@ -3159,22 +3901,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "events_cursor"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "red"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "file"
+              "options": "429"
             },
             "properties": [
               {
@@ -3189,28 +3916,128 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "file_content"
+              "options": "400"
             },
             "properties": [
               {
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "dark-purple"
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "401"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "403"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "500"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "502"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "503"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
                 }
               }
             ]
           }
         ]
       },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (endpoint) (rate(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
-          "legendFormat": "{{endpoint}}"
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (status) (sum_over_time(((last_over_time(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "{{status}}"
         }
       ],
-      "description": "Which endpoint the scan is spending its call budget on right now; folder_items should dominate during a scan. For the totals this scan actually cost, read the table \u2014 this one is shape over time. The four /events endpoints are kept apart on purpose: the cursor read is one or two pages, the admin-log backfill runs up to 200 pages per refresh, and the per-user pull runs once per user."
+      "id": 304,
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 69
+      }
     },
     {
       "id": 146,
@@ -3222,9 +4049,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 64
+        "w": 6,
+        "x": 6,
+        "y": 69
       },
       "fieldConfig": {
         "defaults": {
@@ -3415,7 +4242,177 @@
           "legendFormat": "{{status}}"
         }
       ],
-      "description": "transport_error is a request that never got a response \u2014 connection reset, timeout, DNS. Deliberately distinct from any HTTP code, so 'Box refused us' and 'we never reached Box' are not the same bucket."
+      "description": "**Box API responses by status code**, as a rate. 'transport_error' is a request that never got an answer (connection reset, timeout, DNS), kept apart so 'Box refused us' and 'we never reached Box' are not the same thing.\n\n**Normal:** almost all 200. 429 = too fast; 401/403 = credentials or permissions; 5xx or transport errors = Box or the network.\n\n**Next:** '429s (window)' and 'API Call Duration p95 by Endpoint'."
+    },
+    {
+      "id": 221,
+      "type": "table",
+      "title": "API Calls by Endpoint (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 69
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "expr": "(sort_desc(sum by (endpoint, status) (sum_over_time(((last_over_time(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))) > 0"
+        }
+      ],
+      "description": "**What the selected time range cost in Box API requests, per endpoint and status.** Box limits requests per app, so this budget is what binds, and 'how many did this scan spend' is the number to plan with.\n\n**Normal:** folder listings on top during a full scan. A large count on the per-user event pull means the last-access lookup is the expensive part.\n\n**Next:** 'API Calls by Endpoint (rate, 5m)' for when."
+    },
+    {
+      "id": 220,
+      "type": "timeseries",
+      "title": "API Calls by Endpoint (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 69
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 70,
+            "lineWidth": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "folder_items"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "users"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "token"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "events_cursor"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "file"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "file_content"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (endpoint) (rate(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "{{endpoint}}"
+        }
+      ],
+      "description": "**Which Box API endpoint the traffic goes to**, as a rate. The four event-stream endpoints are kept apart on purpose: reading the change cursor is one or two pages, the admin-log backfill up to 200 pages per refresh, and the per-user pull runs once for every user.\n\n**Normal:** folder listings dominate during a scan; file and collaboration lookups during enrichment. A short scan may not show here \u2014 the table below counts it.\n\n**Next:** 'API Calls by Endpoint (window)' for totals."
     },
     {
       "id": 147,
@@ -3428,8 +4425,8 @@
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 16,
-        "y": 64
+        "x": 0,
+        "y": 77
       },
       "fieldConfig": {
         "defaults": {
@@ -3475,7 +4472,7 @@
           "legendFormat": "slot requeues /s (leading)"
         }
       ],
-      "description": "Read left to right in time: contention shows up before Box complains. Requeues rise first (folders cannot get a slot), then limiter wait (the client throttling itself), and 429s last \u2014 by then Box is already refusing. Deferrals sit between requeues and loss: they only appear once folders exhaust the requeue bound."
+      "description": "**The four signs of saturation, in the order they appear.** First folders cannot get a user slot and are re-queued; then the connector's own speed limit makes requests wait; deferrals appear only once folders run out of re-queues; Box's 429 refusals come last.\n\n**Normal:** all near 0. Requeues alone under load are fine. 429s mean Box is already refusing; deferrals mean folders are close to being lost.\n\n**Next:** 'Slot Deferrals (window)' and '429s (window)'."
     },
     {
       "id": 148,
@@ -3488,8 +4485,8 @@
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 0,
-        "y": 72
+        "x": 8,
+        "y": 77
       },
       "fieldConfig": {
         "defaults": {
@@ -3598,7 +4595,7 @@
           "legendFormat": "{{endpoint}}"
         }
       ],
-      "description": "Round-trip only, deliberately excluding the limiter wait below it, so 'is Box slow' and 'are we throttling ourselves' stay separable. For file_content this is time-to-first-byte, NOT the download \u2014 that leg is box_content_transfer_duration_seconds, and reading it as the download is wrong by orders of magnitude."
+      "description": "**How long Box takes to answer, per endpoint** (95th percentile). Only the round trip: the time waiting on our own speed limit is excluded, so 'is Box slow?' and 'are we holding ourselves back?' stay separate.\n\n**Normal:** folder listings around half a second. For file content this is only the time until the download starts, NOT the download itself \u2014 reading it as the download time is wrong by orders of magnitude.\n\n**Next:** 'Transfer p95 by size_bucket' in the Content row for the download."
     },
     {
       "id": 149,
@@ -3611,8 +4608,8 @@
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 8,
-        "y": 72
+        "x": 16,
+        "y": 77
       },
       "fieldConfig": {
         "defaults": {
@@ -3636,47 +4633,7 @@
           "legendFormat": "p99"
         }
       ],
-      "description": "Sub-second is the interesting range; the ladder starts at 1ms."
-    },
-    {
-      "id": 146,
-      "type": "table",
-      "title": "API Calls by Endpoint (window)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 72
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "showHeader": true,
-        "sortBy": [
-          {
-            "displayName": "Value",
-            "desc": true
-          }
-        ]
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "format": "table",
-          "instant": true,
-          "expr": "sort_desc(sum by (endpoint, status) (max_over_time(box_api_calls_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))"
-        }
-      ],
-      "description": "What this scan cost in API calls, as a count rather than a rate. Box rate-limits per app, so the call budget is the binding constraint and 'how many did this scan spend' is the number to plan with. The rate panels next to it answer when, not how much."
+      "description": "**How long requests waited on the connector's own speed limit**, as percentiles. Measured from 1 millisecond up.\n\n**Normal:** near 0. Sustained waits of a second or more mean BOX_RATE_LIMIT_PER_SEC (8 per pod) is what limits the scan.\n\n**Next:** 'Back-pressure \u2014 ours vs Box's'."
     },
     {
       "type": "row",
@@ -3687,10 +4644,348 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 80
+        "y": 85
       },
       "panels": [],
       "description": "The augment path re-fetches each previously discovered file from Box to attach collaborations and an approximated last-access date. It is the only source of ACLs in the connector today."
+    },
+    {
+      "type": "bargauge",
+      "title": "Augmenter Items by Outcome (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**What happened to every item the augmenter enriched**, as counts for the whole range.\n\n**Normal:** almost everything sent. 'sent without ACL' is a degraded success: the item went out without its permissions.\n\n**Next:** the line chart beside it shows when.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "forked"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upserted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "discovered"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_inactive"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent_without_acl"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "missing"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "miss"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deleted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_collab"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "getfile_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "build_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upsert_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "publish_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "delete_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (outcome) (sum_over_time(((last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "id": 305,
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 86
+      }
     },
     {
       "id": 161,
@@ -3702,9 +4997,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 81
+        "w": 6,
+        "x": 6,
+        "y": 86
       },
       "fieldConfig": {
         "defaults": {
@@ -4000,7 +5295,7 @@
           "legendFormat": "{{outcome}}"
         }
       ],
-      "description": "sent_without_acl is degraded success, not failure: when ListFileCollaborations fails the item is emitted anyway (stale metadata beats no metadata). Counting it as plain success is what made the old board overstate data quality. outcome=missing is also counted by items_skipped_not_found_total for the same event \u2014 never sum the two."
+      "description": "**What happened to each file the enrichment step re-fetched from Box to add who can access it (collaborations) and when it was last accessed.** Exactly one outcome per file. 'Sent without ACL' = the access list could not be read, so the file was sent without it: degraded success, not plain success. 'Missing' = Box answered 404, the file is gone.\n\n**Normal:** mostly sent. A growing 'sent without ACL' share means access data is incomplete. A file counted as missing here is also counted by a separate 'not found' series \u2014 never add the two.\n\n**Next:** the Pipeline board's Augmenter row, per datasource."
     },
     {
       "id": 162,
@@ -4012,9 +5307,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 81
+        "w": 6,
+        "x": 12,
+        "y": 86
       },
       "fieldConfig": {
         "defaults": {
@@ -4034,7 +5329,7 @@
           "legendFormat": "events loaded /s"
         }
       ],
-      "description": "hit / (hit + miss) answers how much of the last_access we emit is real rather than unknown. The events-loaded rate underneath is the denominator behind it: a hit rate falling while events stop loading is a stale store, not a data problem."
+      "description": "**How much of the last-access date we send is real rather than unknown** (hit rate), with the number of access events loaded per second underneath it.\n\n**Normal:** a steady hit rate. A falling hit rate while events stop loading means the event store is stale, not that the data is bad.\n\n**Next:** 'last_access Result' and 'Events Loaded into the Store' on the Pipeline board."
     },
     {
       "id": 163,
@@ -4046,9 +5341,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 81
+        "w": 6,
+        "x": 18,
+        "y": 86
       },
       "fieldConfig": {
         "defaults": {
@@ -4058,21 +5353,21 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.50, sum by (le) (max_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (sum_over_time(((last_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))",
           "legendFormat": "p50"
         },
         {
           "refId": "B",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))",
           "legendFormat": "p95"
         },
         {
           "refId": "C",
-          "expr": "histogram_quantile(0.99, sum by (le) (max_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (sum_over_time(((last_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))",
           "legendFormat": "p99"
         }
       ],
-      "description": "Carries no datasource_id on purpose: the observation is deferred at the top of AugmentScan and the id is only recovered further in, per access-id group. So this is the one augmenter panel the pipeline board cannot break down by datasource \u2014 it still filters by namespace and pod, which come from the scrape, not from the instrument."
+      "description": "**How long one enrichment batch takes**, as percentiles over the selected time range.\n\n**Normal:** seconds to a few minutes depending on batch size. This is the one enrichment panel that cannot be split by datasource (the timing is taken before the datasource is known); it still filters by pod.\n\n**Next:** 'Augmenter Items by Outcome' for how much each batch did."
     },
     {
       "type": "row",
@@ -4083,7 +5378,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 89
+        "y": 94
       },
       "panels": [],
       "description": "CONNECTOR_MODE=content streams Box file bytes into content-service. These series are labeled by datasource_access_id, not datasource_id: the URN content is handed carries only access, file_id and user_id, so the datasource_id genuinely does not exist in this mode."
@@ -4100,11 +5395,11 @@
         "h": 4,
         "w": 3,
         "x": 0,
-        "y": 90
+        "y": 95
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
@@ -4149,7 +5444,7 @@
           "expr": "(sum(up{job=~\".*box-connector-be-go-content\", namespace=\"$namespace\", pod=~\"$pod\"})) or vector(0)"
         }
       ],
-      "description": "With minReplicaCount 0 the connector sleeps when there is no work, so 0 pods is the normal resting state, not an outage. That is why 0 is neutral rather than red \u2014 \"should be running and is not\" is 0 pods WITH backlog, which the backlog panels in this same row show."
+      "description": "**Content pods answering right now.**\n\n**Normal:** 0 when idle \u2014 content also scales to zero, so 0 is not an outage. 'Should be running and is not' is 0 pods with a fetch backlog.\n\n**Next:** 'NATS \u2014 Fetch Backlog'."
     },
     {
       "id": 182,
@@ -4163,11 +5458,11 @@
         "h": 4,
         "w": 3,
         "x": 3,
-        "y": 90
+        "y": 95
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
@@ -4211,7 +5506,8 @@
           "refId": "A",
           "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", container=\"box-connector-be-go-content\"}[1h]))"
         }
-      ]
+      ],
+      "description": "**Content container restarts in the last hour.**\n\n**Normal:** 0. Restarts usually mean the pod ran out of memory (limit 256 MiB) or failed its health check.\n\n**Next:** the Runtime board with Component = Content."
     },
     {
       "id": 183,
@@ -4225,11 +5521,11 @@
         "h": 4,
         "w": 3,
         "x": 6,
-        "y": 90
+        "y": 95
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         }
       },
@@ -4245,10 +5541,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(max_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
+          "expr": "sum(sum_over_time(((last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))"
         }
       ],
-      "description": "Rate, not a total: this answers how fast it is going right now. The count for the window is in the Totals row. Count for the dashboard's time range. A rate would read zero here: this connector works in bursts, so by the time anyone looks the burst is over."
+      "description": "**File downloads requested, counted over the selected time range**, any outcome. Every delivery counts, so a request retried after a failure counts again.\n\n**Normal:** whatever was asked for.\n\n**Next:** 'Content Fetches by Outcome (window)'."
     },
     {
       "id": 184,
@@ -4262,7 +5558,7 @@
         "h": 4,
         "w": 3,
         "x": 9,
-        "y": 90
+        "y": 95
       },
       "fieldConfig": {
         "defaults": {
@@ -4284,15 +5580,64 @@
         {
           "refId": "A",
           "legendFormat": "mean",
-          "expr": "sum(max_over_time(box_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) / clamp_min(sum(max_over_time(box_content_fetch_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])), 1)"
+          "expr": "sum(sum_over_time(((last_over_time(box_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) / clamp_min(sum(sum_over_time(((last_over_time(box_content_fetch_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_content_fetch_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_content_fetch_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])), 1)"
         },
         {
           "refId": "B",
           "legendFormat": "p95",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))"
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))"
         }
       ],
-      "description": "The cost of one fetch, as the two numbers that answer different questions. The mean is total fetch time over fetch count and it is the one that multiplies: mean x fetches estimates a larger job. The p95 is how bad it gets for the slowest 5% and does not multiply. Read the mean against 'Content Transfer Rate' beside it: if the mean rises while the transfer rate holds, the files got bigger and nothing is wrong; if the transfer rate falls, something genuinely got slower. Either number alone is ambiguous, because fetch cost scales with file size."
+      "description": "**How long one file fetch takes, end to end.** The mean is total fetch time over fetch count \u2014 multiply it by a number of fetches to estimate a bigger job. The p95 is the slowest 5%.\n\n**Normal:** seconds for ordinary office files. Fetch cost grows with file size, so read the mean against 'Content Transfer Rate': if the mean rises while the transfer rate holds, the files got bigger and nothing is wrong; if the transfer rate falls, something really got slower.\n\n**Next:** the Pipeline board's Content row for success vs failure and per size."
+    },
+    {
+      "id": 219,
+      "type": "stat",
+      "title": "Content Transfer Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 95
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "decimals": 1,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(sum_over_time(((last_over_time(box_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)) / clamp_min(sum(sum_over_time(((last_over_time(box_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])), 0.001)"
+        }
+      ],
+      "description": "**Transfer speed while actually transferring**: bytes delivered divided by the time spent fetching, not by elapsed time.\n\n**Normal:** steady across runs. Read it against 'Content Fetch \u2014 mean / p95': if fetch time rises while this stays flat, the files got bigger; if this falls, something really got slower. Unlike 'Upload Throughput' it does not drop to 0 when idle.\n\n**Next:** 'Transfer p95 by size_bucket'."
     },
     {
       "id": 185,
@@ -4306,11 +5651,11 @@
         "h": 4,
         "w": 3,
         "x": 15,
-        "y": 90
+        "y": 95
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
@@ -4352,9 +5697,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"false\"}[$__range]))) or vector(0)"
+          "expr": "(sum(sum_over_time(((last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"false\"}[15s]) - last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"false\"}[1d] offset 15s)) >= 0 or last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"false\"}[15s]) * 1)[$__range:15s]))) or vector(0)"
         }
-      ]
+      ],
+      "description": "**File fetches that did not succeed**, for any reason, over the selected time range.\n\n**Normal:** 0, but not every error is a problem \u2014 a file deleted since the scan is expected.\n\n**Next:** 'Content Fetches by Outcome (window)' for the colours."
     },
     {
       "id": 186,
@@ -4368,7 +5714,7 @@
         "h": 4,
         "w": 3,
         "x": 18,
-        "y": 90
+        "y": 95
       },
       "fieldConfig": {
         "defaults": {
@@ -4666,56 +6012,7 @@
           "expr": "sum(rate(box_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
         }
       ],
-      "description": "Bytes content-service confirmed in its UploadResponse \u2014 what the far side acknowledged, not what Box declared."
-    },
-    {
-      "id": 219,
-      "type": "stat",
-      "title": "Content Transfer Rate",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 12,
-        "y": 90
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "Bps",
-          "decimals": 1,
-          "mappings": [
-            {
-              "type": "special",
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "No data",
-                  "color": "text",
-                  "index": 0
-                }
-              }
-            }
-          ]
-        }
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "graphMode": "area"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "(sum(max_over_time(box_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)) / clamp_min(sum(max_over_time(box_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])), 0.001)"
-        }
-      ],
-      "description": "Bytes per second of actual transfer time \u2014 bytes moved divided by time spent fetching, not by wall clock. Read it against 'Cost per Content Fetch': if the cost per fetch rises while this stays flat, the files got bigger and nothing is wrong; if this falls, something genuinely got slower. Each number alone is ambiguous. Distinct from 'Upload Throughput', which is bytes per second of elapsed time and drops to zero whenever nothing is running."
+      "description": "**Bytes per second sent to the content service**, averaged over the last 5 minutes of wall-clock time. Counted as what the content service confirmed receiving, not what Box declared.\n\n**Normal:** 0 whenever nothing is running; a short burst may read near 0.\n\n**Next:** 'Content Transfer Rate' for the speed of the transfers themselves."
     },
     {
       "id": 188,
@@ -4729,11 +6026,11 @@
         "h": 4,
         "w": 3,
         "x": 21,
-        "y": 90
+        "y": 95
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0
         }
       },
@@ -4752,7 +6049,7 @@
           "expr": "sum(max by (stream_name, consumer_name) (nats_consumer_num_pending{consumer_name=~\"content-fetch-box.*\"}))"
         }
       ],
-      "description": "Bulk and interactive durables together."
+      "description": "**File-fetch requests waiting**, bulk and interactive ('See content') queues together.\n\n**Normal:** 0 between jobs. Growing with no content pods means they are not waking up.\n\n**Next:** 'NATS \u2014 Content Consumer Backlog' for the two queues apart."
     },
     {
       "id": 189,
@@ -4766,7 +6063,7 @@
         "h": 8,
         "w": 10,
         "x": 0,
-        "y": 94
+        "y": 99
       },
       "fieldConfig": {
         "defaults": {
@@ -5100,10 +6397,10 @@
           "legendFormat": "{{error_code}}"
         }
       ],
-      "description": "Shape over time: when fetches happened and how the outcomes were interleaved. Read the x axis for timing; the y axis is a rate and will look vanishingly small, because this connector works in bursts \u2014 nine fetches inside a few seconds divided by a five-minute window is 0.025 ops/s, arithmetically correct and of no use to anyone. For HOW MANY fetches ended in each outcome, read 'Content Fetches by Outcome (window)' beside it, which counts over the dashboard range. error_code=NONE is what the connector emits on success and is displayed here as 'success'. Counting per time bucket instead of rating was tried and rejected: increase() summed 7 of 9 and max_over_time minus min_over_time summed 3, because the whole burst lands inside a single bucket on a series created in that same bucket. A panel that disagrees with the one next to it is worse than one that only answers timing."
+      "description": "**When fetches happened and how they ended**, as a rate. 'NONE' is shown as success.\n\n**Normal:** bursts when a job runs. Read the time axis, not the height: a burst of a few fetches in seconds spread over 5 minutes is a tiny number. For how many, use the bars beside it.\n\n**Next:** 'Content Fetches by Outcome (window)'."
     },
     {
-      "id": 148,
+      "id": 222,
       "type": "bargauge",
       "title": "Content Fetches by Outcome (window)",
       "datasource": {
@@ -5114,7 +6411,7 @@
         "h": 8,
         "w": 6,
         "x": 10,
-        "y": 94
+        "y": 99
       },
       "fieldConfig": {
         "defaults": {
@@ -5370,10 +6667,10 @@
         {
           "refId": "A",
           "legendFormat": "{{error_code}}",
-          "expr": "sum by (error_code) (max_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range]))"
+          "expr": "(sum by (error_code) (sum_over_time(((last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))) > 0"
         }
       ],
-      "description": "Where the fetches ended up, as counts. This is the panel that answers 'I ran N fetches \u2014 what happened to them?': the total is in 'Fetches', and this says how it split. Colour carries the verdict: green fine, yellow expected (the file is gone, nothing to do), orange back-pressure, red needs action."
+      "description": "**Where every fetch ended up, counted over the selected time range.** The total is in 'Fetches'; this is how it split. Green = fine. Yellow = expected (the file is gone or over the size limit). Orange = back-pressure (rate limited, timeout). Red = needs action (credentials, permissions, internal or queue failures).\n\n**Normal:** mostly green.\n\n**Next:** the Pipeline board's 'Fetch Errors by error_code' table."
     },
     {
       "id": 190,
@@ -5387,7 +6684,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 94
+        "y": 99
       },
       "fieldConfig": {
         "defaults": {
@@ -5401,7 +6698,7 @@
           "legendFormat": "{{size_bucket}}"
         }
       ],
-      "description": "Answers 'is the latency per file or per byte?'. Because the size is known before the transfer starts (Content-Length), it works on the failure path too \u2014 flip success to false. The unknown bucket is Box omitting Content-Length, not a zero-byte file, which is why it is not grouped with the small ones."
+      "description": "**How long the download from Box plus upload to the content service takes, per file size** (95th percentile, successful fetches). Answers 'is the slowness per file or per byte?'. 'Unknown' means Box did not say the file size, not a zero-byte file.\n\n**Normal:** small files well under a second, large ones longer in proportion to size.\n\n**Next:** the Pipeline board has the failure version of this panel."
     },
     {
       "id": 191,
@@ -5415,7 +6712,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 102
+        "y": 107
       },
       "fieldConfig": {
         "defaults": {
@@ -5428,7 +6725,8 @@
           "expr": "sum(rate(box_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
           "legendFormat": "uploaded"
         }
-      ]
+      ],
+      "description": "**Bytes sent to the content service per second over time**, as confirmed by the content service.\n\n**Normal:** bursts when a job runs, 0 otherwise.\n\n**Next:** 'Content Transfer Rate' for the speed while transferring."
     },
     {
       "id": 192,
@@ -5442,7 +6740,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 102
+        "y": 107
       },
       "fieldConfig": {
         "defaults": {
@@ -5516,7 +6814,7 @@
           "legendFormat": "redelivered {{consumer_name}}"
         }
       ],
-      "description": "Two durables share the CONTENT_FETCH stream: content-fetch-box for the bulk lane and content-fetch-box-interactive for See-Content. Split by consumer_name so an interactive-only backlog is visible instead of averaged away."
+      "description": "**Both content queues over time**: the bulk queue (classifier) and the interactive queue ('See content', a person waiting in the UI), shown separately so an interactive backlog is not averaged away. Pending = waiting, ack pending = in progress, redelivered = being retried (at most 3 attempts).\n\n**Normal:** spikes that drain to 0. Anything on the interactive queue that does not drain within seconds means someone is staring at a spinner.\n\n**Next:** 'KEDA \u2014 Content Replicas'."
     },
     {
       "id": 193,
@@ -5530,7 +6828,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 102
+        "y": 107
       },
       "fieldConfig": {
         "defaults": {
@@ -5553,7 +6851,8 @@
           "expr": "max(kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*box-connector-be-go-content\"})",
           "legendFormat": "max"
         }
-      ]
+      ],
+      "description": "**Content pods running, pods wanted, and the ceiling** (3 by default).\n\n**Normal:** 0 when idle; pods stay up ~15 minutes after the work ends (cooldown 900s, scale-down window 600s).\n\n**Next:** 'KEDA \u2014 Content Trigger Signals'."
     },
     {
       "id": 194,
@@ -5567,7 +6866,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 110
+        "y": 115
       },
       "fieldConfig": {
         "defaults": {
@@ -5591,7 +6890,7 @@
           "legendFormat": "pending-wakeup (thr 1000)"
         }
       ],
-      "description": "Three of the content ScaledObject's four effective triggers, all against the bulk durable. pipeline-full is not rendered in dev."
+      "description": "**Three of the content autoscaler's rules, all on the bulk queue**: work in progress, queue growth, and waiting messages, with their thresholds in the legend. The 'pipeline full' rule is not configured in this chart.\n\n**Normal:** far below the thresholds. Any waiting message wakes the pods from zero.\n\n**Next:** 'KEDA \u2014 interactive-wakeup' beside it."
     },
     {
       "id": 195,
@@ -5605,7 +6904,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 110
+        "y": 115
       },
       "fieldConfig": {
         "defaults": {
@@ -5637,7 +6936,7 @@
           "legendFormat": "interactive pending"
         }
       ],
-      "description": "The fourth trigger, and the one the scanner does not have: it watches the See-Content durable so an interactive-only backlog still wakes the pod. Without it scale-to-zero would strand every See-Content request into a 504."
+      "description": "**The rule that wakes the content pods for the interactive queue.** The scanner has no equivalent: it exists so a single 'See content' request wakes the pods even when the bulk queue is empty. Without it, scale-to-zero would turn every such request into a timeout.\n\n**Normal:** 0, or brief spikes that drain within seconds.\n\n**Next:** 'Pods Up' in this row."
     },
     {
       "type": "row",
@@ -5648,7 +6947,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 118
+        "y": 123
       },
       "panels": [],
       "description": "Box answers 'how many files are no longer there?' at THREE stages, and they are deliberately not summable: each is a different moment in the pipeline and is diagnosed differently. The incremental one is the cleanest signal in the whole set \u2014 it comes from an explicit ITEM_TRASH/DELETE event from Box, not from a NOT_FOUND inferred after the fact."
@@ -5665,7 +6964,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 119
+        "y": 124
       },
       "fieldConfig": {
         "defaults": {
@@ -5685,10 +6984,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"skipped_inactive\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"skipped_inactive\"}[15s]) - last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"skipped_inactive\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"skipped_inactive\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "Already in Box's trash at the moment we listed its parent folder."
+      "description": "**Files that were already in Box's trash when the scanner listed their folder**, over the selected time range.\n\n**Normal:** a small number on an active tenant. Do not add it to the other 'Gone' stats: each is a different moment, possibly for the same file.\n\n**Next:** 'Files Gone by stage'."
     },
     {
       "id": 202,
@@ -5702,7 +7001,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 119
+        "y": 124
       },
       "fieldConfig": {
         "defaults": {
@@ -5722,10 +7021,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_scanner_incremental_changes_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"deleted\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(box_scanner_incremental_changes_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"deleted\"}[15s]) - last_over_time(box_scanner_incremental_changes_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"deleted\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_incremental_changes_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"deleted\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "An ITEM_TRASH or DELETE event resolved by an incremental run."
+      "description": "**Files reported deleted or trashed by Box's event stream during incremental scans**, over the selected time range. The cleanest 'gone' signal: Box said so explicitly.\n\n**Normal:** follows how much users delete. 0 when no incremental scan ran.\n\n**Next:** 'Incremental Changes by Outcome' on the Pipeline board."
     },
     {
       "id": 203,
@@ -5739,7 +7038,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 119
+        "y": 124
       },
       "fieldConfig": {
         "defaults": {
@@ -5759,13 +7058,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[15s]) - last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[1d] offset 15s)) >= 0 or last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "Discovered by an earlier scan, and Box answered 404 when the augmenter went back for it."
+      "description": "**Files found by an earlier scan that Box no longer had (404) when the enrichment step went back for them**, over the selected time range.\n\n**Normal:** small. Expected churn, not a failure.\n\n**Next:** 'Files Gone % (augment)' to put it in proportion."
     },
     {
-      "id": 149,
+      "id": 223,
       "type": "stat",
       "title": "Gone \u2014 404 on content fetch",
       "datasource": {
@@ -5776,11 +7075,11 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 119
+        "y": 124
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "mappings": [
             {
@@ -5821,10 +7120,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[15s]) - last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[1d] offset 15s)) >= 0 or last_over_time(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "The latest window of all: content went to download the file and it was no longer there, so it disappeared between the scan and the fetch. Do NOT add this to the other stages \u2014 content runs on demand over a subset, not over the whole share, so it has a different denominator. It is here because a 404 on fetch is evidence a file is gone, and until now that evidence only showed up as a content error."
+      "description": "**Files that were gone (404) when the content pods went to download them**, over the selected time range \u2014 the latest of all the 'gone' moments.\n\n**Normal:** small. Do NOT add it to the other stages: content only fetches a requested subset, so it has a different denominator. It is here because a 404 on download is evidence a file is gone, which otherwise shows only as a content error.\n\n**Next:** 'Content Fetches by Outcome (window)'."
     },
     {
       "id": 204,
@@ -5838,7 +7137,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 123
+        "y": 128
       },
       "fieldConfig": {
         "defaults": {
@@ -5867,10 +7166,10 @@
           "expr": "sum(rate(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[5m]))"
         }
       ],
-      "description": "Three series, never one number. The augment series is 1:1 with box_augmenter_items_skipped_not_found_total \u2014 the same event increments both, and that second counter exists only so alerts can suppress this expected signal separately. Graphing both would be the same thing counted twice."
+      "description": "**When files turned out to be gone, by the stage that noticed**: already in trash at scan time, deleted per the event stream, 404 on enrichment, 404 on download. Four series, never one number.\n\n**Normal:** small bumps that follow user deletions. The enrichment line is the same event as a separate 'not found' counter; that one is not drawn so nothing is counted twice.\n\n**Next:** the stats above for the counts."
     },
     {
-      "id": 147,
+      "id": 224,
       "type": "stat",
       "title": "Augment Items (window)",
       "datasource": {
@@ -5881,11 +7180,11 @@
         "h": 8,
         "w": 4,
         "x": 12,
-        "y": 123
+        "y": 128
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "locale",
           "decimals": 0,
           "mappings": [
             {
@@ -5913,10 +7212,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(max_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0))"
+          "expr": "(sum(sum_over_time(((last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "The denominator for the percentage next to it. A ratio with no denominator cannot be read: 100% of 4 items and 100% of 40,000 are the same number and completely different news."
+      "description": "**Files the enrichment step processed, over the selected time range** \u2014 the denominator for the percentage beside it.\n\n**Normal:** the number of files sent for enrichment. A ratio needs this: 100% of 4 files and 100% of 40,000 are the same number and completely different news.\n\n**Next:** 'Files Gone % (augment)'."
     },
     {
       "id": 205,
@@ -5930,7 +7229,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 123
+        "y": 128
       },
       "fieldConfig": {
         "defaults": {
@@ -5950,10 +7249,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * ((sum(max_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[$__range])) or vector(0)) / clamp_min((sum(max_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])) or vector(0)), 1))"
+          "expr": "100 * ((sum(sum_over_time(((last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[15s]) - last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[1d] offset 15s)) >= 0 or last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"missing\"}[15s]) * 1)[$__range:15s])) or vector(0)) / clamp_min((sum(sum_over_time(((last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)), 1))"
         }
       ],
-      "description": "Share of everything the augmenter touched that Box no longer had. Read it against 'Augment Items' to its left \u2014 the percentage alone hides how small the sample is."
+      "description": "**Share of the files the enrichment step touched that Box no longer had.**\n\n**Normal:** a low percentage. Always read it with 'Augment Items' beside it, because the percentage alone hides how small the sample is.\n\n**Next:** 'Gone \u2014 404 on augment re-fetch'."
     },
     {
       "type": "row",
@@ -5961,10 +7260,10 @@
       "collapsed": false,
       "id": 216,
       "gridPos": {
-        "x": 0,
-        "y": 131,
+        "h": 1,
         "w": 24,
-        "h": 1
+        "x": 0,
+        "y": 136
       },
       "panels": [],
       "description": "What was lost. The scanner funnel can close perfectly and work can still have been discarded here: a message that exhausts its deliveries ends up in the DLQ leaving no trace in items_processed. See PLAN-deferral-dlq.md."
@@ -5978,12 +7277,12 @@
         "uid": "${datasource}"
       },
       "gridPos": {
-        "x": 0,
-        "y": 132,
+        "h": 5,
         "w": 6,
-        "h": 5
+        "x": 0,
+        "y": 137
       },
-      "description": "Messages the SDK gave up on and removed from the stream. For the scanner each one is a FOLDER plus every subtree it would have expanded \u2014 so this count does not measure the damage: one discarded message cost 7 files when it hit a leaf, and would have cost thousands near the root. Any non-zero value means a scan silently returned less than the tenant holds. The connector's own funnel cannot show this: items_sent still equals files_discovered. See PLAN-deferral-dlq.md.",
+      "description": "**Scan messages given up on after 5 attempts and parked in the dead-letter queue (DLQ_CONSUME_BOX).** For the scanner each one is a folder plus its entire subtree, so this count does not measure the damage: one message cost 7 files when it hit a small folder, and would cost thousands near the top of a tree.\n\n**Normal:** 0. Any other value means a scan quietly returned less than the tenant holds \u2014 and the connector's own funnel cannot show it, because Items Sent still equals Files Discovered for what was seen. Each message names the folder: nats stream get DLQ_CONSUME_BOX <seq>.\n\n**Next:** 'DLQ Depth over time' for when, and 'Slot Deferrals' for the usual cause.",
       "targets": [
         {
           "refId": "A",
@@ -5999,7 +7298,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "unit": "short",
+          "unit": "locale",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -6043,6 +7342,82 @@
       }
     },
     {
+      "type": "stat",
+      "title": "Lost to DLQ (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Messages that failed every retry and were given up on in the selected range.** Each one is a folder \u2014 and everything below it \u2014 that was not indexed while its scan still reported success.\n\n**Normal:** 0. To see which ones: each message carries the folder and the last error \u2014 `nats stream get DLQ_CONSUME_BOX <seq>`. Counted from the stream's sequence number, so a purge or the DLQ's own size limit does not hide anything.\n\n**Next:** 'DLQ Depth over time' beside it, for when it started.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((max_over_time(max(nats_stream_last_seq{stream_name=\"DLQ_CONSUME_BOX\"})[$__range:30s]) - min_over_time(max(nats_stream_last_seq{stream_name=\"DLQ_CONSUME_BOX\"})[$__range:30s])) or vector(0))"
+        }
+      ],
+      "id": 306,
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 137
+      }
+    },
+    {
       "type": "timeseries",
       "title": "DLQ Depth over time",
       "id": 218,
@@ -6051,12 +7426,12 @@
         "uid": "${datasource}"
       },
       "gridPos": {
-        "x": 6,
-        "y": 132,
-        "w": 18,
-        "h": 5
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 137
       },
-      "description": "A step up here marks the moment a scan started losing folders. It is the only external evidence: the connector reports zero failures throughout.",
+      "description": "**When work started landing in the dead-letter queue.**\n\n**Normal:** flat at 0. A step up marks the moment a scan started losing folders; it is the only outside evidence, because the connector reports no failure.\n\n**Next:** 'Slot Deferrals' and 'NATS \u2014 Redelivered' around the same time.",
       "targets": [
         {
           "refId": "A",

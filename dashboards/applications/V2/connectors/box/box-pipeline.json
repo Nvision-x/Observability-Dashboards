@@ -164,6 +164,26 @@
   },
   "panels": [
     {
+      "type": "text",
+      "title": "How to read this board",
+      "options": {
+        "mode": "markdown",
+        "content": "**This is the drill-down.** The Overview says *what happened*; this board says *where, for which datasource, and at what cost*. Use the datasource selector at the top to narrow everything to one datasource.\n\n**Totals count only what happened inside the time range** \u2014 narrow it to one scan to describe one Box tenant.\n\nHover the \u24d8 on any panel for what it counts, what is normal, and where to look next.",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        }
+      },
+      "id": 300,
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
       "type": "row",
       "id": 100,
       "title": "Scanner \u2014 Discovery & Funnel",
@@ -172,7 +192,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 4
       },
       "panels": [],
       "description": "The funnel checks itself: files_discovered minus the sum over every items_processed outcome is zero unless some exit path in processFolder is uninstrumented. Everything in this row is per datasource, which is what turns 'something is losing files' into 'this tenant is losing files'."
@@ -189,7 +209,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 1
+        "y": 5
       },
       "fieldConfig": {
         "defaults": {
@@ -490,7 +510,7 @@
           "legendFormat": "{{outcome}}"
         }
       ],
-      "description": "The discovered line is not part of the stack \u2014 it is the denominator the stack should add up to."
+      "description": "**What happened to every file the scanner saw**, as a rate, stacked by outcome. The 'discovered' line is not part of the stack \u2014 it is the total the stack should add up to.\n\n**Normal:** the stack reaches the discovered line, almost all of it sent. A scan shorter than ~30 seconds may not show here; the Overview's Totals row counts it. Filter by $datasource_id to see one datasource.\n\n**Next:** 'Item Loss (discovered \u2212 sent)' below."
     },
     {
       "id": 102,
@@ -504,7 +524,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 1
+        "y": 5
       },
       "fieldConfig": {
         "defaults": {
@@ -800,7 +820,7 @@
           "legendFormat": "{{outcome}}"
         }
       ],
-      "description": "Every subfolder is forked as its own message. skipped_collab is the owner filter: a folder owned by another user, left for that user's own fork so it is enumerated exactly once."
+      "description": "**When subfolders were queued, skipped or failed to queue**, per datasource. Every subfolder becomes its own message; 'skipped collab' is a folder owned by another user, left for that user's own scan.\n\n**Normal:** forked and skipped collab only. 'Publish failed' means a whole subtree was not scanned until that message is retried.\n\n**Next:** 'Folders Forked (total)' on the Overview."
     },
     {
       "id": 103,
@@ -814,7 +834,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 1
+        "y": 5
       },
       "fieldConfig": {
         "defaults": {
@@ -829,7 +849,7 @@
           "legendFormat": "conversion"
         }
       ],
-      "description": "The ratio the three parallel throughput lines hide. Anything below 1 is loss, and the panel next to it says how much in absolute terms."
+      "description": "**Share of discovered files that were sent** (sent \u00f7 discovered).\n\n**Normal:** 1 (100%). Files already in Box's trash also lower it, so a little under 1 is expected. Only meaningful while a scan runs; short scans may not show.\n\n**Next:** 'Item Loss' beside it for the absolute number."
     },
     {
       "id": 104,
@@ -843,7 +863,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 9
+        "y": 13
       },
       "fieldConfig": {
         "defaults": {
@@ -857,7 +877,7 @@
           "legendFormat": "loss /s"
         }
       ],
-      "description": "Absolute leak per second, per datasource. Not the same question as the conversion ratio: a 99% conversion on a huge tenant can leak more files than a 60% conversion on a tiny one."
+      "description": "**Files seen minus files sent, per second.** Includes files skipped because they were in Box's trash.\n\n**Normal:** near 0. This is a different question from the conversion ratio: 99% on a huge tenant can leak more files than 60% on a tiny one.\n\n**Next:** 'Scanner Items by Outcome' to see which outcome the gap is."
     },
     {
       "id": 105,
@@ -871,7 +891,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 9
+        "y": 13
       },
       "fieldConfig": {
         "defaults": {
@@ -987,7 +1007,7 @@
           "legendFormat": "{{reason}}"
         }
       ],
-      "description": "The loss the file funnel above cannot see: these users' files were never discovered in the first place, so they never entered the funnel."
+      "description": "**Users skipped, by reason, as a rate.** These users' files were never discovered, so the file funnel above cannot show this loss at all.\n\n**Normal:** only deactivated and terms-of-service. Permission denied is broken configuration; traverse failed is a real error and is counted on every retry.\n\n**Next:** 'Users Skipped by Reason' on the Overview for counts."
     },
     {
       "type": "row",
@@ -998,7 +1018,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 21
       },
       "panels": [],
       "description": "What a unit of work costs, and what a bigger tenant would cost. The three durations at the right are three different units of work and are NOT comparable with each other \u2014 they share a panel for scale only."
@@ -1015,7 +1035,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 18
+        "y": 22
       },
       "fieldConfig": {
         "defaults": {
@@ -1025,21 +1045,21 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.50, sum by (le) (max_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (sum_over_time(((last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
           "legendFormat": "p50"
         },
         {
           "refId": "B",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
           "legendFormat": "p95"
         },
         {
           "refId": "C",
-          "expr": "histogram_quantile(0.99, sum by (le) (max_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (sum_over_time(((last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
           "legendFormat": "p99"
         }
       ],
-      "description": "One BoxFolderWork message: one folder listing plus the publishes and upserts it produces. This is the connector's real unit of work \u2014 multiply its mean by a folder count to estimate a larger tenant."
+      "description": "**Folder time as percentiles over the selected time range, per datasource.** One folder = one Box listing plus what it queues and sends: the connector's real unit of work.\n\n**Normal:** p50 and p95 under about a second. Read the latest value; it covers the whole range.\n\n**Next:** 'Mean Cost per Folder' beside it."
     },
     {
       "id": 122,
@@ -1053,7 +1073,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 18
+        "y": 22
       },
       "fieldConfig": {
         "defaults": {
@@ -1068,7 +1088,7 @@
           "legendFormat": "seconds per folder"
         }
       ],
-      "description": "Multiply by a folder count to estimate a larger tenant. This is the prediction question \u2014 'if this enterprise grew 10x, how much folder work is that?' \u2014 and it is the reason the histogram is per-folder rather than per-scan."
+      "description": "**Average seconds per folder.** Multiply it by a folder count to estimate a larger tenant: 'if this enterprise grew 10x, how much folder work is that?'.\n\n**Normal:** around half a second to a second, most of it Box's own response time. Only drawn while folders are being processed.\n\n**Next:** 'API Call Duration p95 by Endpoint' on the Overview to see if Box is the slow part."
     },
     {
       "id": 123,
@@ -1082,7 +1102,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 18
+        "y": 22
       },
       "fieldConfig": {
         "defaults": {
@@ -1092,21 +1112,21 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_scanner_fanout_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_fanout_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_fanout_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_fanout_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
           "legendFormat": "fan-out p95"
         },
         {
           "refId": "B",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
           "legendFormat": "incremental p95"
         },
         {
           "refId": "C",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_scanner_root_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_root_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_root_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_root_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
           "legendFormat": "root folder p95"
         }
       ],
-      "description": "fan-out = authenticate + paged GET /users + publish one box.fork per user; EXCLUDES the traversal, which happens in other messages on other pods. incremental = a whole run including its inline augment. root_folder = one BoxFork, a user's root level only, not their tree. If fan-out and folder p95 come out similar, something is measuring what it does not think it is."
+      "description": "**Three different timings, drawn together for scale only.** Fan-out = logging in, listing users and queuing one scan per user; it does NOT include scanning their folders, which happens in other messages on other pods. Incremental = a whole incremental scan including its enrichment. Root folder = one user's top-level folder only.\n\n**Normal:** fan-out in seconds, root folder under a few seconds. If fan-out and folder times come out similar, something is not measuring what it should.\n\n**Next:** 'Incremental Duration' in the next row."
     },
     {
       "type": "row",
@@ -1117,7 +1137,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 30
       },
       "panels": [],
       "description": "An incremental run reads Box's /events stream from the stored cursor, dedupes, applies deletes and augments the changed files inline. It lists no folders at all, so the scanner's folder panels stay flat while an incremental runs."
@@ -1134,7 +1154,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 27
+        "y": 31
       },
       "fieldConfig": {
         "defaults": {
@@ -1430,7 +1450,7 @@
           "legendFormat": "{{outcome}}"
         }
       ],
-      "description": "outcome=deleted is Box's cleanest Files Gone signal: an explicit ITEM_TRASH/DELETE event, not a NOT_FOUND inferred after the fact. delete_failed is the one that used to surface only as a publishError to Observer."
+      "description": "**What incremental scans did with each changed file**, as a rate: upserted (sent again), deleted, delete failed, or skipped. 'Deleted' is Box's cleanest 'file gone' signal \u2014 an explicit delete or trash event.\n\n**Normal:** mostly upserted, some deleted, delete failed at 0. A failed delete leaves a removed file in the index.\n\n**Next:** 'Incremental Bailouts'."
     },
     {
       "id": 142,
@@ -1444,7 +1464,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 27
+        "y": 31
       },
       "fieldConfig": {
         "defaults": {
@@ -1454,21 +1474,21 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.50, sum by (le) (max_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (sum_over_time(((last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
           "legendFormat": "p50"
         },
         {
           "refId": "B",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
           "legendFormat": "p95"
         },
         {
           "refId": "C",
-          "expr": "histogram_quantile(0.99, sum by (le) (max_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[$__range])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (sum_over_time(((last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
           "legendFormat": "p99"
         }
       ],
-      "description": "Unlike the fan-out, this really is the whole unit of work: events read, dedupe, deletes and the inline augment."
+      "description": "**How long one incremental scan takes**, as percentiles over the selected time range. Unlike the fan-out, this really is the whole job: reading changes, removing duplicates, deletes and enrichment.\n\n**Normal:** seconds to a few minutes, growing with how much changed.\n\n**Next:** 'Scan Mode Decisions' to check incremental scans are running at all."
     },
     {
       "id": 143,
@@ -1482,7 +1502,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 27
+        "y": 31
       },
       "fieldConfig": {
         "defaults": {
@@ -1496,7 +1516,7 @@
           "legendFormat": "bailouts /s"
         }
       ],
-      "description": "Runs that promoted themselves to a full scan because the change volume exceeded BOX_INCREMENTAL_MAX_RATIO of the known file count. Expensive, and until now visible only in the logs."
+      "description": "**Incremental scans that switched themselves to a full scan** because too much had changed \u2014 more than BOX_INCREMENTAL_MAX_RATIO (5% by default) of the known files.\n\n**Normal:** 0 or rare. Frequent bailouts are expensive: each one is a full scan.\n\n**Next:** 'Scan Mode Decisions' beside it."
     },
     {
       "id": 144,
@@ -1510,7 +1530,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 39
       },
       "fieldConfig": {
         "defaults": {
@@ -1592,7 +1612,7 @@
           "legendFormat": "{{mode}} / {{reason}}"
         }
       ],
-      "description": "Is incremental mode running, and if not, what is stopping it? The three panels to the left say how incremental runs went; this one says whether they were allowed to happen. no_cursor sustained means incremental is broken, not idle - a 400 on the events cursor capture disabled it permanently once while every scan still reported success. cursor_stale sustained means the scan cadence disagrees with BOX_INCREMENTAL_MAX_AGE_HOURS. This counts the decision taken at ScanStart from stored state, so it does not overlap with Bailouts: a run counted here as incremental can still promote itself to full mid-flight, and incremental decisions minus bailouts is what actually stayed incremental."
+      "description": "**Which mode each scan was allowed to run in, and why**, counted per 5 minutes. No cursor = nothing to read changes from. Cursor stale = the last full scan is older than BOX_INCREMENTAL_MAX_AGE_HOURS (168 h). Cursor fresh = incremental.\n\n**Normal:** mostly incremental. No cursor sustained means incremental is broken, not idle \u2014 that once disabled it for good while every scan reported success. Cursor stale sustained means the scan schedule and that setting disagree. This is the decision before the run: an incremental run can still bail out to full, so incremental minus bailouts is what really stayed incremental.\n\n**Next:** 'Incremental Bailouts'."
     },
     {
       "type": "row",
@@ -1603,7 +1623,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 47
       },
       "panels": [],
       "description": "The two things that bound scan speed: per-user admission slots (Box rate-limits per impersonated user and the cap is shared across pods) and the client-side rate limiter against the app-wide ceiling."
@@ -1620,7 +1640,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 44
+        "y": 48
       },
       "fieldConfig": {
         "defaults": {
@@ -1639,7 +1659,7 @@
           "legendFormat": "user slots held"
         }
       ],
-      "description": "Both gauges are per pod and unlabeled by tenant \u2014 the slot scope is (datasource_access_id, user_id) while the deferral counter beside it is keyed by datasource_id, and minting a second label universe that cannot be joined to the first is the mistake to avoid. Flat at zero with the pods asleep is normal; flat WITH load would mean only one of the two folder entry points is instrumented."
+      "description": "**Folders being worked on right now, and per-user slots held**, summed over scanner pods. Not split by datasource: the slots are per user, and the deferral counter is per datasource, so the two cannot be joined.\n\n**Normal:** flat at 0 while pods sleep. Slots at the cap (BOX_USER_MAX_CONCURRENCY, 5 per user) with deferrals rising means that cap limits speed. Flat at 0 WITH load would mean the counting is broken.\n\n**Next:** 'Slot Contention by Datasource' beside it."
     },
     {
       "id": 162,
@@ -1653,7 +1673,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 44
+        "y": 48
       },
       "fieldConfig": {
         "defaults": {
@@ -1704,7 +1724,7 @@
           "legendFormat": "deferrals \u00b7 {{datasource_id}}"
         }
       ],
-      "description": "Two paths out of a saturated user, and the pair is the diagnostic:\n\nrequeues up, deferrals at zero \u2014 healthy. Folders that find no slot are re-published with their delivery count reset, so contention never walks them toward a discard.\n\ndeferrals above zero \u2014 folders are exhausting BOX_USER_SLOT_MAX_REQUEUE and falling back to a NAK. That spends a delivery, and past JOBENGINE_MAX_DELIVER the SDK removes the folder and everything below it. This is the last warning before silent loss.\n\nboth at zero \u2014 no contention; the user's slots are keeping up."
+      "description": "**What happens when a user has no free slot, per datasource.** Requeue = the folder is re-queued as a fresh message with a full set of attempts. Deferral = it is put back for retry, spending one of its 5 attempts; for folders that only happens after BOX_USER_SLOT_MAX_REQUEUE (50) re-queues.\n\n**Normal:** requeues up with deferrals at 0 is healthy contention. Deferrals above 0 is the last warning before folders and their subtrees are thrown away. Both at 0 = no contention.\n\n**Next:** 'DLQ Depth' on the Overview."
     },
     {
       "type": "row",
@@ -1715,7 +1735,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 56
       },
       "panels": [],
       "description": "The augment path is the only source of ACLs in the connector: the scanner's collaboration fetch is commented out in folder_work.go to save API tokens."
@@ -1732,7 +1752,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 53
+        "y": 57
       },
       "fieldConfig": {
         "defaults": {
@@ -2028,7 +2048,7 @@
           "legendFormat": "{{outcome}}"
         }
       ],
-      "description": "Exactly one outcome fires per item, so the stack sums to the batch size and this funnel checks itself the same way the scanner's does. sent_without_acl is degraded success \u2014 the item is emitted with no collaborations because ListFileCollaborations failed, on the principle that stale metadata beats no metadata. It is also the ACL-failure count; there is no separate acl_failures series, because the failure and the degraded emission are the same event."
+      "description": "**What happened to each file the enrichment step re-fetched**, as a rate per datasource. Exactly one outcome per file, so the stack adds up to the batch. 'Sent without ACL' = the access list could not be read and the file went out without it: degraded success, and also the only count of access-list failures. 'Missing' = Box answered 404.\n\n**Normal:** mostly sent. Rising 'sent without ACL' means incomplete access data; 'get file failed', build or send failures should be 0.\n\n**Next:** 'Skipped Not-Found' below."
     },
     {
       "id": 182,
@@ -2042,7 +2062,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 53
+        "y": 57
       },
       "fieldConfig": {
         "defaults": {
@@ -2338,7 +2358,7 @@
           "legendFormat": "{{result}}"
         }
       ],
-      "description": "Coverage of the events-derived last_access lookup. As a ratio it answers how much of the last_access we emit is real rather than unknown."
+      "description": "**Last-access lookups that found a real date (hit) or not (miss)**, as a rate. As a ratio it tells how much of the last-access date we send is real rather than unknown.\n\n**Normal:** a steady hit share.\n\n**Next:** 'Events Loaded into the Store' beside it."
     },
     {
       "id": 183,
@@ -2352,7 +2372,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 53
+        "y": 57
       },
       "fieldConfig": {
         "defaults": {
@@ -2366,45 +2386,7 @@
           "legendFormat": "events /s"
         }
       ],
-      "description": "Access events folded into the LastAccessStore on a refresh \u2014 the denominator behind the hit rate. A hit rate falling while this goes to zero is a stale store, not a data problem."
-    },
-    {
-      "id": 184,
-      "type": "timeseries",
-      "title": "Augment Batch Duration \u2014 p50 / p95 / p99",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 61
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.50, sum by (le) (max_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
-          "legendFormat": "p50"
-        },
-        {
-          "refId": "B",
-          "expr": "histogram_quantile(0.95, sum by (le) (max_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
-          "legendFormat": "p95"
-        },
-        {
-          "refId": "C",
-          "expr": "histogram_quantile(0.99, sum by (le) (max_over_time(box_augmenter_batch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[$__range])))",
-          "legendFormat": "p99"
-        }
-      ],
-      "description": "The one augmenter panel that cannot be broken down by datasource: the observation is deferred at the top of AugmentScan and the id is only recovered further in, per access-id group. It still filters by pod, which comes from the scrape rather than the instrument \u2014 hence the missing $datasource_id here is deliberate, not an oversight."
+      "description": "**Box access events loaded into the connector's last-access store on each refresh**, per second. This is what the hit rate depends on.\n\n**Normal:** bumps at each refresh. A hit rate falling while this goes to 0 is a stale store, not a data problem.\n\n**Next:** 'last_access Result'."
     },
     {
       "id": 185,
@@ -2416,9 +2398,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 61
+        "w": 24,
+        "x": 0,
+        "y": 65
       },
       "fieldConfig": {
         "defaults": {
@@ -2432,7 +2414,7 @@
           "legendFormat": "{{datasource_id}}"
         }
       ],
-      "description": "1:1 with items_processed_total{outcome=\"missing\"} \u2014 the same event increments both. It exists so alerts can suppress this expected signal independently. Graphed alone here, and never added to the outcome panel: that would be the same thing counted twice."
+      "description": "**Files Box no longer had (404) when the enrichment step went back for them**, per datasource. The same event as 'missing' in the outcome panel; it exists separately so alerts can ignore this expected signal.\n\n**Normal:** small. Never add it to the outcome panel \u2014 that would count the same files twice.\n\n**Next:** 'Files Gone' row on the Overview."
     },
     {
       "type": "row",
@@ -2443,7 +2425,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 69
+        "y": 73
       },
       "panels": [],
       "description": "Filtered by $access_id, not $datasource_id: content mode is handed a URN carrying only access, file_id and user_id, so the datasource_id genuinely does not exist here. The 'unknown' value is the bounded sentinel for failures that happen before the URN is parsed."
@@ -2460,7 +2442,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 70
+        "y": 74
       },
       "fieldConfig": {
         "defaults": {
@@ -2726,7 +2708,7 @@
           "legendFormat": "{{error_code}}"
         }
       ],
-      "description": "NONE is success. Timeout and too-large are error_code values rather than their own counters, which is what lets an alert target any code without adding a series. The NAK_* codes are infra failures before or after a wire reply \u2014 counting them is what makes fetch_total equal the deliveries the handler processed."
+      "description": "**How file fetches ended**, as a rate, filtered by $access_id. NONE = success. Timeouts and too-large are outcome codes, not separate counters. The NAK_* codes are failures in the message-queue handling itself (unreadable request, or the reply could not be sent); those messages are retried.\n\n**Normal:** mostly NONE. A short job may barely show \u2014 the Overview's bar chart counts it.\n\n**Next:** 'Fetch Errors by error_code' table below."
     },
     {
       "id": 202,
@@ -2740,7 +2722,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 70
+        "y": 74
       },
       "fieldConfig": {
         "defaults": {
@@ -2754,7 +2736,7 @@
           "legendFormat": "{{size_bucket}}"
         }
       ],
-      "description": "'Is the latency per file or per byte?' \u2014 the size_bucket label answers it directly. Buckets are cut at 1 MiB / 10 MiB / 100 MiB."
+      "description": "**How long successful download-plus-upload takes, per file size** (95th percentile). Sizes are cut at 1 MiB, 10 MiB and 100 MiB; 'unknown' means Box did not send the size.\n\n**Normal:** grows with size. If small files are slow too, the cost is per file (Box latency), not per byte.\n\n**Next:** 'Transfer p95 by size_bucket \u2014 failure' beside it."
     },
     {
       "id": 203,
@@ -2768,7 +2750,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 70
+        "y": 74
       },
       "fieldConfig": {
         "defaults": {
@@ -2782,7 +2764,7 @@
           "legendFormat": "{{size_bucket}}"
         }
       ],
-      "description": "Half the value of the size_bucket label: the size is known from Content-Length before the transfer starts, so it works on the failure path too. An 80MiB file that dies halfway through the upload and a 2KiB file that fails to open are two different incidents; without this they are one series."
+      "description": "**The same timing for transfers that failed, per file size.** The size is known before the transfer starts, so failures can be split too: a 80 MiB file dying halfway and a 2 KiB file that never opens are different incidents.\n\n**Normal:** empty. Long times on large files point at timeouts; short times on small files at access errors.\n\n**Next:** 'Fetch Errors by error_code'."
     },
     {
       "id": 204,
@@ -2796,7 +2778,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 78
+        "y": 82
       },
       "fieldConfig": {
         "defaults": {
@@ -2820,7 +2802,7 @@
           "legendFormat": "p99"
         }
       ],
-      "description": "End-to-end handler latency. Success and failure are separate label values so a slow-failing request does not poison the success p99."
+      "description": "**How long one successful fetch takes end to end**, as percentiles. Failures are kept out so a slow failure does not distort the success numbers.\n\n**Normal:** seconds for ordinary files; the p99 reflects the largest files.\n\n**Next:** 'Content Fetch p95 by access_id' to find which datasource is slow."
     },
     {
       "id": 205,
@@ -2834,7 +2816,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 78
+        "y": 82
       },
       "fieldConfig": {
         "defaults": {
@@ -2858,7 +2840,7 @@
           "legendFormat": "p99"
         }
       ],
-      "description": "Size distribution of successfully streamed files, 1KiB to ~1GiB. Unlabeled by tenant, so this one is not filtered by $access_id."
+      "description": "**Size of successfully fetched files**, as percentiles. Not split by datasource. The size steps go from 1 KiB to 256 MiB; anything larger falls off the top and the percentile cannot place it.\n\n**Normal:** depends on the tenant; mostly under a few MiB.\n\n**Next:** 'Transfer p95 by size_bucket \u2014 success'."
     },
     {
       "id": 206,
@@ -2872,7 +2854,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 78
+        "y": 82
       },
       "fieldConfig": {
         "defaults": {
@@ -2886,7 +2868,7 @@
           "legendFormat": "{{datasource_access_id}}"
         }
       ],
-      "description": "Bytes content-service confirmed in its UploadResponse \u2014 what the far side acknowledged, not what Box declared."
+      "description": "**Bytes sent to the content service per second, per datasource access**, as confirmed by the content service.\n\n**Normal:** bursts during jobs, 0 otherwise.\n\n**Next:** 'Average Bytes per Fetch'."
     },
     {
       "id": 207,
@@ -2900,7 +2882,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 86
+        "y": 90
       },
       "fieldConfig": {
         "defaults": {
@@ -2914,13 +2896,13 @@
           "legendFormat": "{{datasource_access_id}}"
         }
       ],
-      "description": "Which tenant is slow. 'unknown' here means the failure happened before the URN could be parsed."
+      "description": "**Which datasource access is slow** (95th percentile of successful fetches). 'unknown' means the request failed before the connector could tell which datasource it belonged to.\n\n**Normal:** similar lines. One line far above the rest points at that tenant's files or Box account.\n\n**Next:** 'Transfer p95 by size_bucket \u2014 success' to see whether it is just bigger files."
     },
     {
       "id": 208,
       "type": "table",
       "title": "Fetch Errors by error_code (increase, 1h)",
-      "description": "Triage table: non-NONE error codes over the last hour. NAK_* are infra-level failures on the NATS path, not Box refusing us.",
+      "description": "**Fetch errors by code over the last hour**, for triage. NAK_* codes are failures in the message-queue handling, not Box refusing us.\n\n**Normal:** empty. NOT_FOUND is expected (file deleted since the scan); credential or permission codes need configuration fixes; timeouts and rate limiting are back-pressure.\n\n**Next:** 'Content Fetches by error_code' for when.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2929,7 +2911,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 86
+        "y": 90
       },
       "fieldConfig": {
         "defaults": {
@@ -3211,7 +3193,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 94
+        "y": 98
       },
       "fieldConfig": {
         "defaults": {
@@ -3225,7 +3207,7 @@
           "legendFormat": "in flight"
         }
       ],
-      "description": "Content mode's saturation signal, the counterpart of the scanner's folder_work_in_flight. Per pod and unlabeled by tenant."
+      "description": "**File fetches running right now**, summed over content pods. This is the content side's measure of how busy it is.\n\n**Normal:** 0 when idle; at most 10 per pod (contentFetch.workers) during a job.\n\n**Next:** 'KEDA \u2014 Content Replicas' on the Overview."
     },
     {
       "id": 210,
@@ -3239,7 +3221,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 94
+        "y": 98
       },
       "fieldConfig": {
         "defaults": {
@@ -3253,7 +3235,7 @@
           "legendFormat": "bytes per fetch"
         }
       ],
-      "description": "An average of averages, not a distribution: one 1GB file and a thousand 1KB files land on the same point as a thousand medium ones. The size_bucket panels above are the real answer; this is the cheap sanity check next to them."
+      "description": "**Average bytes per successful fetch.** An average only: one 1 GB file and a thousand 1 KB files land on the same point as a thousand medium files.\n\n**Normal:** stable for a given tenant. Use it as a quick sanity check; the size percentile panels are the real answer.\n\n**Next:** 'Content Fetch Bytes \u2014 p50 / p95 / p99'."
     }
   ]
 }
