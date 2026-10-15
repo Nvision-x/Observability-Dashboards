@@ -1,0 +1,1640 @@
+{
+  "uid": "apps-v2-oracle-pipeline",
+  "title": "Oracle Connector — Pipeline",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "connector:oracle",
+    "pipeline"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-oracle-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "Oracle — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-oracle-overview?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Oracle — Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-oracle-runtime?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "enable": true,
+        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\".*oracle-connector.*\"}[5m]) > 0",
+        "name": "Pod Restarts",
+        "tagKeys": "pod",
+        "titleFormat": "Pod Restart"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "description": "Fed from kube-state-metrics, never from process_start_time_seconds: oracle is minReplicaCount 0, so a process-lifecycle metric leaves this variable — and every panel, including the backlog and KEDA rows that survive the sleeping pod — empty in the connector's normal state.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(kube_deployment_spec_replicas{deployment=~\".*oracle-connector-be-go.*\"}, namespace)",
+        "query": {
+          "query": "label_values(kube_deployment_spec_replicas{deployment=~\".*oracle-connector-be-go.*\"}, namespace)",
+          "refId": "ns"
+        },
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "description": "allValue is .+ and not .*: every series is scraped twice in dev (PodMonitor plus the kubernetes-services catch-all) and only the PodMonitor copy carries a pod label. In PromQL .* also matches the absent label, which doubles every additive aggregation while leaving percentiles and _sum/_count ratios correct.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(process_start_time_seconds{job=~\".*oracle-connector-be-go.*\", namespace=\"$namespace\"}, pod)",
+        "query": {
+          "query": "label_values(process_start_time_seconds{job=~\".*oracle-connector-be-go.*\", namespace=\"$namespace\"}, pod)",
+          "refId": "pod"
+        },
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      },
+      {
+        "name": "query_type",
+        "type": "query",
+        "label": "Query type",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(oracle_scanner_query_duration_seconds_count{namespace=\"$namespace\"}, query_type)",
+        "query": {
+          "query": "label_values(oracle_scanner_query_duration_seconds_count{namespace=\"$namespace\"}, query_type)",
+          "refId": "qt"
+        },
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1,
+        "description": "allValue .* on purpose: query_type is a business label, not the duplicate-scrape discriminator."
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "How to read this board",
+      "options": {
+        "mode": "markdown",
+        "content": "**This is the drill-down.** The Overview says *what happened*; this board says *how much it cost* and *how it was distributed*. Nothing here is repeated from the Overview.\n\n**Totals add up every scan in the time range** — narrow the range to one scan to describe one database.\n\n**Heatmaps show one cell per owner or per query**, so a single slow one stands out instead of disappearing into an average.\n\nHover the ⓘ on any panel for what it counts, what is normal, and where to look next.",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1
+    },
+    {
+      "type": "row",
+      "title": "Scanner — Cost & Prediction",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "id": 2
+    },
+    {
+      "type": "stat",
+      "title": "Time per Object",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Average time to scan one table or view**, in milliseconds, end to end inside its owner: listing, reading its columns, sending its documents, plus its share of the owner's fixed cost.\n\n**Normal:** a few hundred ms. Multiply by the number of tables to estimate a bigger database. It is the same total time as 'Time per Column' beside it, divided by tables instead of columns — so Time per Object ≈ Time per Column × Columns per Object.\n\n**Next:** 'Time per Column' beside it.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "1000 * sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) / clamp_min(sum(sum_over_time(((last_over_time(oracle_scanner_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(oracle_scanner_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])), 1)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 5
+      },
+      "id": 3
+    },
+    {
+      "type": "stat",
+      "title": "Time per Column",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**The same total time divided by columns instead of tables**, in milliseconds. It is not how long one column takes to read — columns are read together, one query per table.\n\n**Normal:** tens of ms. If it stays flat while Time per Object moves, the tables got wider, not slower.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 1,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "1000 * sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) / clamp_min(sum(sum_over_time(((last_over_time(oracle_scanner_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(oracle_scanner_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])), 1)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 5
+      },
+      "id": 4
+    },
+    {
+      "type": "stat",
+      "title": "Objects per Owner",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Average tables and views per owner**, counting only owners that have some.\n\n**Normal:** any number — but databases are rarely uniform. One big owner hides inside an average.\n\n**Next:** the 'Owner Duration — distribution' heatmap below shows each owner as a cell.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 1,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(sum_over_time(((last_over_time(oracle_scanner_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(oracle_scanner_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) / clamp_min(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) - ((sum(sum_over_time(((last_over_time(oracle_scanner_empty_scan_outcomes_total{namespace=\"$namespace\", pod=~\"$pod\", scope=\"owner\"}[15s]) - last_over_time(oracle_scanner_empty_scan_outcomes_total{namespace=\"$namespace\", pod=~\"$pod\", scope=\"owner\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_empty_scan_outcomes_total{namespace=\"$namespace\", pod=~\"$pod\", scope=\"owner\"}[15s]) * 1)[$__range:15s]))) or vector(0)), 1)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 5
+      },
+      "id": 5
+    },
+    {
+      "type": "stat",
+      "title": "Columns per Object",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Average width of a table**, in columns.\n\n**Normal:** any number. A very wide table (hundreds of columns) moves this and the cost per table together.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 1,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(sum_over_time(((last_over_time(oracle_scanner_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(oracle_scanner_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) / clamp_min(sum(sum_over_time(((last_over_time(oracle_scanner_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(oracle_scanner_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])), 1)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 5
+      },
+      "id": 6
+    },
+    {
+      "type": "heatmap",
+      "title": "Owner Duration — distribution",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How long each owner took, over time.** **How to read it:** time runs left to right, duration bottom to top. Each box is 'this many owners took this long, at this moment' — the colour says how many (brighter = more), and hovering a box shows the exact number as Value. Colours do not identify individual owners.\n\n**Normal:** one tight band when owners are similar. Boxes far above the band are the slow owners — the board cannot name them.\n\n**Next:** 'Owners by Duration' beside it gives the same counts for the whole range, easier to read for a single scan.",
+      "interval": "30s",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "fill": "dark-orange",
+          "scale": "exponential",
+          "exponent": 0.5,
+          "steps": 64,
+          "reverse": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "unit": "s"
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "mode": "single",
+          "yHistogram": true
+        },
+        "legend": {
+          "show": true
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "showValue": "never",
+        "cellValues": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (le) (sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__interval:15s]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
+      ],
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 9
+      },
+      "id": 7
+    },
+    {
+      "type": "bargauge",
+      "title": "Owners by Duration (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How many owners took how long**, for the whole range — the heatmap beside it collapsed into one bar per duration range. Only ranges with at least one owner are shown.\n\n**Normal:** most owners in one or two neighbouring bars. A few owners several bars above the rest are the big ones. Note that every owner pays a fixed cost (listing its tables, extended metadata), so even an empty owner takes a while.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.1\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.1\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.1\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "≤ 0.1 s"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.2\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.2\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.2\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.1\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.1\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.1\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "0.1–0.2 s"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.4\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.4\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.4\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.2\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.2\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.2\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "0.2–0.4 s"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.8\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.8\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.8\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.4\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.4\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.4\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "0.4–0.8 s"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"1.6\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"1.6\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"1.6\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.8\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.8\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"0.8\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "0.8–1.6 s"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"3.2\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"3.2\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"3.2\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"1.6\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"1.6\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"1.6\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "1.6–3.2 s"
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"6.4\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"6.4\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"6.4\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"3.2\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"3.2\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"3.2\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "3.2–6.4 s"
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"12.8\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"12.8\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"12.8\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"6.4\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"6.4\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"6.4\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "6.4–12.8 s"
+        },
+        {
+          "refId": "I",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"25.6\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"25.6\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"25.6\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"12.8\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"12.8\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"12.8\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "12.8–25.6 s"
+        },
+        {
+          "refId": "J",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"51.2\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"51.2\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"51.2\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"25.6\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"25.6\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"25.6\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "25.6–51.2 s"
+        },
+        {
+          "refId": "K",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"102.4\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"102.4\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"102.4\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"51.2\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"51.2\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"51.2\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "51.2–102.4 s"
+        },
+        {
+          "refId": "L",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"204.8\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"204.8\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"204.8\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"102.4\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"102.4\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"102.4\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "102.4–204.8 s"
+        },
+        {
+          "refId": "M",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"409.6\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"409.6\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"409.6\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"204.8\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"204.8\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"204.8\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "204.8–409.6 s"
+        },
+        {
+          "refId": "N",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"819.2\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"819.2\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"819.2\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"409.6\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"409.6\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"409.6\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "409.6–819.2 s"
+        },
+        {
+          "refId": "O",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"+Inf\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"+Inf\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"+Inf\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"819.2\"}[15s]) - last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"819.2\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_schema_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=\"819.2\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "> 819.2 s"
+        }
+      ],
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 9
+      },
+      "id": 8
+    },
+    {
+      "type": "heatmap",
+      "title": "Query Duration — distribution",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How long each SQL query took, over time**, filtered by the Query type selector at the top. **How to read it:** time runs left to right, duration bottom to top. Each box is 'this many queries took this long, at this moment' — the colour says how many (brighter = more), and hovering a box shows the exact number as Value. Colours do not identify individual queries.\n\n**Normal:** most boxes low. Column queries run once per table, so they dominate the count.",
+      "interval": "30s",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "fill": "dark-orange",
+          "scale": "exponential",
+          "exponent": 0.5,
+          "steps": 64,
+          "reverse": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "unit": "s"
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "mode": "single",
+          "yHistogram": true
+        },
+        "legend": {
+          "show": true
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "showValue": "never",
+        "cellValues": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (le) (sum_over_time(((last_over_time(oracle_scanner_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[15s]) - last_over_time(oracle_scanner_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[15s]) * 1)[$__interval:15s]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
+      ],
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 9
+      },
+      "id": 9
+    },
+    {
+      "type": "row",
+      "title": "Scanner — Query Performance",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 10
+    },
+    {
+      "type": "timeseries",
+      "title": "Query p95 by query_type",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How slow the slowest 5% of each kind of query was**, over time. list_tables runs once per owner, query_columns once per table, the rest once per owner for extended metadata.\n\n**Normal:** only readable under sustained load. For a single scan use the mean beside it.\n\n**Next:** the Overview's 'Query Time by Type' for where the time went in total.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, query_type) (rate(oracle_scanner_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[5m])))",
+          "legendFormat": "{{query_type}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 19
+      },
+      "id": 11
+    },
+    {
+      "type": "timeseries",
+      "title": "Query Mean by query_type (5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Average time per query of each kind.** The average is the one that multiplies: average × number of calls = total time.\n\n**Normal:** column queries well under a second.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (query_type) (rate(oracle_scanner_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[5m])) / sum by (query_type) (rate(oracle_scanner_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[5m]))",
+          "legendFormat": "{{query_type}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 19
+      },
+      "id": 12
+    },
+    {
+      "type": "bargauge",
+      "title": "Query Count by Type (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How many queries of each kind ran** — a count, not time. For where the time went, see 'Query Time by Type' on the Overview.\n\n**Normal:** query_columns = tables scanned + tables failed; list_tables = owner attempts; the metadata kinds = owners with tables, when the scan has DBA access.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (query_type) (sum_over_time(((last_over_time(oracle_scanner_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[15s]) - last_over_time(oracle_scanner_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_scanner_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", query_type=~\"$query_type\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "{{query_type}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 19
+      },
+      "id": 13
+    },
+    {
+      "type": "row",
+      "title": "Content — Fetch & Streaming",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 14
+    },
+    {
+      "type": "timeseries",
+      "title": "Fetch Duration — p50 / p95 by outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How long samples took, split into successes and failures**, so fast failures do not make successes look quicker than they are.\n\n**Normal:** only readable under sustained load.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, outcome) (rate(oracle_content_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p50 {{outcome}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, outcome) (rate(oracle_content_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p95 {{outcome}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 28
+      },
+      "id": 15
+    },
+    {
+      "type": "timeseries",
+      "title": "Stream Duration — p50 / p95 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Only the part spent reading rows from Oracle and uploading them.** The whole fetch minus this is setup: credentials, connection, looking up the column type.\n\n**Normal:** most of the fetch time on big tables; little on small ones.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(oracle_content_stream_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(oracle_content_stream_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(oracle_content_stream_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 28
+      },
+      "id": 16
+    },
+    {
+      "type": "timeseries",
+      "title": "Stream Throughput",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Speed while streaming, adjusted for size.**\n\n**Normal:** steady. If fetches get slower and this holds, the samples just got bigger; if this drops, something really got slower.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(oracle_content_stream_bytes_sum{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) / clamp_min(sum(rate(oracle_content_stream_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[5m])), 1e-9)",
+          "legendFormat": "bytes/s while streaming"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(oracle_content_stream_rows_sum{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) / clamp_min(sum(rate(oracle_content_stream_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[5m])), 1e-9)",
+          "legendFormat": "rows/s while streaming"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 28
+      },
+      "id": 17
+    },
+    {
+      "type": "heatmap",
+      "title": "Stream Bytes — distribution",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Size of each successful sample, over time.** **How to read it:** each box is 'this many samples were this big, at this moment'; brighter = more, hover for the exact count.\n\n**Normal:** values are cut at 4000 characters, so a text/CLOB sample tops out around rows × 4000 bytes.",
+      "interval": "30s",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "fill": "dark-orange",
+          "scale": "exponential",
+          "exponent": 0.5,
+          "steps": 64,
+          "reverse": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "unit": "bytes"
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "mode": "single",
+          "yHistogram": true
+        },
+        "legend": {
+          "show": true
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "showValue": "never",
+        "cellValues": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (le) (sum_over_time(((last_over_time(oracle_content_stream_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(oracle_content_stream_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_content_stream_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__interval:15s]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "id": 18
+    },
+    {
+      "type": "heatmap",
+      "title": "Stream Rows — distribution",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Rows in each successful sample, over time.** **How to read it:** each box is 'this many samples were this big, at this moment'; brighter = more, hover for the exact count.\n\n**Normal:** between 100 and 1000 (ORACLE_CONTENT_SAMPLE_MIN_ROWS / MAX_ROWS). Below 100 means small tables, not a broken sampler.",
+      "interval": "30s",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "fill": "dark-orange",
+          "scale": "exponential",
+          "exponent": 0.5,
+          "steps": 64,
+          "reverse": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "unit": "short"
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "mode": "single",
+          "yHistogram": true
+        },
+        "legend": {
+          "show": true
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "showValue": "never",
+        "cellValues": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (le) (sum_over_time(((last_over_time(oracle_content_stream_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(oracle_content_stream_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_content_stream_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__interval:15s]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "id": 19
+    },
+    {
+      "type": "row",
+      "title": "Content — Sampling",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "id": 20
+    },
+    {
+      "type": "bargauge",
+      "title": "Sample Attempts (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How many tries each successful sample needed.** A retry happens when a random sample returns too few rows or none; 4 means the last try read the whole column.\n\n**Normal:** almost all in '1 attempt'. Many in 2–4 means the sample percentage is too low for this data.\n\n**Next:** 'Empty Samples by kind' on the Overview.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(sum_over_time(((last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"1(\\\\.0)?\"}[15s]) - last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"1(\\\\.0)?\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"1(\\\\.0)?\"}[15s]) * 1)[$__range:15s]))",
+          "legendFormat": "1 attempt"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(sum_over_time(((last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"2(\\\\.0)?\"}[15s]) - last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"2(\\\\.0)?\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"2(\\\\.0)?\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"1(\\\\.0)?\"}[15s]) - last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"1(\\\\.0)?\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"1(\\\\.0)?\"}[15s]) * 1)[$__range:15s]))",
+          "legendFormat": "2 attempts"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(sum_over_time(((last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"3(\\\\.0)?\"}[15s]) - last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"3(\\\\.0)?\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"3(\\\\.0)?\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"2(\\\\.0)?\"}[15s]) - last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"2(\\\\.0)?\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"2(\\\\.0)?\"}[15s]) * 1)[$__range:15s]))",
+          "legendFormat": "3 attempts"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(sum_over_time(((last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"4(\\\\.0)?\"}[15s]) - last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"4(\\\\.0)?\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"4(\\\\.0)?\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"3(\\\\.0)?\"}[15s]) - last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"3(\\\\.0)?\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_content_sample_attempts_bucket{namespace=\"$namespace\", pod=~\"$pod\", le=~\"3(\\\\.0)?\"}[15s]) * 1)[$__range:15s]))",
+          "legendFormat": "4 — full scan"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 45
+      },
+      "id": 21
+    },
+    {
+      "type": "timeseries",
+      "title": "Empty Samples by kind (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**When samples came back empty**, same colours as on the Overview.\n\n**Normal:** rare bumps; the counts are on the Overview.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "empty"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unrendered"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "recovered"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (outcome) (rate(oracle_content_sample_verify_empty_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 45
+      },
+      "id": 22
+    },
+    {
+      "type": "timeseries",
+      "title": "Truncation & Size Limit (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**When long values were cut** (only the first 4000 characters were sampled) **and when whole samples stopped at the 100 MB limit.**\n\n**Normal:** flat unless there are long text or CLOB columns.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^values truncated"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^samples cut"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(oracle_content_values_truncated_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "values truncated"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(oracle_content_sample_budget_stopped_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "samples cut by size limit"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 45
+      },
+      "id": 23
+    }
+  ]
+}
