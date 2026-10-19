@@ -152,7 +152,7 @@
     {
       "id": 81,
       "type": "stat",
-      "title": "Files Discovered (total)",
+      "title": "Files Discovered",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -189,7 +189,7 @@
     {
       "id": 82,
       "type": "stat",
-      "title": "Items Sent (total)",
+      "title": "Items Sent",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -221,12 +221,12 @@
           "expr": "(sum(sum_over_time(((last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[15s]) - last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "**Files the scanner handed on for indexing.** This is the only success path out of the scan.\n\n**Normal:** close to Files Discovered, minus files already in Box's trash and any failures.\n\n**Next:** 'Items Failed (window)' in the Scanner row, and 'Scanner Items by Outcome' for the split."
+      "description": "**Files the scanner handed on for indexing.** This is the only success path out of the scan.\n\n**Normal:** close to Files Discovered, minus files already in Box's trash and any failures.\n\n**Next:** 'Failed' in the Scanner row, and 'Scanner Items by Outcome' for the split."
     },
     {
       "id": 83,
       "type": "stat",
-      "title": "Item Loss (total)",
+      "title": "Item Loss",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -289,7 +289,7 @@
     {
       "id": 7,
       "type": "stat",
-      "title": "Folders Skipped (total)",
+      "title": "Folders Skipped",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -351,7 +351,7 @@
     {
       "id": 85,
       "type": "stat",
-      "title": "Folders Forked (total)",
+      "title": "Folders Forked",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -388,7 +388,7 @@
     {
       "id": 86,
       "type": "stat",
-      "title": "Content Fetches (total)",
+      "title": "Content Fetches",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -617,7 +617,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "**Why users were skipped, counted over the selected time range.** All six reasons are always reported, at 0 when nobody is skipped, so an empty chart means a clean scan, not missing data. Deactivated = the account is inactive in Box; deactivated mid-scan = it was deactivated while the scan ran; not found = deleted during the scan; terms of service = the user has not accepted Box's terms; permission denied = the service account can no longer act as that user; traverse failed = a genuine error.\n\n**Normal:** only deactivated and terms-of-service, which are expected. Permission denied is broken configuration. Traverse failed is the only connector failure, and it is counted again on each retry (up to 5), so it can overstate the number of distinct users.\n\n**Next:** 'NATS \u2014 Redelivered' for the retries; the Pipeline board breaks this down per datasource.",
+      "description": "**Why users were skipped, counted over the selected time range.** All six reasons are always reported, at 0 when nobody is skipped, so an empty chart means a clean scan, not missing data. Deactivated = the account is inactive in Box; deactivated mid-scan = it was deactivated while the scan ran; not found = deleted during the scan; terms of service = the user has not accepted Box's terms; permission denied = the service account can no longer act as that user; traverse failed = a genuine error.\n\n**Normal:** only deactivated and terms-of-service, which are expected. Permission denied is broken configuration. Traverse failed is the only connector failure, and it is counted again on each retry (up to 5), so it can overstate the number of distinct users.\n\n**Next:** 'Redelivered' for the retries; the Pipeline board breaks this down per datasource.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -968,7 +968,7 @@
     {
       "id": 121,
       "type": "stat",
-      "title": "NATS \u2014 Scanner Backlog",
+      "title": "NATS Backlog",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1005,7 +1005,7 @@
     {
       "id": 122,
       "type": "stat",
-      "title": "NATS \u2014 In Flight (unacked)",
+      "title": "In Flight",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1042,7 +1042,7 @@
     {
       "id": 123,
       "type": "stat",
-      "title": "NATS \u2014 Redelivered",
+      "title": "Redelivered",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1100,7 +1100,7 @@
           "expr": "max(nats_consumer_num_redelivered{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"})"
         }
       ],
-      "description": "**Work being retried after a failure.** A message is retried up to 5 times (JOBENGINE_MAX_DELIVER) before it is moved to the dead-letter queue.\n\n**Normal:** 0. A connector that fails and retries in a loop shows up here and nowhere else.\n\n**Next:** 'Slot Deferrals' (a saturated user also spends retries) and the Dead Letter Queue row."
+      "description": "**Work being retried after a failure.** A message is retried up to 5 times (JOBENGINE_MAX_DELIVER) before it is moved to the dead-letter queue.\n\n**Normal:** 0. A connector that fails and retries in a loop shows up here and nowhere else.\n\n**Next:** 'Deferrals' (a saturated user also spends retries) and the Dead Letter Queue row."
     },
     {
       "id": 124,
@@ -1174,12 +1174,12 @@
           "expr": "max(kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*box-connector-be-go\"})"
         }
       ],
-      "description": "**The most scanner pods the autoscaler may start** (chart setting autoscaling.maxReplicas, 3 by default, and it can differ per environment).\n\n**Normal:** read it against Replicas and the backlog: at the ceiling with a growing backlog means the scanner cannot go faster. Being at the ceiling with a draining backlog is routine with a low ceiling, not trouble.\n\n**Next:** 'NATS \u2014 Scanner Backlog'."
+      "description": "**The most scanner pods the autoscaler may start** (chart setting autoscaling.maxReplicas, 3 by default, and it can differ per environment).\n\n**Normal:** read it against Replicas and the backlog: at the ceiling with a growing backlog means the scanner cannot go faster. Being at the ceiling with a draining backlog is routine with a low ceiling, not trouble.\n\n**Next:** 'NATS Backlog'."
     },
     {
       "id": 126,
       "type": "stat",
-      "title": "NATS \u2014 Backlog Slope (2m)",
+      "title": "Backlog Slope",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1211,7 +1211,7 @@
           "expr": "clamp_min(max(deriv(nats_consumer_num_pending{stream_name=\"JE_BOX\", consumer_name=\"box-scanner-v1\"}[2m])), 0)"
         }
       ],
-      "description": "**How fast the scanner's backlog is growing**, in messages per second. This is exactly what one of the autoscaler's rules looks at.\n\n**Normal:** 0. Above 0.5 the autoscaler adds pods.\n\n**Next:** 'KEDA \u2014 trend-based signal vs threshold' below."
+      "description": "**How fast the scanner's backlog is growing**, in messages per second. This is exactly what one of the autoscaler's rules looks at.\n\n**Normal:** 0. Above 0.5 the autoscaler adds pods.\n\n**Next:** 'KEDA \u2014 trend-based vs threshold' below."
     },
     {
       "id": 127,
@@ -1400,7 +1400,7 @@
           "expr": "(sum(up{job=~\".*box-connector-be-go\", namespace=\"$namespace\", pod=~\"$pod\"})) or vector(0)"
         }
       ],
-      "description": "**Scanner pods answering right now.**\n\n**Normal:** 0 when idle \u2014 the scanner scales to zero when there is no work, so 0 is the normal resting state, not an outage. 'Should be running and is not' is 0 pods WITH a backlog, which the queue panels in this row show.\n\n**Next:** 'NATS \u2014 Scanner Backlog'."
+      "description": "**Scanner pods answering right now.**\n\n**Normal:** 0 when idle \u2014 the scanner scales to zero when there is no work, so 0 is the normal resting state, not an outage. 'Should be running and is not' is 0 pods WITH a backlog, which the queue panels in this row show.\n\n**Next:** 'NATS Backlog'."
     },
     {
       "id": 102,
@@ -1468,7 +1468,7 @@
     {
       "id": 103,
       "type": "stat",
-      "title": "Files Discovered (window)",
+      "title": "Found",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1505,7 +1505,7 @@
     {
       "id": 105,
       "type": "stat",
-      "title": "Items Failed (window)",
+      "title": "Failed",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1568,7 +1568,7 @@
     {
       "id": 104,
       "type": "stat",
-      "title": "Items Sent (window)",
+      "title": "Sent",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1649,7 +1649,7 @@
     {
       "id": 108,
       "type": "stat",
-      "title": "User Slots Held",
+      "title": "Slots Held",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1681,7 +1681,7 @@
           "expr": "sum(box_scanner_user_slots_held{namespace=\"$namespace\", pod=~\"$pod\"})"
         }
       ],
-      "description": "**Per-user work slots this connector holds right now, across all scanner pods.** Box limits traffic per user, so the connector lets at most BOX_USER_MAX_CONCURRENCY (5 by default) folders of the same user run at once, shared by every pod.\n\n**Normal:** 0 when idle. Slots near the cap with deferrals rising means that cap is what limits speed.\n\n**Next:** 'Per-user Contention' below and 'Slot Deferrals' in the Box API row."
+      "description": "**Per-user work slots this connector holds right now, across all scanner pods.** Box limits traffic per user, so the connector lets at most BOX_USER_MAX_CONCURRENCY (5 by default) folders of the same user run at once, shared by every pod.\n\n**Normal:** 0 when idle. Slots near the cap with deferrals rising means that cap is what limits speed.\n\n**Next:** 'User Slots \u2014 held vs requeued' below and 'Deferrals' in the Box API row."
     },
     {
       "id": 109,
@@ -3366,12 +3366,12 @@
           "legendFormat": "{{outcome}}"
         }
       ],
-      "description": "**When subfolders were queued, skipped or failed to queue**, as a rate. Every subfolder becomes its own message; 'skipped collab' is a folder owned by another user, left for that user's own scan.\n\n**Normal:** forked and skipped collab only. 'Publish failed' is the worst silent failure: until that message is retried, the folder's whole subtree is not scanned.\n\n**Next:** 'Folders Forked (total)' and 'Folders Skipped (total)' for the counts."
+      "description": "**When subfolders were queued, skipped or failed to queue**, as a rate. Every subfolder becomes its own message; 'skipped collab' is a folder owned by another user, left for that user's own scan.\n\n**Normal:** forked and skipped collab only. 'Publish failed' is the worst silent failure: until that message is retried, the folder's whole subtree is not scanned.\n\n**Next:** 'Folders Forked' and 'Folders Skipped' for the counts."
     },
     {
       "id": 113,
       "type": "timeseries",
-      "title": "Per-user Contention \u2014 slots held vs requeues",
+      "title": "User Slots \u2014 held vs requeued",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3441,12 +3441,12 @@
           "legendFormat": "slot requeues /s"
         }
       ],
-      "description": "**Where the scanner holds itself back.** Box limits traffic per user, so each user gets a fixed number of slots shared by all pods. A folder that finds no free slot waits (BOX_USER_SLOT_WAIT_SEC, 10 s), then is re-queued as a fresh message \u2014 'requeues', the normal sign of contention. After BOX_USER_SLOT_MAX_REQUEUE (50) re-queues it is instead put back for retry \u2014 a 'deferral' \u2014 which spends one of its 5 attempts.\n\n**Normal:** requeues climbing with deferrals at 0 is healthy. Deferrals above 0 is the last step before a folder and everything below it is thrown away.\n\n**Next:** 'Slot Deferrals (window)' and the Dead Letter Queue row."
+      "description": "**Where the scanner holds itself back.** Box limits traffic per user, so each user gets a fixed number of slots shared by all pods. A folder that finds no free slot waits (BOX_USER_SLOT_WAIT_SEC, 10 s), then is re-queued as a fresh message \u2014 'requeues', the normal sign of contention. After BOX_USER_SLOT_MAX_REQUEUE (50) re-queues it is instead put back for retry \u2014 a 'deferral' \u2014 which spends one of its 5 attempts.\n\n**Normal:** requeues climbing with deferrals at 0 is healthy. Deferrals above 0 is the last step before a folder and everything below it is thrown away.\n\n**Next:** 'Deferrals' and the Dead Letter Queue row."
     },
     {
       "id": 129,
       "type": "timeseries",
-      "title": "KEDA \u2014 ack-capacity signal vs threshold",
+      "title": "KEDA \u2014 ack-capacity vs threshold",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3492,7 +3492,7 @@
     {
       "id": 130,
       "type": "timeseries",
-      "title": "KEDA \u2014 trend-based signal vs threshold",
+      "title": "KEDA \u2014 trend-based vs threshold",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3533,12 +3533,12 @@
           "legendFormat": "backlog slope"
         }
       ],
-      "description": "**Another autoscaler rule: is the queue growing?** Above 0.5 messages per second it adds pods; it becomes active at 0.1.\n\n**Normal:** 0 most of the time, short positive bumps at the start of a scan.\n\n**Next:** 'NATS \u2014 Backlog Slope (2m)'."
+      "description": "**Another autoscaler rule: is the queue growing?** Above 0.5 messages per second it adds pods; it becomes active at 0.1.\n\n**Normal:** 0 most of the time, short positive bumps at the start of a scan.\n\n**Next:** 'Backlog Slope'."
     },
     {
       "id": 131,
       "type": "timeseries",
-      "title": "KEDA \u2014 pending-wakeup signal vs threshold",
+      "title": "KEDA \u2014 pending-wakeup vs threshold",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3735,7 +3735,7 @@
     {
       "id": 144,
       "type": "stat",
-      "title": "Slot Deferrals (window)",
+      "title": "Deferrals",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3767,12 +3767,12 @@
           "expr": "sum(sum_over_time(((last_over_time(box_scanner_user_slot_deferrals_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_user_slot_deferrals_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_user_slot_deferrals_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))"
         }
       ],
-      "description": "**Scan messages put back for retry because their user had no free slot, over the selected time range.** For a folder this only happens after it has already been re-queued BOX_USER_SLOT_MAX_REQUEUE (50) times; a user's first top-level scan has no re-queue path and is put back straight after waiting. Each one spends one of the message's 5 attempts (JOBENGINE_MAX_DELIVER), and past that the folder and everything below it is thrown away.\n\n**Normal:** 0. Anything above zero means the per-user limits are too tight for this tenant.\n\n**Next:** 'NATS \u2014 Redelivered' and the Dead Letter Queue row."
+      "description": "**Scan messages put back for retry because their user had no free slot, over the selected time range.** For a folder this only happens after it has already been re-queued BOX_USER_SLOT_MAX_REQUEUE (50) times; a user's first top-level scan has no re-queue path and is put back straight after waiting. Each one spends one of the message's 5 attempts (JOBENGINE_MAX_DELIVER), and past that the folder and everything below it is thrown away.\n\n**Normal:** 0. Anything above zero means the per-user limits are too tight for this tenant.\n\n**Next:** 'Redelivered' and the Dead Letter Queue row."
     },
     {
       "id": 206,
       "type": "stat",
-      "title": "Slot Requeues (window)",
+      "title": "Requeues",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3804,7 +3804,7 @@
           "expr": "sum(sum_over_time(((last_over_time(box_scanner_user_slot_requeues_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_scanner_user_slot_requeues_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_user_slot_requeues_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))"
         }
       ],
-      "description": "**Folders re-queued as a fresh message because their user had no free slot, over the selected time range.** This is back-pressure working: a fresh message starts with a full set of attempts, so waiting never pushes a folder toward being thrown away.\n\n**Normal:** above 0 under load is normal. Worry only if 'Slot Deferrals' beside it also rises.\n\n**Next:** 'Per-user Contention' in the Scanner row."
+      "description": "**Folders re-queued as a fresh message because their user had no free slot, over the selected time range.** This is back-pressure working: a fresh message starts with a full set of attempts, so waiting never pushes a folder toward being thrown away.\n\n**Normal:** above 0 under load is normal. Worry only if 'Deferrals' beside it also rises.\n\n**Next:** 'User Slots \u2014 held vs requeued' in the Scanner row."
     },
     {
       "type": "bargauge",
@@ -4472,7 +4472,7 @@
           "legendFormat": "slot requeues /s (leading)"
         }
       ],
-      "description": "**The four signs of saturation, in the order they appear.** First folders cannot get a user slot and are re-queued; then the connector's own speed limit makes requests wait; deferrals appear only once folders run out of re-queues; Box's 429 refusals come last.\n\n**Normal:** all near 0. Requeues alone under load are fine. 429s mean Box is already refusing; deferrals mean folders are close to being lost.\n\n**Next:** 'Slot Deferrals (window)' and '429s (window)'."
+      "description": "**The four signs of saturation, in the order they appear.** First folders cannot get a user slot and are re-queued; then the connector's own speed limit makes requests wait; deferrals appear only once folders run out of re-queues; Box's 429 refusals come last.\n\n**Normal:** all near 0. Requeues alone under load are fine. 429s mean Box is already refusing; deferrals mean folders are close to being lost.\n\n**Next:** 'Deferrals' and '429s (window)'."
     },
     {
       "id": 148,
@@ -4990,7 +4990,7 @@
     {
       "id": 161,
       "type": "timeseries",
-      "title": "Augmenter Items by Outcome (rate, 5m)",
+      "title": "Items by Outcome (rate, 5m)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -5334,7 +5334,7 @@
     {
       "id": 163,
       "type": "timeseries",
-      "title": "Augment Batch Duration \u2014 p50 / p95 / p99",
+      "title": "Batch Duration \u2014 p50 / p95 / p99",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -5444,7 +5444,7 @@
           "expr": "(sum(up{job=~\".*box-connector-be-go-content\", namespace=\"$namespace\", pod=~\"$pod\"})) or vector(0)"
         }
       ],
-      "description": "**Content pods answering right now.**\n\n**Normal:** 0 when idle \u2014 content also scales to zero, so 0 is not an outage. 'Should be running and is not' is 0 pods with a fetch backlog.\n\n**Next:** 'NATS \u2014 Fetch Backlog'."
+      "description": "**Content pods answering right now.**\n\n**Normal:** 0 when idle \u2014 content also scales to zero, so 0 is not an outage. 'Should be running and is not' is 0 pods with a fetch backlog.\n\n**Next:** 'Fetch Backlog'."
     },
     {
       "id": 182,
@@ -5512,7 +5512,7 @@
     {
       "id": 183,
       "type": "stat",
-      "title": "Fetches (window)",
+      "title": "Fetches",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -5549,7 +5549,7 @@
     {
       "id": 184,
       "type": "stat",
-      "title": "Content Fetch \u2014 mean / p95",
+      "title": "Fetch Time",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -5588,12 +5588,12 @@
           "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])))"
         }
       ],
-      "description": "**How long one file fetch takes, end to end.** The mean is total fetch time over fetch count \u2014 multiply it by a number of fetches to estimate a bigger job. The p95 is the slowest 5%.\n\n**Normal:** seconds for ordinary office files. Fetch cost grows with file size, so read the mean against 'Content Transfer Rate': if the mean rises while the transfer rate holds, the files got bigger and nothing is wrong; if the transfer rate falls, something really got slower.\n\n**Next:** the Pipeline board's Content row for success vs failure and per size."
+      "description": "**How long one file fetch takes, end to end.** The mean is total fetch time over fetch count \u2014 multiply it by a number of fetches to estimate a bigger job. The p95 is the slowest 5%.\n\n**Normal:** seconds for ordinary office files. Fetch cost grows with file size, so read the mean against 'Transfer Rate': if the mean rises while the transfer rate holds, the files got bigger and nothing is wrong; if the transfer rate falls, something really got slower.\n\n**Next:** the Pipeline board's Content row for success vs failure and per size."
     },
     {
       "id": 219,
       "type": "stat",
-      "title": "Content Transfer Rate",
+      "title": "Transfer Rate",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -5637,12 +5637,12 @@
           "expr": "(sum(sum_over_time(((last_over_time(box_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)) / clamp_min(sum(sum_over_time(((last_over_time(box_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(box_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(box_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])), 0.001)"
         }
       ],
-      "description": "**Transfer speed while actually transferring**: bytes delivered divided by the time spent fetching, not by elapsed time.\n\n**Normal:** steady across runs. Read it against 'Content Fetch \u2014 mean / p95': if fetch time rises while this stays flat, the files got bigger; if this falls, something really got slower. Unlike 'Upload Throughput' it does not drop to 0 when idle.\n\n**Next:** 'Transfer p95 by size_bucket'."
+      "description": "**Transfer speed while actually transferring**: bytes delivered divided by the time spent fetching, not by elapsed time.\n\n**Normal:** steady across runs. Read it against 'Fetch Time': if fetch time rises while this stays flat, the files got bigger; if this falls, something really got slower. Unlike 'Upload Rate' it does not drop to 0 when idle.\n\n**Next:** 'Transfer p95 by size_bucket'."
     },
     {
       "id": 185,
       "type": "stat",
-      "title": "Errors (window)",
+      "title": "Errors",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -5705,7 +5705,7 @@
     {
       "id": 186,
       "type": "stat",
-      "title": "Upload Throughput",
+      "title": "Upload Rate",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -6012,12 +6012,12 @@
           "expr": "sum(rate(box_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))"
         }
       ],
-      "description": "**Bytes per second sent to the content service**, averaged over the last 5 minutes of wall-clock time. Counted as what the content service confirmed receiving, not what Box declared.\n\n**Normal:** 0 whenever nothing is running; a short burst may read near 0.\n\n**Next:** 'Content Transfer Rate' for the speed of the transfers themselves."
+      "description": "**Bytes per second sent to the content service**, averaged over the last 5 minutes of wall-clock time. Counted as what the content service confirmed receiving, not what Box declared.\n\n**Normal:** 0 whenever nothing is running; a short burst may read near 0.\n\n**Next:** 'Transfer Rate' for the speed of the transfers themselves."
     },
     {
       "id": 188,
       "type": "stat",
-      "title": "NATS \u2014 Fetch Backlog",
+      "title": "Fetch Backlog",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -6726,7 +6726,7 @@
           "legendFormat": "uploaded"
         }
       ],
-      "description": "**Bytes sent to the content service per second over time**, as confirmed by the content service.\n\n**Normal:** bursts when a job runs, 0 otherwise.\n\n**Next:** 'Content Transfer Rate' for the speed while transferring."
+      "description": "**Bytes sent to the content service per second over time**, as confirmed by the content service.\n\n**Normal:** bursts when a job runs, 0 otherwise.\n\n**Next:** 'Transfer Rate' for the speed while transferring."
     },
     {
       "id": 192,
@@ -7171,7 +7171,7 @@
     {
       "id": 224,
       "type": "stat",
-      "title": "Augment Items (window)",
+      "title": "Augment Items",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -7282,7 +7282,7 @@
         "x": 0,
         "y": 137
       },
-      "description": "**Scan messages given up on after 5 attempts and parked in the dead-letter queue (DLQ_CONSUME_BOX).** For the scanner each one is a folder plus its entire subtree, so this count does not measure the damage: one message cost 7 files when it hit a small folder, and would cost thousands near the top of a tree.\n\n**Normal:** 0. Any other value means a scan quietly returned less than the tenant holds \u2014 and the connector's own funnel cannot show it, because Items Sent still equals Files Discovered for what was seen. Each message names the folder: nats stream get DLQ_CONSUME_BOX <seq>.\n\n**Next:** 'DLQ Depth over time' for when, and 'Slot Deferrals' for the usual cause.",
+      "description": "**Scan messages given up on after 5 attempts and parked in the dead-letter queue (DLQ_CONSUME_BOX).** For the scanner each one is a folder plus its entire subtree, so this count does not measure the damage: one message cost 7 files when it hit a small folder, and would cost thousands near the top of a tree.\n\n**Normal:** 0. Any other value means a scan quietly returned less than the tenant holds \u2014 and the connector's own funnel cannot show it, because Items Sent still equals Files Discovered for what was seen. Each message names the folder: nats stream get DLQ_CONSUME_BOX <seq>.\n\n**Next:** 'DLQ Depth over time' for when, and 'Deferrals' for the usual cause.",
       "targets": [
         {
           "refId": "A",
@@ -7431,7 +7431,7 @@
         "x": 12,
         "y": 137
       },
-      "description": "**When work started landing in the dead-letter queue.**\n\n**Normal:** flat at 0. A step up marks the moment a scan started losing folders; it is the only outside evidence, because the connector reports no failure.\n\n**Next:** 'Slot Deferrals' and 'NATS \u2014 Redelivered' around the same time.",
+      "description": "**When work started landing in the dead-letter queue.**\n\n**Normal:** flat at 0. A step up marks the moment a scan started losing folders; it is the only outside evidence, because the connector reports no failure.\n\n**Next:** 'Deferrals' and 'Redelivered' around the same time.",
       "targets": [
         {
           "refId": "A",

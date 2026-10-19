@@ -58,11 +58,12 @@
         "name": "namespace",
         "type": "query",
         "label": "Namespace",
+        "description": "Fed from kube-state-metrics, never from process_start_time_seconds: postgresql is minReplicaCount 0, so a process-lifecycle metric leaves the variable — and the whole board — empty in the connector's normal state.",
         "datasource": {
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "query": "label_values(process_start_time_seconds{job=~\".*postgresql-connector-be-go.*\"}, namespace)",
+        "query": "label_values(kube_deployment_spec_replicas{deployment=~\".*postgresql-connector-be-go.*\"}, namespace)",
         "current": {
           "selected": true,
           "text": "default",
@@ -85,9 +86,21 @@
           "value": ".*postgresql-connector-be-go.*"
         },
         "options": [
-          { "selected": true, "text": "All", "value": ".*postgresql-connector-be-go.*" },
-          { "selected": false, "text": "Scanner", "value": ".*postgresql-connector-be-go" },
-          { "selected": false, "text": "Content", "value": ".*postgresql-connector-be-go-content" }
+          {
+            "selected": true,
+            "text": "All",
+            "value": ".*postgresql-connector-be-go.*"
+          },
+          {
+            "selected": false,
+            "text": "Scanner",
+            "value": ".*postgresql-connector-be-go"
+          },
+          {
+            "selected": false,
+            "text": "Content",
+            "value": ".*postgresql-connector-be-go-content"
+          }
         ],
         "hide": 0,
         "includeAll": false,
@@ -97,6 +110,7 @@
         "name": "pod",
         "type": "query",
         "label": "Pod",
+        "description": "allValue is .+ and not .*: every series is scraped twice in dev (PodMonitor plus the kubernetes-services catch-all) and only the PodMonitor copy carries a pod label. In PromQL .* also matches the absent label, which doubles every additive aggregation.",
         "datasource": {
           "type": "prometheus",
           "uid": "${datasource}"
@@ -109,7 +123,7 @@
         },
         "hide": 0,
         "includeAll": true,
-        "allValue": ".*",
+        "allValue": ".+",
         "multi": true,
         "refresh": 2,
         "sort": 1
@@ -133,74 +147,155 @@
   },
   "panels": [
     {
+      "type": "text",
+      "title": "How to read this board",
+      "options": {
+        "mode": "markdown",
+        "content": "**Is the connector itself healthy?** CPU, memory, Go runtime and file handles for the scanner and content pods. Use the *component* selector at the top to look at one of them.\n\n**Empty is normal:** both deployments scale to zero between jobs, so this board only has data while something runs.\n\nHover the ⓘ on any panel for what it shows, what is normal, and where to look next.",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        }
+      },
+      "id": 401,
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
       "type": "row",
       "id": 100,
       "title": "Process — CPU & Memory",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
       "panels": []
     },
     {
       "id": 1,
       "type": "timeseries",
       "title": "Process CPU (rate)",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        }
+      },
       "targets": [
         {
           "refId": "A",
           "expr": "rate(process_cpu_seconds_total{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])",
           "legendFormat": "{{pod}}"
         }
-      ]
+      ],
+      "description": "**CPU the connector process uses**, in cores.\n\n**Normal:** near 0 when idle, up to the limit during work (0.5 core for the scanner, 0.25 for content). Pinned at the limit means the pod is being throttled and everything slows down.\n\n**Next:** 'Container CPU Usage' for what Kubernetes sees."
     },
     {
       "id": 2,
       "type": "timeseries",
       "title": "Process Resident Memory",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
       "targets": [
         {
           "refId": "A",
           "expr": "process_resident_memory_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}",
           "legendFormat": "{{pod}}"
         }
-      ]
+      ],
+      "description": "**Memory the process is really using** (what is in RAM).\n\n**Normal:** well below the limit (1 GiB scanner, 512 MiB content). A line that only goes up across several scans points at memory that is never released — e.g. the scans a scanner pod keeps cached, with their connection pools, for 30 minutes after their last message (jobContextIdleTTL).\n\n**Next:** 'Container Memory (working set)' for the number Kubernetes compares with the limit."
     },
     {
       "id": 3,
       "type": "timeseries",
       "title": "Process Virtual Memory",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
       "targets": [
         {
           "refId": "A",
           "expr": "process_virtual_memory_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}",
           "legendFormat": "{{pod}}"
         }
-      ]
+      ],
+      "description": "**Memory the process has reserved**, used or not. Go reserves far more than it uses.\n\n**Normal:** large and flat. Not a useful alarm on its own — use resident memory."
     },
     {
       "type": "row",
       "id": 200,
       "title": "Container — Resource Usage",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
       "panels": []
     },
     {
       "id": 10,
       "type": "timeseries",
       "title": "Container CPU Usage",
-      "description": "cAdvisor series carry no job label, so this is selected by pod name rather than by job — which means it covers both components and deliberately ignores the Component and Pod pickers. That is the point: it keeps reporting pods that have already churned out of the scrape target list, so container history survives a scale-to-zero. Content pods are identifiable by the -content segment in the series name.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 9 },
-      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "description": "**CPU per pod as Kubernetes measures it.** These container panels select pods by name, because Kubernetes' own metrics do not carry the connector's labels.\n\n**Normal:** same shape as Process CPU. At the limit (0.5 core scanner, 0.25 content) the pod is throttled.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        }
+      },
       "targets": [
         {
           "refId": "A",
@@ -213,91 +308,129 @@
       "id": 11,
       "type": "timeseries",
       "title": "Container Memory (working set)",
-      "description": "cAdvisor series carry no job label, so this is selected by pod name rather than by job — which means it covers both components and deliberately ignores the Component and Pod pickers. That is the point: it keeps reporting pods that have already churned out of the scrape target list, so container history survives a scale-to-zero. Content pods are identifiable by the -content segment in the series name. This is the number the OOM killer watches, not process RSS.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 9 },
-      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
       "targets": [
         {
           "refId": "A",
           "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*postgresql-connector.*\", container!=\"\", container!=\"POD\"})",
           "legendFormat": "{{pod}}"
         }
-      ]
+      ],
+      "description": "**Memory per pod as Kubernetes measures it** — the number it compares with the limit (1 GiB scanner, 512 MiB content).\n\n**Normal:** well below the limit. Reaching it gets the pod killed (OOMKilled) and the work it held is retried."
     },
     {
       "type": "row",
       "id": 300,
       "title": "Go Runtime",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
       "panels": []
     },
     {
       "id": 20,
       "type": "timeseries",
       "title": "Goroutines",
-      "description": "A count that climbs and never comes back down across scans is the leak signature — the schema/table fan-out workers and the content fetch handlers are where goroutines are spawned per unit of work.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 17 },
-      "fieldConfig": { "defaults": { "unit": "short" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
       "targets": [
         {
           "refId": "A",
           "expr": "go_goroutines{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}",
           "legendFormat": "{{pod}}"
         }
-      ]
+      ],
+      "description": "**How many concurrent tasks the program is running.**\n\n**Normal:** grows during a scan and returns to a low, steady number after. A count that keeps growing between scans is a leak."
     },
     {
       "id": 21,
       "type": "timeseries",
       "title": "Heap In-Use",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 17 },
-      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
       "targets": [
         {
           "refId": "A",
           "expr": "go_memstats_heap_inuse_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}",
           "legendFormat": "{{pod}}"
         }
-      ]
+      ],
+      "description": "**Memory used by the program's own data.**\n\n**Normal:** rises during work and drops after garbage collection. Steadily rising floors across scans mean something is being kept."
     },
     {
       "id": 22,
       "type": "timeseries",
-      "title": "GC Pause (max / p75)",
-      "description": "go_gc_duration_seconds is a SUMMARY, not a histogram — there is no _bucket series, so histogram_quantile against it returns nothing. These are the pre-computed quantiles the Go collector exports; the available ones are 0, 0.25, 0.5, 0.75 and 1, so there is no p99 to plot. The label is matched with =~ because client_golang formats these values as \"0.0\"/\"1.0\" here while older versions emit \"0\"/\"1\" — an exact quantile=\"1\" silently returns nothing.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 17 },
-      "fieldConfig": { "defaults": { "unit": "s" } },
+      "title": "GC Pause — max & median",
+      "description": "**How long the program stops to clean up memory.** Max = the worst pause, median = a typical one.\n\n**Normal:** milliseconds. Pauses of hundreds of milliseconds mean memory pressure.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
       "targets": [
         {
           "refId": "A",
-          "expr": "go_gc_duration_seconds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\", quantile=~\"1(.0)?\"}",
+          "expr": "go_gc_duration_seconds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\", quantile=~\"1(\\\\.0)?\"}",
           "legendFormat": "max {{pod}}"
         },
         {
           "refId": "B",
-          "expr": "go_gc_duration_seconds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\", quantile=~\"0.75\"}",
-          "legendFormat": "p75 {{pod}}"
-        }
-      ]
-    },
-    {
-      "id": 23,
-      "type": "timeseries",
-      "title": "GC Cycles (rate)",
-      "description": "Completed GC cycles per second, from the summary's observation count. A rate that climbs alongside flat heap in-use means allocation churn rather than growth.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 17 },
-      "fieldConfig": { "defaults": { "unit": "ops" } },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "rate(go_gc_duration_seconds_count{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])",
-          "legendFormat": "{{pod}}"
+          "expr": "go_gc_duration_seconds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\", quantile=\"0.5\"}",
+          "legendFormat": "p50 {{pod}}"
         }
       ]
     },
@@ -306,17 +439,33 @@
       "id": 400,
       "title": "File Descriptors & Threads",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
       "panels": []
     },
     {
       "id": 30,
       "type": "timeseries",
       "title": "Open vs Max FDs",
-      "description": "Every pooled PostgreSQL connection is a socket, so an open count converging on max is how connection-pool exhaustion presents at the process level. The connector exports no pool gauges of its own, which makes this the closest available proxy.",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 25 },
-      "fieldConfig": { "defaults": { "unit": "short" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 29
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
       "targets": [
         {
           "refId": "A",
@@ -328,22 +477,36 @@
           "expr": "process_max_fds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}",
           "legendFormat": "max {{pod}}"
         }
-      ]
+      ],
+      "description": "**Open files and network connections against the process limit.**\n\n**Normal:** far below the limit. Each PostgreSQL connection is one of these — and it is the closest thing to a connection count this connector has: a scan keeps up to 20 connections per database it reads, per pod, closing idle ones after ~2.5 minutes."
     },
     {
       "id": 31,
       "type": "timeseries",
       "title": "OS Threads",
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 25 },
-      "fieldConfig": { "defaults": { "unit": "short" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 29
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
       "targets": [
         {
           "refId": "A",
           "expr": "go_threads{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}",
           "legendFormat": "{{pod}}"
         }
-      ]
+      ],
+      "description": "**Operating-system threads the program uses.**\n\n**Normal:** a small, steady number. Growing steadily means calls are blocking."
     }
   ]
 }
