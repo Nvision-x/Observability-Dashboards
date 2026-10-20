@@ -151,8 +151,8 @@
     {
       "id": 81,
       "type": "stat",
-      "title": "Files Discovered (total)",
-      "description": "**Files the scanner found and read the metadata of, in the selected range.** A file is counted once its basic metadata was read; files that could not even be read are not counted and show up as errors in the logs instead.\n\n**Normal:** the file count of every share scanned in the range. 0 means nothing ran; the backlog panels tell idle from stuck.\n\n**Next:** 'Items Sent (total)' beside it \u2014 the two should match.",
+      "title": "Files Discovered",
+      "description": "**Files the scanner found and read the metadata of, in the selected range.** A file is counted once its basic metadata was read; files that could not even be read are not counted and show up as errors in the logs instead.\n\n**Normal:** the file count of every share scanned in the range. 0 means nothing ran; the backlog panels tell idle from stuck.\n\n**Next:** 'Items Sent' beside it \u2014 the two should match.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -188,8 +188,8 @@
     {
       "id": 82,
       "type": "stat",
-      "title": "Items Sent (total)",
-      "description": "**Files handed on for indexing in the selected range.**\n\n**Normal:** equal to Files Discovered. Anything less is shown in 'Item Loss'.\n\n**Next:** 'Item Loss (total)' beside it.",
+      "title": "Items Sent",
+      "description": "**Files handed on for indexing in the selected range.**\n\n**Normal:** equal to Files Discovered. Anything less is shown in 'Item Loss'.\n\n**Next:** 'Item Loss' beside it.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -225,8 +225,8 @@
     {
       "id": 83,
       "type": "stat",
-      "title": "Item Loss (total)",
-      "description": "**Files found but not handed on for indexing: Files Discovered minus Items Sent.** Each such file either could not be turned into a document (bad data) or could not be handed to the sender (sender or NATS problem).\n\n**Normal:** 0. Above 0 means those files are missing from the index while the scan still finishes.\n\n**Next:** 'Items Failed (window)' in the Scanner row, and 'Scanner Items by Outcome' on the Pipeline board for the cause.",
+      "title": "Item Loss",
+      "description": "**Files found but not handed on for indexing: Files Discovered minus Items Sent.** Each such file either could not be turned into a document (bad data) or could not be handed to the sender (sender or NATS problem).\n\n**Normal:** 0. Above 0 means those files are missing from the index while the scan still finishes.\n\n**Next:** 'Items Failed' in the Scanner row, and 'Scanner Items by Outcome' on the Pipeline board for the cause.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -288,7 +288,7 @@
     {
       "id": 84,
       "type": "stat",
-      "title": "Directories Forked (total)",
+      "title": "Directories Forked",
       "description": "**Subfolders handed off as separate work items in the selected range.** Every subfolder found is published as its own message so other pods can scan it in parallel; this tracks the shape of the tree (number of folders), not the number of files.\n\n**Normal:** roughly the number of folders in the scanned shares.\n\n**Next:** 'Directories Forked vs Local' on the Pipeline board \u2014 folders that could not be handed off are walked by the same pod instead.",
       "datasource": {
         "type": "prometheus",
@@ -325,7 +325,7 @@
     {
       "id": 85,
       "type": "stat",
-      "title": "Content Fetches (total)",
+      "title": "Content Fetches",
       "description": "**Content downloads requested in the selected range, whatever their outcome.** Content runs on its own pods and only for files someone asked to read (classification, See Content), not for the whole share.\n\n**Normal:** whatever downstream asked for; 0 when nobody requested content.\n\n**Next:** the Content row, and 'Content Fetches by Outcome (window)' for how they ended.",
       "datasource": {
         "type": "prometheus",
@@ -362,7 +362,7 @@
     {
       "id": 86,
       "type": "stat",
-      "title": "Augmenter Items (total)",
+      "title": "Augmenter Items",
       "description": "**Items the augmenter processed in the selected range, all outcomes together.** Augment goes back to files already discovered to add permissions (ACL) and owner details.\n\n**Normal:** the number of items sent for augment; 0 when no augment ran.\n\n**Next:** 'Augmenter Items by Outcome (window)' in the Augmenter row.",
       "datasource": {
         "type": "prometheus",
@@ -450,7 +450,7 @@
       "id": 92,
       "type": "stat",
       "title": "ACL Cost per Item Augmented",
-      "description": "**Average permissions (ACL) query time per augmented item, in the selected range.** Total ACL query time divided by all items augmented \u2014 items that never reached the query (file gone, mount failed, no SMB target) are in the denominator too, so it reads lower than the true per-query cost when many items end early.\n\n**Normal:** milliseconds. A rise means the file server is slower to answer permission queries.\n\n**Next:** 'Augmenter ACL Query Duration \u2014 p50 / p95 / p99' in the Augmenter row.",
+      "description": "**Average permissions (ACL) query time per augmented item, in the selected range.** Total ACL query time divided by all items augmented \u2014 items that never reached the query (file gone, mount failed, no SMB target) are in the denominator too, so it reads lower than the true per-query cost when many items end early.\n\n**Normal:** milliseconds. A rise means the file server is slower to answer permission queries.\n\n**Next:** 'ACL Query \u2014 p50 / p95 / p99' in the Augmenter row.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -565,7 +565,7 @@
           "expr": "(sum(sum_over_time(((last_over_time(cifs_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) or vector(0)) / clamp_min(sum(sum_over_time(((last_over_time(cifs_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])), 0.001)"
         }
       ],
-      "description": "**Bytes delivered per second of download time: bytes uploaded divided by the time spent in content requests, not by wall clock.** The time includes mounting the share and failed requests, so it slightly understates the raw link speed.\n\n**Normal:** steady for the same share. Cost per fetch up with this flat = the files got bigger, nothing wrong; this falling = something genuinely got slower. Each number alone is ambiguous. Unlike 'Upload Throughput', it does not drop to zero when nothing is running.\n\n**Next:** 'Content Upload Duration' on the Pipeline board to tell a slow share read from a slow content service."
+      "description": "**Bytes delivered per second of download time: bytes uploaded divided by the time spent in content requests, not by wall clock.** The time includes mounting the share and failed requests, so it slightly understates the raw link speed.\n\n**Normal:** steady for the same share. Cost per fetch up with this flat = the files got bigger, nothing wrong; this falling = something genuinely got slower. Each number alone is ambiguous. Unlike 'Upload Rate', it does not drop to zero when nothing is running.\n\n**Next:** 'Content Upload Duration' on the Pipeline board to tell a slow share read from a slow content service."
     },
     {
       "type": "row",
@@ -628,7 +628,7 @@
           "expr": "sum(up{job=~\".*cifs-connector-be-go\", namespace=\"$namespace\", pod=~\"$pod\"})"
         }
       ],
-      "description": "**Scanner pods currently up and being scraped.**\n\n**Normal:** 0 between jobs is normal: the scanner scales to zero when its queue is empty (KEDA, min 0, max 10). 0 while the backlog grows means pods are not starting.\n\n**Next:** 'Replicas' and 'NATS \u2014 Scanner Backlog' in the Backlog & Autoscaling row."
+      "description": "**Scanner pods currently up and being scraped.**\n\n**Normal:** 0 between jobs is normal: the scanner scales to zero when its queue is empty (KEDA, min 0, max 10). 0 while the backlog grows means pods are not starting.\n\n**Next:** 'Replicas' and 'NATS Backlog' in the Backlog & Autoscaling row."
     },
     {
       "id": 7,
@@ -735,7 +735,7 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Files Discovered (window)",
+      "title": "Found",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -767,12 +767,12 @@
           "expr": "sum(sum_over_time(((last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s]))"
         }
       ],
-      "description": "**Files the scanner found in the selected range.** Same count as 'Files Discovered (total)' above, kept here next to its outcomes.\n\n**Normal:** the file count of the scanned shares; 0 when nothing ran.\n\n**Next:** 'Items Sent' and 'Items Failed' beside it."
+      "description": "**Files the scanner found in the selected range.** Same count as 'Files Discovered' above, kept here next to its outcomes.\n\n**Normal:** the file count of the scanned shares; 0 when nothing ran.\n\n**Next:** 'Sent' and 'Failed' beside it."
     },
     {
       "id": 4,
       "type": "stat",
-      "title": "Items Failed (window)",
+      "title": "Failed",
       "description": "**Files found but not handed on for indexing in the selected range, both causes together.** Either the file's metadata could not be turned into a document (bad data) or the batch sender / NATS refused it (infrastructure).\n\n**Normal:** 0. Any value means files missing from the index.\n\n**Next:** 'Scanner Items by Outcome' on the Pipeline board splits the two causes.",
       "datasource": {
         "type": "prometheus",
@@ -839,7 +839,7 @@
     {
       "id": 5,
       "type": "stat",
-      "title": "Items Sent (window)",
+      "title": "Sent",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -871,12 +871,12 @@
           "expr": "sum(sum_over_time(((last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[15s]) - last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", outcome=\"sent\"}[15s]) * 1)[$__range:15s]))"
         }
       ],
-      "description": "**Files handed on for indexing in the selected range.**\n\n**Normal:** equal to 'Files Discovered (window)'.\n\n**Next:** 'Scanner Throughput' below for when."
+      "description": "**Files handed on for indexing in the selected range.**\n\n**Normal:** equal to 'Found'.\n\n**Next:** 'Scanner Throughput' below for when."
     },
     {
       "id": 6,
       "type": "stat",
-      "title": "ACL Errors (window)",
+      "title": "ACL Errors",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -943,7 +943,7 @@
     {
       "id": 8,
       "type": "stat",
-      "title": "Dir Processing p95",
+      "title": "Dir Time p95",
       "description": "**95% of folders were processed faster than this, over the selected range.** One measurement per folder: listing it, reading each file's metadata, the permissions query when enabled, and handing off its subfolders. It does not measure a whole scan.\n\n**Normal:** milliseconds for ordinary folders. The top folder of a large tree can take seconds because it hands off one message per subfolder.\n\n**Next:** 'Directory Processing \u2014 p50 / p95 / p99' below for when.",
       "datasource": {
         "type": "prometheus",
@@ -1281,7 +1281,7 @@
           "legendFormat": "sum across pods"
         }
       ],
-      "description": "**Folders a scanner pod is walking itself because it could not hand them off as separate work.** Normally every subfolder is published as its own message; when publishing fails (typically the work stream is full) the pod keeps the folder on its own list instead. One value per pod, not split by datasource.\n\n**Normal:** 0. Above 0 means the work stream is pushing back and the pod is carrying the tree alone \u2014 slower, but nothing is lost.\n\n**Next:** 'Directories Forked vs Local' on the Pipeline board and 'NATS \u2014 Scanner Backlog' below."
+      "description": "**Folders a scanner pod is walking itself because it could not hand them off as separate work.** Normally every subfolder is published as its own message; when publishing fails (typically the work stream is full) the pod keeps the folder on its own list instead. One value per pod, not split by datasource.\n\n**Normal:** 0. Above 0 means the work stream is pushing back and the pod is carrying the tree alone \u2014 slower, but nothing is lost.\n\n**Next:** 'Directories Forked vs Local' on the Pipeline board and 'NATS Backlog' below."
     },
     {
       "type": "row",
@@ -1300,7 +1300,7 @@
     {
       "id": 50,
       "type": "stat",
-      "title": "NATS \u2014 Scanner Backlog",
+      "title": "NATS Backlog",
       "description": "**Messages waiting in the scanner's queue (JE_CIFS / cifs-scanner-v1).** Scanner and augmenter share this one queue, so folder work and augment batches are blended and cannot be told apart here. Measured on the NATS server, so it ignores the namespace and pod selectors.\n\n**Normal:** 0 between jobs. Growing while pods run means they are not keeping up; growing with 0 pods means scaling is not waking them.\n\n**Next:** 'Replicas' and 'NATS \u2014 Scanner Consumer Backlog'.",
       "datasource": {
         "type": "prometheus",
@@ -1362,7 +1362,7 @@
     {
       "id": 51,
       "type": "stat",
-      "title": "NATS \u2014 In Flight (unacked)",
+      "title": "NATS In Flight",
       "description": "**Messages handed to scanner pods but not yet finished (acknowledged).** This is the work currently inside the pods, and the signal KEDA's ack-capacity trigger scales on. Measured on the NATS server (no namespace/pod filter).\n\n**Normal:** up to about 10 per pod while working (10 concurrent messages per pod), 0 when idle.\n\n**Next:** 'KEDA \u2014 ack-capacity signal vs threshold'.",
       "datasource": {
         "type": "prometheus",
@@ -1424,8 +1424,8 @@
     {
       "id": 52,
       "type": "stat",
-      "title": "NATS \u2014 Redelivered",
-      "description": "**Unfinished messages that have been delivered more than once.** A message is redelivered when a pod fails it or does not finish within the 60s ack wait. Measured on the NATS server (no namespace/pod filter).\n\n**Normal:** 0. Growing while 'Items Sent' stays flat means the pods are not draining; after the 5th attempt a message goes to the dead-letter queue.\n\n**Next:** the Dead Letter Queue row at the bottom.",
+      "title": "NATS Redelivered",
+      "description": "**Unfinished messages that have been delivered more than once.** A message is redelivered when a pod fails it or does not finish within the 60s ack wait. Measured on the NATS server (no namespace/pod filter).\n\n**Normal:** 0. Growing while 'Sent' stays flat means the pods are not draining; after the 5th attempt a message goes to the dead-letter queue.\n\n**Next:** the Dead Letter Queue row at the bottom.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1562,7 +1562,7 @@
     {
       "id": 55,
       "type": "stat",
-      "title": "NATS \u2014 Backlog Slope (2m)",
+      "title": "Backlog Slope (2m)",
       "description": "**How fast the scanner queue is growing, in messages per second over the last 2 minutes (shrinking counts as 0).** This is exactly the number KEDA's trend-based trigger evaluates.\n\n**Normal:** 0 when idle or draining. Above 0.5 KEDA asks for more pods.\n\n**Next:** 'KEDA \u2014 trend-based signal vs threshold'.",
       "datasource": {
         "type": "prometheus",
@@ -2058,7 +2058,7 @@
     {
       "id": 20,
       "type": "timeseries",
-      "title": "Augmenter Items by Outcome (rate, 5m)",
+      "title": "Items by Outcome (rate, 5m)",
       "description": "**The augmenter's item outcomes over time.** 'missing' here is the same event as 'Skipped Not-Found' beside it \u2014 never add the two.\n\n**Normal:** mostly success. A short augment may barely show on a 5-minute rate; the (window) bars have the exact counts.\n\n**Next:** 'Augmenter Items by Outcome (rate, stacked)' on the Pipeline board, per datasource.",
       "datasource": {
         "type": "prometheus",
@@ -2305,7 +2305,7 @@
     {
       "id": 22,
       "type": "timeseries",
-      "title": "Augmenter ACL Query Duration \u2014 p50 / p95 / p99",
+      "title": "ACL Query \u2014 p50 / p95 / p99",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2358,7 +2358,7 @@
       "id": 30,
       "type": "stat",
       "title": "Pods Up",
-      "description": "**Content pods currently up and being scraped.**\n\n**Normal:** 0 with an empty queue is normal: content scales 0\u219410 on its own, independently of the scanner.\n\n**Next:** 'NATS \u2014 Fetch Backlog' and 'KEDA \u2014 Content Replicas'.",
+      "description": "**Content pods currently up and being scraped.**\n\n**Normal:** 0 with an empty queue is normal: content scales 0\u219410 on its own, independently of the scanner.\n\n**Next:** 'Fetch Backlog' and 'KEDA \u2014 Content Replicas'.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2472,7 +2472,7 @@
     {
       "id": 31,
       "type": "stat",
-      "title": "Fetches (window)",
+      "title": "Fetches",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2509,7 +2509,7 @@
     {
       "id": 32,
       "type": "stat",
-      "title": "Fetch p95 (5m)",
+      "title": "Fetch p95 5m",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2546,7 +2546,7 @@
     {
       "id": 33,
       "type": "stat",
-      "title": "Errors (window)",
+      "title": "Errors",
       "description": "**Content download requests that failed in the selected range.** Includes expected cases such as files that no longer exist.\n\n**Normal:** 0 or a few 'not found'. Anything else, or a sudden jump, needs a look.\n\n**Next:** 'Content Fetches by Outcome (window)' for which kind of failure.",
       "datasource": {
         "type": "prometheus",
@@ -2613,7 +2613,7 @@
     {
       "id": 34,
       "type": "stat",
-      "title": "Upload Throughput",
+      "title": "Upload Rate",
       "description": "**Bytes per second delivered to the content service, averaged over the last 5 minutes.** This is per second of wall clock, so it drops to 0 whenever nothing is running.\n\n**Normal:** bursty: high while a download runs, 0 otherwise.\n\n**Next:** 'Content Transfer Rate' at the top for speed while actually transferring.",
       "datasource": {
         "type": "prometheus",
@@ -2650,7 +2650,7 @@
     {
       "id": 35,
       "type": "stat",
-      "title": "Mount Acquire p95 (5m)",
+      "title": "Mount p95 5m",
       "description": "**95% of successful share mounts on content pods finished faster than this, over the last 5 minutes.** Failed mounts are measured separately, so a mount that hangs ~120s before failing does not distort this number.\n\n**Normal:** near 0 when the share is already mounted; up to a second or two for a fresh mount.\n\n**Next:** 'Content Mount Acquire p95 \u2014 success vs failure' on the Pipeline board.",
       "datasource": {
         "type": "prometheus",
@@ -2687,7 +2687,7 @@
     {
       "id": 37,
       "type": "stat",
-      "title": "NATS \u2014 Fetch Backlog",
+      "title": "Fetch Backlog",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3509,7 +3509,7 @@
     {
       "id": 70,
       "type": "stat",
-      "title": "Gone \u2014 404 on augment re-fetch",
+      "title": "Gone at Augment (404)",
       "description": "**Items augment went back for and found gone from the share, in the selected range.** Its own stage only \u2014 content 404s are no longer added in, which used to make a run with no augment still show a count.\n\n**Normal:** a small number is normal churn between scan and augment.\n\n**Next:** 'Files Gone % (augment)' for the share of the total.",
       "datasource": {
         "type": "prometheus",
@@ -3602,12 +3602,12 @@
           "expr": "(sum(sum_over_time(((last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[15s]) - last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", error_code=\"FETCH_ERROR_NOT_FOUND\"}[15s]) * 1)[$__range:15s])) or vector(0))"
         }
       ],
-      "description": "**Content downloads that found the file gone, in the selected range.** The latest point of all: the file disappeared between the scan and the download. On CIFS this code also covers things that are not regular files (symlinks, sockets, devices), so it shows the content is not retrievable rather than proving deletion.\n\n**Normal:** a few. Do not add this to the augment count \u2014 content runs on demand over a subset of files, so it has a different denominator.\n\n**Next:** 'Files Gone by stage' for when."
+      "description": "**Content downloads that found the file gone, in the selected range.** The latest point of all: the file disappeared between the scan and the download. On CIFS this code also covers things that are not regular files (symlinks, sockets, devices), so it shows the content is not retrievable rather than proving deletion.\n\n**Normal:** a few. Do not add this to the augment count \u2014 content runs on demand over a subset of files, so it has a different denominator.\n\n**Next:** 'Gone by Stage' for when."
     },
     {
       "id": 357,
       "type": "stat",
-      "title": "Augment Items (window)",
+      "title": "Augment Items",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3657,7 +3657,7 @@
       "id": 72,
       "type": "stat",
       "title": "Files Gone % (augment)",
-      "description": "**Share of augmented items whose file was already gone, in the selected range.** Augment only: content fetches one file per request and has no comparable denominator.\n\n**Normal:** a few percent at most. A high value on one datasource suggests the share was reorganised or emptied since the scan.\n\n**Next:** 'Augment Items (window)' beside it for the count behind the percentage.",
+      "description": "**Share of augmented items whose file was already gone, in the selected range.** Augment only: content fetches one file per request and has no comparable denominator.\n\n**Normal:** a few percent at most. A high value on one datasource suggests the share was reorganised or emptied since the scan.\n\n**Next:** 'Augment Items' beside it for the count behind the percentage.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3723,7 +3723,7 @@
     {
       "id": 71,
       "type": "timeseries",
-      "title": "Files Gone by stage (rate, 5m)",
+      "title": "Gone by Stage (rate, 5m)",
       "description": "**Files found missing, split by the stage that noticed, over time.** Augment and content are different moments and are diagnosed differently. The content line also counts non-regular files (symlinks, sockets, devices).\n\n**Normal:** near 0. A short burst may barely show on a 5-minute rate; the stats beside it have the exact counts.\n\n**Next:** 'Skipped Not-Found' in the Augmenter row.",
       "datasource": {
         "type": "prometheus",
@@ -3936,7 +3936,7 @@
           "expr": "max by (stream_name) (nats_stream_total_messages{stream_name=\"DLQ_CONSUME_CIFS\"})"
         }
       ],
-      "description": "**The dead-letter queue size over time.** A step up is the moment work was dropped.\n\n**Normal:** flat at 0. Line a step up against the scanner throughput: that chart will not show a dip, which is exactly why this row exists.\n\n**Next:** 'NATS \u2014 Redelivered' to see the retries that came before."
+      "description": "**The dead-letter queue size over time.** A step up is the moment work was dropped.\n\n**Normal:** flat at 0. Line a step up against the scanner throughput: that chart will not show a dip, which is exactly why this row exists.\n\n**Next:** 'NATS Redelivered' to see the retries that came before."
     }
   ]
 }
