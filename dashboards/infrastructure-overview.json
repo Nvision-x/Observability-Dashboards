@@ -1,5 +1,5 @@
 {
-  "__comment": "NVisionX Infrastructure Overview — merges Kong Gateway, NATS/JetStream, OpenSearch Metrics, Prometheus Self-Monitoring, Pulsar, and NVIDIA GPU/DCGM (6 files) into one file, one collapsed row per component, repeating per client via the shared Clients picker. Same pattern/trade-offs as connectors-detail.json and services-detail.json. 2026-09-18: dashboard consolidation.",
+  "__comment": "NVisionX Infrastructure Overview — merges Kong Gateway, NATS/JetStream, OpenSearch Metrics, Prometheus Self-Monitoring, Pulsar, and NVIDIA GPU/DCGM (6 files) into one file, one collapsed row per component, using the single-select Datasource picker. Same pattern/trade-offs as connectors-detail.json and services-detail.json. 2026-09-18: dashboard consolidation.",
   "annotations": {
     "list": [
       {
@@ -33,7 +33,7 @@
         "code": {
           "language": "markdown"
         },
-        "content": "**Infrastructure Overview** — one section per infra component (Kong Gateway, NATS/JetStream, OpenSearch, Prometheus self-monitoring, Pulsar, GPU/DCGM), each repeating once per client selected in the **Clients** picker. Note: Prometheus Self-Monitoring reflects each client's own in-cluster Prometheus, not this central Grafana's.\n\nAs with Connectors/Services Detail, per-instance/route/topic/node filter pickers are aggregated rather than kept as row-repeat can't cascade a chained variable per client.",
+        "content": "**Infrastructure Overview** — one section per infra component (Kong Gateway, NATS/JetStream, OpenSearch, Prometheus self-monitoring, Pulsar, GPU/DCGM), using the **Datasource** picker. Note: Prometheus Self-Monitoring reflects each client's own in-cluster Prometheus, not this central Grafana's.\n\nAs with Connectors/Services Detail, per-instance/route/topic/node filter pickers are aggregated rather than kept as row-repeat can't cascade a chained variable per client.",
         "mode": "markdown"
       },
       "pluginVersion": "11.5.2",
@@ -54,7 +54,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -112,7 +112,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "(kong_memory_lua_shared_dict_bytes{instance=~\".*\",shared_dict!~\"kong_process_events\"}/kong_memory_lua_shared_dict_total_bytes{instance=~\".*\",shared_dict!~\"kong_process_events\"})*100",
               "legendFormat": "{{shared_dict}} ({{kong_subsystem}})",
@@ -125,7 +125,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -201,7 +201,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "kong_memory_workers_lua_vms_bytes{instance=~\".*\"}",
               "legendFormat": "PID:{{pid}} ({{kong_subsystem}})",
@@ -214,7 +214,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -288,7 +288,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(kong_nginx_connections_total{state=~\"active|reading|writing|waiting\", instance=~\".*\"}) by (state)",
               "legendFormat": "{{state}}",
@@ -301,7 +301,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -348,7 +348,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(kong_nginx_connections_total{state=\"total\", instance=~\".*\"})",
               "legendFormat": "Total",
@@ -361,7 +361,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -408,7 +408,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(kong_nginx_connections_total{state=\"handled\", instance=~\".*\"})",
               "legendFormat": "Handled",
@@ -421,7 +421,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -468,7 +468,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(kong_nginx_connections_total{state=\"accepted\", instance=~\".*\"})",
               "legendFormat": "Accepted",
@@ -481,7 +481,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -555,7 +555,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(kong_http_requests_total{instance=~\".*\"}[1m]))",
               "legendFormat": "Requests/second",
@@ -568,7 +568,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -642,7 +642,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(kong_http_requests_total{service=~\".*\", route=~\".*\", instance=~\".*\"}[1m])) by (service)",
               "legendFormat": "service:{{service}}",
@@ -651,7 +651,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(kong_http_requests_total{service=~\".*\", route=~\".*\", instance=~\".*\"}[1m])) by (route)",
               "legendFormat": "route:{{route}}",
@@ -664,7 +664,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -738,7 +738,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(kong_http_requests_total{service=~\".*\", route=~\".*\", instance=~\".*\"}[1m])) by (service,code)",
               "legendFormat": "service:{{service}}-{{code}}",
@@ -747,7 +747,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(kong_http_requests_total{service=~\".*\", route=~\".*\", instance=~\".*\"}[1m])) by (route,code)",
               "legendFormat": "route:{{route}}-{{code}}",
@@ -760,7 +760,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -834,7 +834,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.90, sum(rate(kong_kong_latency_ms_bucket{instance=~\".*\"}[1m])) by (le))",
               "legendFormat": "p90",
@@ -843,7 +843,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum(rate(kong_kong_latency_ms_bucket{instance=~\".*\"}[1m])) by (le))",
               "legendFormat": "p95",
@@ -852,7 +852,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum(rate(kong_kong_latency_ms_bucket{instance=~\".*\"}[1m])) by (le))",
               "legendFormat": "p99",
@@ -865,7 +865,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -939,7 +939,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.90, sum(rate(kong_kong_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (service,le))",
               "legendFormat": "p90-{{service}}",
@@ -948,7 +948,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum(rate(kong_kong_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (service,le))",
               "legendFormat": "p95-{{service}}",
@@ -957,7 +957,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum(rate(kong_kong_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (service,le))",
               "legendFormat": "p99-{{service}}",
@@ -970,7 +970,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1044,7 +1044,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.90, sum(rate(kong_kong_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (route,le))",
               "legendFormat": "p90-{{route}}",
@@ -1053,7 +1053,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum(rate(kong_kong_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (route,le))",
               "legendFormat": "p95-{{route}}",
@@ -1062,7 +1062,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum(rate(kong_kong_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (route,le))",
               "legendFormat": "p99-{{route}}",
@@ -1075,7 +1075,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1149,7 +1149,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.90, sum(rate(kong_request_latency_ms_bucket{}[1m])) by (le))",
               "legendFormat": "p90",
@@ -1158,7 +1158,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum(rate(kong_request_latency_ms_bucket{}[1m])) by (le))",
               "legendFormat": "p95",
@@ -1167,7 +1167,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum(rate(kong_request_latency_ms_bucket{}[1m])) by (le))",
               "legendFormat": "p99",
@@ -1180,7 +1180,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1254,7 +1254,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.90, sum(rate(kong_request_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (service,le))",
               "legendFormat": "p90-{{service}}",
@@ -1263,7 +1263,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum(rate(kong_request_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (service,le))",
               "legendFormat": "p95-{{service}}",
@@ -1272,7 +1272,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum(rate(kong_request_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (service,le))",
               "legendFormat": "p99-{{service}}",
@@ -1285,7 +1285,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1359,7 +1359,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.90, sum(rate(kong_request_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (route,le))",
               "legendFormat": "p90-{{route}}",
@@ -1368,7 +1368,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum(rate(kong_request_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (route,le))",
               "legendFormat": "p95-{{route}}",
@@ -1377,7 +1377,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum(rate(kong_request_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (route,le))",
               "legendFormat": "p99-{{route}}",
@@ -1390,7 +1390,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1464,7 +1464,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.90, sum(rate(kong_upstream_latency_ms_bucket{}[1m])) by (le))",
               "legendFormat": "p90",
@@ -1473,7 +1473,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum(rate(kong_upstream_latency_ms_bucket{}[1m])) by (le))",
               "legendFormat": "p95",
@@ -1482,7 +1482,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum(rate(kong_upstream_latency_ms_bucket{}[1m])) by (le))",
               "legendFormat": "p99",
@@ -1495,7 +1495,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1569,7 +1569,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.90, sum(rate(kong_upstream_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (service,le))",
               "legendFormat": "p90-{{service}}",
@@ -1578,7 +1578,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum(rate(kong_upstream_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (service,le))",
               "legendFormat": "p95-{{service}}",
@@ -1587,7 +1587,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum(rate(kong_upstream_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (service,le))",
               "legendFormat": "p99-{{service}}",
@@ -1600,7 +1600,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1674,7 +1674,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.90, sum(rate(kong_upstream_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (route,le))",
               "legendFormat": "p90-{{route}}",
@@ -1683,7 +1683,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum(rate(kong_upstream_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (route,le))",
               "legendFormat": "p95-{{route}}",
@@ -1692,7 +1692,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum(rate(kong_upstream_latency_ms_bucket{service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (route,le))",
               "legendFormat": "p99-{{route}}",
@@ -1705,7 +1705,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1784,7 +1784,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(irate(kong_bandwidth_bytes{instance=~\".*\"}[1m])) by (direction)",
               "legendFormat": "{{direction}}",
@@ -1797,7 +1797,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1871,7 +1871,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(irate(kong_bandwidth_bytes{direction=\"egress\", service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (service)",
               "legendFormat": "service:{{service}}",
@@ -1880,7 +1880,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(irate(kong_bandwidth_bytes{direction=\"egress\", service=~\".*\",route=~\".*\",instance=~\".*\"}[1m])) by (route)",
               "legendFormat": "route:{{route}}",
@@ -1893,7 +1893,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1967,7 +1967,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(irate(kong_bandwidth_bytes{direction=\"ingress\", service=~\".*\",instance=~\".*\"}[1m])) by (service)",
               "legendFormat": "{{service}}",
@@ -1980,7 +1980,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2087,7 +2087,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(label_replace(label_replace(label_replace(kong_upstream_target_health{upstream=~\".*\"}, \"state_value\", \"1\", \"state\", \"healthy\"), \"state_value\", \"0\", \"state\", \"healthchecks_off\"), \"state_value\", \"-1\", \"state\", \"(dns_error|unhealthy)\")) by (upstream, target, address, state, state_value) > 0",
               "format": "table",
@@ -2126,7 +2126,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2200,7 +2200,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(kong_stream_session_total{instance=~\".*\"}[1m])) by (service,code)",
               "legendFormat": "{{service}}-{{code}}",
@@ -2211,9 +2211,7 @@
           "type": "timeseries"
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "🦍 Kong Gateway ($client_ds)",
+      "title": "🦍 Kong Gateway",
       "type": "row"
     },
     {
@@ -2227,7 +2225,7 @@
       "id": 143,
       "panels": [
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2312,7 +2310,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2397,7 +2395,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2458,7 +2456,7 @@
           "type": "stat"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2519,7 +2517,7 @@
           "type": "stat"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2580,7 +2578,7 @@
           "type": "stat"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2633,7 +2631,7 @@
           "type": "stat"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2713,7 +2711,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2793,7 +2791,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2878,7 +2876,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2968,7 +2966,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3021,7 +3019,7 @@
           "type": "stat"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3074,7 +3072,7 @@
           "type": "stat"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3127,7 +3125,7 @@
           "type": "stat"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3180,7 +3178,7 @@
           "type": "stat"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3265,7 +3263,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3350,7 +3348,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3435,7 +3433,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3520,7 +3518,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3600,9 +3598,7 @@
           "type": "timeseries"
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "📨 NATS / JetStream ($client_ds)",
+      "title": "📨 NATS / JetStream",
       "type": "row"
     },
     {
@@ -3628,7 +3624,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3684,7 +3680,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "(max(elasticsearch_cluster_health_status{color=\"red\"})*2) + max(elasticsearch_cluster_health_status{color=\"yellow\"})",
               "refId": "A"
@@ -3704,7 +3700,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3729,7 +3725,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "max(elasticsearch_cluster_health_number_of_data_nodes)",
               "refId": "A"
@@ -3749,7 +3745,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3790,7 +3786,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "max(elasticsearch_cluster_health_active_shards_percent_as_number)",
               "refId": "A"
@@ -3810,7 +3806,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3847,7 +3843,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "max(elasticsearch_cluster_health_unassigned_shards)",
               "refId": "A"
@@ -3867,7 +3863,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3892,7 +3888,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(elasticsearch_indices_docs{index=~\".*-nxidx-.*\"})",
               "refId": "A"
@@ -3912,7 +3908,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3937,7 +3933,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(elasticsearch_indices_store_size_bytes{index=~\".*-nxidx-.*\"})",
               "refId": "A"
@@ -3957,7 +3953,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3998,7 +3994,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "max(100 * elasticsearch_jvm_memory_used_bytes{area=\"heap\"} / elasticsearch_jvm_memory_max_bytes{area=\"heap\"})",
               "refId": "A"
@@ -4018,7 +4014,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4059,7 +4055,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "100 * sum(elasticsearch_filesystem_data_free_bytes) / sum(elasticsearch_filesystem_data_size_bytes)",
               "refId": "A"
@@ -4079,7 +4075,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4111,7 +4107,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(elasticsearch_indices_docs{index=~\".*-nxidx-.*\"})",
               "legendFormat": "scanned records",
@@ -4132,7 +4128,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4152,7 +4148,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "topk(15, elasticsearch_indices_docs{index=~\".*-nxidx-.*\"})",
               "legendFormat": "{{index}}",
@@ -4174,7 +4170,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4206,7 +4202,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(elasticsearch_indices_indexing_index_total[5m]))",
               "legendFormat": "indexed/s",
@@ -4227,7 +4223,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4259,7 +4255,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(elasticsearch_indices_search_query_total[5m]))",
               "legendFormat": "queries/s",
@@ -4280,7 +4276,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4312,7 +4308,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "elasticsearch_os_cpu_percent",
               "legendFormat": "{{name}}",
@@ -4333,7 +4329,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4365,7 +4361,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "elasticsearch_jvm_memory_used_bytes{area=\"heap\"}",
               "legendFormat": "used {{name}}",
@@ -4374,7 +4370,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "elasticsearch_jvm_memory_max_bytes{area=\"heap\"}",
               "legendFormat": "max {{name}}",
@@ -4395,7 +4391,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4415,7 +4411,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "topk(15, elasticsearch_indices_store_size_bytes{index=~\".*-nxidx-.*\"})",
               "legendFormat": "{{index}}",
@@ -4425,9 +4421,7 @@
           ]
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "🔎 OpenSearch Metrics ($client_ds)",
+      "title": "🔎 OpenSearch Metrics",
       "type": "row"
     },
     {
@@ -4450,7 +4444,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "editable": true,
           "error": false,
@@ -4544,7 +4538,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "editable": true,
           "error": false,
@@ -4637,7 +4631,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "",
           "fill": 0,
@@ -4743,7 +4737,7 @@
           ],
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "format": "none",
           "gauge": {
@@ -4825,7 +4819,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fill": 0,
           "gridPos": {
@@ -4929,7 +4923,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "editable": true,
           "error": false,
@@ -5020,7 +5014,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "decimals": null,
           "description": "",
@@ -5113,7 +5107,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fill": 1,
           "gridPos": {
@@ -5216,7 +5210,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "decimals": null,
           "description": "",
@@ -5339,7 +5333,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fill": 1,
           "gridPos": {
@@ -5438,7 +5432,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fill": 0,
           "gridPos": {
@@ -5528,7 +5522,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "decimals": null,
           "editable": true,
@@ -5624,7 +5618,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fill": 1,
           "gridPos": {
@@ -5733,13 +5727,11 @@
           "type": "text",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "🔥 Prometheus Self-Monitoring ($client_ds)",
+      "title": "🔥 Prometheus Self-Monitoring",
       "type": "row"
     },
     {
@@ -5753,7 +5745,7 @@
       "id": 197,
       "panels": [
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5838,7 +5830,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5923,7 +5915,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5982,7 +5974,7 @@
           "type": "gauge"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6041,7 +6033,7 @@
           "type": "gauge"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6094,7 +6086,7 @@
           "type": "stat"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6147,7 +6139,7 @@
           "type": "stat"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6227,7 +6219,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6307,7 +6299,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6387,7 +6379,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6467,7 +6459,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6552,7 +6544,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6637,7 +6629,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6725,7 +6717,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6810,7 +6802,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6890,7 +6882,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6978,7 +6970,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7062,7 +7054,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7153,7 +7145,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7210,7 +7202,7 @@
           "type": "stat"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7298,7 +7290,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7384,7 +7376,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": "${client_ds}",
+          "datasource": "${datasource}",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7469,9 +7461,7 @@
           "type": "timeseries"
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "📡 Pulsar ($client_ds)",
+      "title": "📡 Pulsar",
       "type": "row"
     },
     {
@@ -7487,7 +7477,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -7536,7 +7526,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "count(DCGM_FI_DEV_GPU_UTIL{Hostname=~\".*\", gpu=~\".*\"})",
@@ -7552,7 +7542,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -7609,7 +7599,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "avg(DCGM_FI_DEV_GPU_UTIL{Hostname=~\".*\", gpu=~\".*\"})",
@@ -7625,7 +7615,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -7682,7 +7672,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "max(DCGM_FI_DEV_GPU_TEMP{Hostname=~\".*\", gpu=~\".*\"})",
@@ -7698,7 +7688,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -7747,7 +7737,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum(DCGM_FI_DEV_POWER_USAGE{Hostname=~\".*\", gpu=~\".*\"})",
@@ -7763,7 +7753,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -7812,7 +7802,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum(DCGM_FI_DEV_FB_USED{Hostname=~\".*\", gpu=~\".*\"})",
@@ -7828,7 +7818,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -7881,7 +7871,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "max(DCGM_FI_DEV_XID_ERRORS{Hostname=~\".*\", gpu=~\".*\"})",
@@ -7897,7 +7887,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "One row per GPU. Utilization is the most recent sample; Pod is the workload currently attributed to the GPU (blank when idle).",
           "fieldConfig": {
@@ -7983,7 +7973,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_GPU_UTIL{Hostname=~\".*\", gpu=~\".*\"}",
@@ -8037,7 +8027,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -8123,7 +8113,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_GPU_UTIL{Hostname=~\".*\", gpu=~\".*\"}",
@@ -8140,7 +8130,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -8222,7 +8212,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_MEM_COPY_UTIL{Hostname=~\".*\", gpu=~\".*\"}",
@@ -8239,7 +8229,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -8321,7 +8311,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_ENC_UTIL{Hostname=~\".*\", gpu=~\".*\"}",
@@ -8333,7 +8323,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_DEC_UTIL{Hostname=~\".*\", gpu=~\".*\"}",
@@ -8350,7 +8340,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -8431,7 +8421,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum by (exported_namespace, exported_pod) (DCGM_FI_DEV_GPU_UTIL{Hostname=~\".*\", gpu=~\".*\"})",
@@ -8448,7 +8438,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -8529,7 +8519,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_FB_USED{Hostname=~\".*\", gpu=~\".*\"}",
@@ -8546,7 +8536,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -8632,7 +8622,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "100 * DCGM_FI_DEV_FB_USED{Hostname=~\".*\", gpu=~\".*\"} / (DCGM_FI_DEV_FB_USED{Hostname=~\".*\", gpu=~\".*\"} + DCGM_FI_DEV_FB_FREE{Hostname=~\".*\", gpu=~\".*\"})",
@@ -8648,7 +8638,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -8733,7 +8723,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_GPU_TEMP{Hostname=~\".*\", gpu=~\".*\"}",
@@ -8745,7 +8735,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_MEMORY_TEMP{Hostname=~\".*\", gpu=~\".*\"}",
@@ -8762,7 +8752,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -8843,7 +8833,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_POWER_USAGE{Hostname=~\".*\", gpu=~\".*\"}",
@@ -8855,7 +8845,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "rate(DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION{Hostname=~\".*\", gpu=~\".*\"}[5m]) / 1000",
@@ -8872,7 +8862,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -8953,7 +8943,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_SM_CLOCK{Hostname=~\".*\", gpu=~\".*\"} * 1000000",
@@ -8970,7 +8960,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -9051,7 +9041,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_MEM_CLOCK{Hostname=~\".*\", gpu=~\".*\"} * 1000000",
@@ -9068,7 +9058,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -9153,7 +9143,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "increase(DCGM_FI_DEV_PCIE_REPLAY_COUNTER{Hostname=~\".*\", gpu=~\".*\"}[5m])",
@@ -9170,7 +9160,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -9255,7 +9245,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_XID_ERRORS{Hostname=~\".*\", gpu=~\".*\"}",
@@ -9272,7 +9262,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -9353,7 +9343,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS{Hostname=~\".*\", gpu=~\".*\"}",
@@ -9365,7 +9355,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_CORRECTABLE_REMAPPED_ROWS{Hostname=~\".*\", gpu=~\".*\"}",
@@ -9377,7 +9367,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "DCGM_FI_DEV_ROW_REMAP_FAILURE{Hostname=~\".*\", gpu=~\".*\"}",
@@ -9392,9 +9382,7 @@
           "description": "Row-remapping counters (A100+ / HBM GPUs only). Growing uncorrectable remaps or any remap failure means the GPU needs service."
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "🖥️ NVIDIA GPU / DCGM ($client_ds)",
+      "title": "🖥️ NVIDIA GPU / DCGM",
       "type": "row"
     }
   ],
@@ -9410,32 +9398,16 @@
   "templating": {
     "list": [
       {
-        "name": "client_ds",
-        "label": "Clients",
+        "name": "datasource",
+        "label": "Datasource",
         "type": "datasource",
         "query": "prometheus",
         "hide": 0,
-        "includeAll": true,
-        "multi": true,
+        "includeAll": false,
+        "multi": false,
         "current": {
-          "text": [
-            "Demo",
-            "Demo2",
-            "Integration",
-            "IONIS",
-            "KrispyKreme",
-            "SSB",
-            "UAT"
-          ],
-          "value": [
-            "dfmklaiqtfif4c",
-            "efl7hw5ukkwzkd",
-            "efl6f47f8cj5sb",
-            "efs7yusoeq680e",
-            "efs2d1k3se39ca",
-            "dfs2d5r9cp0qob",
-            "efmkjlznz8ykgb"
-          ]
+          "text": "Prometheus",
+          "value": "prometheus"
         }
       }
     ]

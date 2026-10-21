@@ -1,5 +1,5 @@
 {
-  "__comment": "NVisionX Content Service (Legacy V1) — merges the 3 pre-V2 Content Service dashboards (Overview, Extraction Routing, Tika vs Kreuzberg Comparison) into one file, one collapsed row per section, repeating per client via the shared Clients picker. Same pattern/trade-offs as the other consolidated dashboards. 2026-09-18: dashboard consolidation.",
+  "__comment": "NVisionX Content Service (Legacy V1) — merges the 3 pre-V2 Content Service dashboards (Overview, Extraction Routing, Tika vs Kreuzberg Comparison) into one file, one collapsed row per section, using the single-select Datasource picker. Same pattern/trade-offs as the other consolidated dashboards. 2026-09-18: dashboard consolidation.",
   "annotations": {
     "list": [
       {
@@ -33,7 +33,7 @@
         "code": {
           "language": "markdown"
         },
-        "content": "**Content Service (Legacy V1)** — the original, pre-V2 Content Service dashboards (Overview, Extraction Routing, Tika vs Kreuzberg Comparison), kept until the V2 Content Service dashboard (part of Services Detail) reaches full parity. Each section repeats once per client selected in the **Clients** picker.",
+        "content": "**Content Service (Legacy V1)** — the original, pre-V2 Content Service dashboards (Overview, Extraction Routing, Tika vs Kreuzberg Comparison), kept until the V2 Content Service dashboard (part of Services Detail) reaches full parity. Sections use the **Datasource** picker.",
         "mode": "markdown"
       },
       "pluginVersion": "11.5.2",
@@ -54,7 +54,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Concurrent in-flight Fetch calls, per pod.\n- GLOBAL_MAX_INFLIGHT (default 200) is a per-pod cap — compare the red line to the per-pod lines, not the total-across-pods line.\n- Plateaued at the cap → requests are queueing in the semaphore; queue time shows up as request latency.",
           "fieldConfig": {
@@ -105,7 +105,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(content_inflight_global{namespace=\".*\", job=\".*\", pod=~\".*\"})",
               "legendFormat": "global — total (all pods)",
@@ -114,7 +114,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "content_inflight_global{namespace=\".*\", job=\".*\", pod=~\".*\"}",
               "legendFormat": "global — {{pod}}",
@@ -123,7 +123,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(content_inflight_stream{namespace=\".*\", job=\".*\", pod=~\".*\"})",
               "legendFormat": "stream — total (all pods)",
@@ -132,7 +132,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "content_inflight_stream{namespace=\".*\", job=\".*\", pod=~\".*\"}",
               "legendFormat": "stream — {{pod}}",
@@ -145,7 +145,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Request rate by status. Sustained `failed` is the load-test failure signal.\n- Counted per DELIVERY, not per document — a Nak'd + redelivered message counts as a failure AND (if the retry succeeds) a completion.\n- A burst of redeliveries raises every status line at once, including `completed` — don't read that as broad recovery.\n- For NATS-only failure reasons, see \"NATS retry outcomes\" below.",
           "fieldConfig": {
@@ -307,7 +307,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (status) (rate(content_requests_total{namespace=\".*\", job=\".*\"}[1m]))",
               "legendFormat": "{{status}}",
@@ -320,7 +320,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- End-to-end Fetch latency p50/p95/p99, across all api + content_type combinations.",
           "fieldConfig": {
@@ -357,7 +357,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.50, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\".*\", job=\".*\"}[1m])))",
               "legendFormat": "p50",
@@ -366,7 +366,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\".*\", job=\".*\"}[1m])))",
               "legendFormat": "p95",
@@ -375,7 +375,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum by (le) (rate(content_request_duration_seconds_bucket{namespace=\".*\", job=\".*\"}[1m])))",
               "legendFormat": "p99",
@@ -388,7 +388,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Rejections by reason. Non-zero → hit a concurrency ceiling.\n- reason ∈ {global_full, stream_full, shutdown}.",
           "fieldConfig": {
@@ -425,7 +425,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (reason) (rate(content_inflight_rejections_total{namespace=\".*\", job=\".*\"}[1m]))",
               "legendFormat": "{{reason}}",
@@ -438,7 +438,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Cache S3 op latency p99, by bucket/op — isolates S3 latency from content-service code paths.\n- bucket ∈ {raw, processed} since 2026-08: this label used to carry the deployed bucket NAME (nvisionx-raw-content-cache-…), so legends were environment-specific and queries written against \"raw\" matched nothing. \"other\" would mean a bucket nothing wired up.\n- Since 2026-08, hits are served HEAD-only (bodies delivered via CacheLocation) — `get` volume should be a small fraction of `head`.\n- Rising `get` rate → the extraction path or the sha256 safety-net is doing real reads.",
           "fieldConfig": {
@@ -475,7 +475,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum by (le, bucket, op) (rate(content_cache_op_duration_seconds_bucket{namespace=\".*\", job=\".*\"}[1m])))",
               "legendFormat": "{{bucket}}/{{op}}",
@@ -488,7 +488,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- NATS fetch outcomes/sec by connector. outcome ∈ {completed, pickup_timeout, worker_timeout, canceled, error}.\n- Non-zero `pickup_timeout` → connectors aren't keeping up.\n- Non-zero `worker_timeout` → connectors are stuck mid-fetch.",
           "fieldConfig": {
@@ -620,7 +620,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (connector, outcome) (rate(content_nats_fetch_total{namespace=\".*\", job=\".*\"}[1m]))",
               "legendFormat": "{{connector}}/{{outcome}}",
@@ -633,7 +633,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Three independent ratios — they answer different questions and don't move together.\n- \"Direct RAW request — served from cache\": plain RAW-request hits (phase=fetch). Drop → RAW callers increasingly missing.\n- \"TEXT request — raw already cached\": the raw-bucket check before extraction (phase=extract). Low/red → TEXT requests are paying for a connector round-trip before extraction even starts.\n- \"TEXT request — output already cached\": final extracted output already cached — the cheapest possible outcome.\n- No data on a tile = zero traffic on that path, not a ratio of zero.\n- Red tile on unique-document traffic (first-pass scan) is expected. Red tile on repeat-document traffic is worth investigating.",
           "fieldConfig": {
@@ -689,7 +689,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_cache_hits_total{namespace=\".*\", job=\".*\", bucket=\"raw\", phase=\"fetch\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\".*\", job=\".*\", bucket=\"raw\", phase=\"fetch\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\".*\", job=\".*\", bucket=\"raw\", phase=\"fetch\"}[5m])))",
               "legendFormat": "Direct RAW request — served from cache",
@@ -698,7 +698,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_cache_hits_total{namespace=\".*\", job=\".*\", bucket=\"raw\", phase=\"extract\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\".*\", job=\".*\", bucket=\"raw\", phase=\"extract\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\".*\", job=\".*\", bucket=\"raw\", phase=\"extract\"}[5m])))",
               "legendFormat": "TEXT request — raw already cached",
@@ -707,7 +707,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_cache_hits_total{namespace=\".*\", job=\".*\", bucket=\"processed\", phase=\"extract\"}[5m])) / (sum(rate(content_cache_hits_total{namespace=\".*\", job=\".*\", bucket=\"processed\", phase=\"extract\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\".*\", job=\".*\", bucket=\"processed\", phase=\"extract\"}[5m])))",
               "legendFormat": "TEXT request — output already cached",
@@ -720,7 +720,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Text extraction p99 latency by outcome.\n- Only `success`/`failed` populate the histogram — `skipped`/`breaker_open` record duration=0 by design.",
           "fieldConfig": {
@@ -757,7 +757,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum by (le, status) (rate(content_extraction_duration_seconds_bucket{namespace=\".*\", job=\".*\"}[1m])))",
               "legendFormat": "p99 — {{status}}",
@@ -770,7 +770,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- NATS two-phase reply latency p99 by connector. pickup = publish→PROCESSING; worker = PROCESSING→COMPLETED.\n- Both timeouts default to 30s — p99 climbing toward 30s means timeouts are imminent.\n- Pair with \"NATS fetch outcomes\" for the actual timeout counts.",
           "fieldConfig": {
@@ -807,7 +807,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_pickup_duration_seconds_bucket{namespace=\".*\", job=\".*\"}[1m])))",
               "legendFormat": "pickup p99 — {{connector}}",
@@ -816,7 +816,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum by (le, connector) (rate(content_nats_worker_duration_seconds_bucket{namespace=\".*\", job=\".*\"}[1m])))",
               "legendFormat": "worker p99 — {{connector}}",
@@ -829,7 +829,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Cache write latency p50/p95/p99, success only — canceled/timeout are long-running by definition and would poison the percentiles (see their own panel).\n- Covers stream ingest + S3 upload; excludes the sha256 stamp copy (own panel).\n- Buckets explicit since 2026-08 — earlier data read 10–1000x too high (SDK's ms-scale default buckets).",
           "fieldConfig": {
@@ -866,7 +866,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.50, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\".*\", job=\".*\", result=\"success\"}[1m])))",
               "legendFormat": "p50",
@@ -875,7 +875,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\".*\", job=\".*\", result=\"success\"}[1m])))",
               "legendFormat": "p95",
@@ -884,7 +884,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\".*\", job=\".*\", result=\"success\"}[1m])))",
               "legendFormat": "p99",
@@ -897,7 +897,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Placeholder — content-service emits no `content_extraction_circuit_state` today; shows No data by design.\n- Will start working unchanged once the extractor circuit breaker (xberg backpressure work) ships (0=closed / 1=half-open / 2=open).\n- Until then, use \"Retry attempts by error code\": a rising SERVICE_UNAVAILABLE line is what a breaker would trip on.",
           "fieldConfig": {
@@ -971,7 +971,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "max(content_extraction_circuit_state{namespace=\".*\", job=\".*\"})",
               "refId": "A"
@@ -983,7 +983,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- S3 cache operation errors/sec. error_type ∈ {read_failed, write_failed, other}.",
           "fieldConfig": {
@@ -1020,7 +1020,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (bucket, op, error_type) (rate(content_cache_op_errors_total{namespace=\".*\", job=\".*\"}[1m]))",
               "legendFormat": "{{bucket}}/{{op}}/{{error_type}}",
@@ -1033,7 +1033,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Cache write outcomes from S3Store. result ∈ {success, read_error, size_mismatch, s3_error, canceled, timeout}.\n- `timeout` → CACHE_WRITE_TIMEOUT_SECONDS fired.\n- `size_mismatch` also deletes the truncated object.",
           "fieldConfig": {
@@ -1165,7 +1165,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (result) (rate(content_cache_write_total{namespace=\".*\", job=\".*\"}[1m]))",
               "legendFormat": "{{result}}",
@@ -1178,7 +1178,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Requests FAILED during graceful shutdown drain. Should be ~0 except during deploy/restart.",
           "fieldConfig": {
@@ -1215,7 +1215,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "rate(content_shutdown_pending_failed_total{namespace=\".*\", job=\".*\"}[1m])",
               "legendFormat": "shutdown_failed",
@@ -1228,7 +1228,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Fires when a raw object has no sha256 metadata (normally stamped synchronously at write time) — should be ~0 outside legacy objects aging out of the 7d raw TTL.\n- Steady `computed_in_process` → stamping regression.\n- `raw_head_miss_text_hit` → text served after its raw was evicted, and the text object predates the sha stamp.",
           "fieldConfig": {
@@ -1265,7 +1265,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (connector, reason) (rate(content_sha256_safety_net_total{namespace=\".*\", job=\".*\"}[1m]))",
               "legendFormat": "{{connector}}/{{reason}}",
@@ -1278,7 +1278,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Text extraction outcomes/sec. status ∈ {success, failed, skipped, breaker_open}.\n- `skipped` tracking near `success` → large share of TEXT requests exceed EXTRACTION_MAX_SIZE (deployed 50 MiB) and are served raw with no extraction — confirm this matches the expected corpus mix.\n- Sustained `breaker_open` → kreuzberg is unhealthy and content-service stopped sending it work; expect SERVICE_UNAVAILABLE to climb on \"Retry attempts by error code\" too.\n- Rising `failed` with flat `success` → documents failing extraction outright (corrupt/unsupported), not a capacity problem.\n- `success` alone doesn't show cost — pair with \"Extraction p99 latency\".",
           "fieldConfig": {
@@ -1515,7 +1515,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (status) (rate(content_extraction_total{namespace=\".*\", job=\".*\"}[1m]))",
               "legendFormat": "{{status}}",
@@ -1528,7 +1528,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Distribution of bytes written per S3 cache Put — p50/p95/p99.\n- Bodies over the 16 MiB multipart threshold take the multipart upload path.\n- 5m window (wider than other panels) — write events are infrequent and benefit from smoothing.\n- Buckets explicit (4KiB–5GiB) since 2026-08; earlier data used ms-scale defaults and is unreadable.",
           "fieldConfig": {
@@ -1565,7 +1565,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.50, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\".*\", job=\".*\"}[5m])))",
               "legendFormat": "p50 — {{result}}",
@@ -1574,7 +1574,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\".*\", job=\".*\"}[5m])))",
               "legendFormat": "p95 — {{result}}",
@@ -1583,7 +1583,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum by (le, result) (rate(content_cache_write_bytes_bucket{namespace=\".*\", job=\".*\"}[5m])))",
               "legendFormat": "p99 — {{result}}",
@@ -1596,7 +1596,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Same series as \"Extraction outcomes\", counted per bucket instead of per second, so the bands add up: the top of the stack is every extraction attempt in that bucket, and each band is its share.\n- Read this one for \"how many documents did that outage cost\" and for a status whose rate is too small to see next to `success`. Read the rate panel for trend and for comparing shapes across a zoom level.\n- An all-`service_unavailable` stack with no `success` band means the extractor is unreachable, not that documents are bad — extraction failures return an empty-text response with a successful RPC, so nothing on the request panels turns red.\n- Counted with `increase()`, which extrapolates at bucket edges, so a bar can read slightly off a whole number. Min step is pinned to 1m so a bar never covers less than one scrape window; widen the time range and the bars widen with it.\n- Band colours match \"Extraction outcomes\" — the same status is the same colour in both.",
           "fieldConfig": {
@@ -1838,7 +1838,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (status) (increase(content_extraction_total{namespace=\".*\", job=\".*\"}[$__interval]))",
               "legendFormat": "{{status}}",
@@ -1852,7 +1852,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Splits successful raw-write latency: `total p95` = whole write (connector stream read + S3 PutObject); `stream-wait p95` = time blocked reading the connector.\n- total − stream-wait ≈ S3-side time.\n- `stream-wait` ≈ `total` → the connector/source system is slow, not the cache.\n- `stream-wait` small, `total` high → S3 itself is slow.",
           "fieldConfig": {
@@ -1889,7 +1889,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le) (rate(content_cache_write_duration_seconds_bucket{namespace=\".*\", job=\".*\", result=\"success\"}[5m])))",
               "legendFormat": "total p95",
@@ -1898,7 +1898,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le) (rate(content_cache_write_stream_wait_seconds_bucket{namespace=\".*\", job=\".*\", result=\"success\"}[5m])))",
               "legendFormat": "stream-wait p95 (connector-paced)",
@@ -1911,7 +1911,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- How long abandoned writes ran before dying. `canceled` = peer went away (connector crash, pod eviction, client deadline). `timeout` = CACHE_WRITE_TIMEOUT_SECONDS fired.\n- Kept separate from the main latency panel — this is client-abandonment behavior, not cache performance.",
           "fieldConfig": {
@@ -1948,7 +1948,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_write_duration_seconds_bucket{namespace=\".*\", job=\".*\", result=~\"canceled|timeout\"}[5m])))",
               "legendFormat": "p95 — {{result}}",
@@ -1961,7 +1961,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Post-upload sha256 stamp (server-side CopyObject self-copy), synchronous within Put but excluded from write-duration.\n- Cost scales with object size — up to the 5GB CopyObject ceiling.\n- Sustained `error` → objects left unstamped → sha safety-net activations rise downstream.",
           "fieldConfig": {
@@ -1998,7 +1998,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le, result) (rate(content_cache_sha_stamp_duration_seconds_bucket{namespace=\".*\", job=\".*\"}[5m])))",
               "legendFormat": "p95 — {{result}}",
@@ -2011,7 +2011,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Writes where the connector declared no size, so byte-count validation was skipped.\n- Should be ~0 — sustained rate means a connector is uploading unverifiable (possibly truncated) content.",
           "fieldConfig": {
@@ -2060,7 +2060,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_cache_write_unverified_total{namespace=\".*\", job=\".*\"}[5m]))",
               "refId": "A"
@@ -2072,7 +2072,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Upload streams currently admitted. Each holds ~48–64MiB of transfer-manager buffers.\n- Capped service-wide at UPLOAD_MAX_CONCURRENT (default 32, red line).\n- Sustained saturation → connectors are queueing behind the gate.",
           "fieldConfig": {
@@ -2122,7 +2122,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(content_upload_concurrent_streams{namespace=\".*\", job=\".*\", pod=~\".*\"})",
               "legendFormat": "total (all pods)",
@@ -2131,7 +2131,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "content_upload_concurrent_streams{namespace=\".*\", job=\".*\", pod=~\".*\"}",
               "legendFormat": "{{pod}}",
@@ -2144,7 +2144,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Connector fetches per document actually drained by the privacy pipeline. 1.0 = healthy (fetched exactly once).\n- Retry ladder ceiling = extractRetryMaxAttempts (5) × JetStream MaxDeliver (3) = 15 — approaching 15 means failing documents consume the whole ladder while holding a caller's worker.\n- Reads true only while a privacy scan is running (pii_* is emitted by the privacy job).",
           "fieldConfig": {
@@ -2197,7 +2197,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_nats_fetch_total{namespace=\".*\", job=\".*\"}[5m])) / sum(rate(pii_bulk_docs_updated_total{namespace=\".*\"}[5m]))",
               "refId": "A"
@@ -2209,7 +2209,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- `failed_budget` — read this one first, it's the common outcome. CALLER_WAIT_BUDGET_SECONDS (5s) stopped the retry ladder early, replied to the caller, then Nak'd with a 30s delay.\n- `failed` — in-handler attempts exhausted, or a malformed request / non-retryable manager failure. Rising `failed` means documents are being retried, not that callers are stranded.\n- `failed_terminal` — MaxDeliver reached or budget spent on the last delivery. Replies AND Acks — end of the line for that document.\n- `failed_draining` — a pod refusing new extraction work while shutting down; Nak'd for a healthy replica to pick up.\n- All four should sit near 0 in steady state; all four ran sustained through the 2026-07-27 incident.\n- Shows THAT and WHY (of these 4 reasons) a delivery was Nak'd, not the underlying connector/extraction error — for that, check \"Retry attempts by error code\" or the Warn log at the Nak decision point.",
           "fieldConfig": {
@@ -2311,7 +2311,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (status) (rate(content_requests_total{namespace=\".*\", job=\".*\", api=\"nats\", status=~\"failed|failed_budget|failed_terminal|failed_draining\"}[5m]))",
               "legendFormat": "{{status}}",
@@ -2324,7 +2324,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Should sit at ~0.\n- Rising → requests exceed the histogram's 60s top bucket; every p95/p99 on this dashboard understates the real tail — go to \"Request latency\" / \"Extraction p99 latency\" to find the slow phase.\n- A steady, near-constant (not spiky) value is the 2026-07-27 outage pattern: p95 pinned at 29s because 100% of requests sat in the same interpolated bucket.\n- Ceiling is 60s because the service allows pickup 60s + worker 180s = 240s end-to-end, but the histogram's top bucket stops at 60s.\n- Query gotcha: the bucket label is decimal (`le=\"60.0\"`) — `le=\"60\"` silently matches nothing.",
           "fieldConfig": {
@@ -2361,7 +2361,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_request_duration_seconds_bucket{namespace=\".*\", job=\".*\", api=\"nats\", le=\"+Inf\"}[5m])) - sum(rate(content_request_duration_seconds_bucket{namespace=\".*\", job=\".*\", api=\"nats\", le=\"60.0\"}[5m]))",
               "legendFormat": "slower than 60s",
@@ -2374,7 +2374,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Privacy document throughput vs. the rate below which its OpenSearch Point-in-Time lease expires.\n- Critical rate = 32 consumers × 1000-doc pages ÷ 30-min lease = 17.8 docs/s (red line).\n- Sustained operation below the red line → PIT lease expires → 404 search_context_missing_exception, and the scan then reports SUCCESS having read only part of the index (reader error is discarded).\n- Requires a running privacy scan.",
           "fieldConfig": {
@@ -2411,7 +2411,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(pii_docs_processed_total{namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "documents analysed/s",
@@ -2420,7 +2420,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "vector(17.8)",
               "legendFormat": "PIT critical rate (32 × 1000 / 1800)",
@@ -2433,7 +2433,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Time spent waiting for an extraction slot before reaching xberg — separates \"we queued\" from \"xberg was slow\", which otherwise surface as the same error codes.\n- Rising p95 + \"Extraction slots in use\" pinned at capacity → a queueing problem, not a document problem.\n- Split by lane: `interactive` wait climbing toward `bulk` → the priority lane (EXTRACTION_PRIORITY_MAX_CONSECUTIVE) isn't buying anything anymore.\n- Buckets run to 600s — the extraction semaphore has no acquire timeout.",
           "fieldConfig": {
@@ -2470,7 +2470,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\".*\", job=\".*\", outcome=\"admitted\"}[5m])))",
               "legendFormat": "p99 {{lane}}",
@@ -2479,7 +2479,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\".*\", job=\".*\", outcome=\"admitted\"}[5m])))",
               "legendFormat": "p95 {{lane}}",
@@ -2488,7 +2488,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.50, sum by (le, lane) (rate(content_extraction_queue_wait_seconds_bucket{namespace=\".*\", job=\".*\", outcome=\"admitted\"}[5m])))",
               "legendFormat": "p50 {{lane}}",
@@ -2501,7 +2501,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Occupancy and capacity (count, left axis) vs. `aborted/s` (rate, right axis) — different units, check the legend value, not just line height.\n- Capacity is `content_extraction_slots_capacity` summed over reporting pods. Each pod exports its own EXTRACTION_MAX_CONCURRENCY, so this tracks a helm change on the next rollout and stays right mid-rollout when pods disagree. No capacity line = the metric is not in the deployed image yet, NOT zero capacity.\n- Both slot series are fleet sums across pods, so they legitimately exceed any single pod's limit. Compare occupancy against the capacity line, never against a fixed number.\n- Occupancy saturates: once pinned at capacity it can't show how far behind you are — use \"Extraction queue wait\" for that.\n- A held slot is not always a document being parsed. It covers the raw read, the extractor call, and the compress-and-write tail after the extractor has already answered.\n- Sustained `aborted/s` > 0 → the gate is shedding work (deadline expired while queueing), not just pacing it.\n- Per-lane split shows who holds the gate: `bulk` filling it during a scan is expected, interactive extractions should still get in. No line for a lane = no traffic, not zero.",
           "fieldConfig": {
@@ -2598,7 +2598,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(content_extraction_slots_in_use{namespace=\".*\", job=\".*\"})",
               "legendFormat": "slots in use (total)",
@@ -2607,7 +2607,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (lane) (content_extraction_slots_in_use{namespace=\".*\", job=\".*\"})",
               "legendFormat": "slots — {{lane}}",
@@ -2616,7 +2616,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (lane) (rate(content_extraction_queue_wait_seconds_count{namespace=\".*\", job=\".*\", outcome=\"aborted\"}[5m]))",
               "legendFormat": "aborted/s — {{lane}}",
@@ -2625,7 +2625,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(content_extraction_slots_capacity{namespace=\".*\", job=\".*\"})",
               "legendFormat": "capacity (slots)",
@@ -2638,7 +2638,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- A rising line = a specific error is driving repeated in-handler retries.\n- `EXTRACTION_ERROR_SERVICE_UNAVAILABLE` rising → kreuzberg is refusing work (overloaded) — retrying it makes the backlog worse, not better.\n- `EXTRACTION_ERROR_TIMEOUT` → documents genuinely slow to extract (capped at fewer attempts — a timeout will likely repeat).\n- `CONTENT_ERROR_CACHE_WRITE_FAILED` → check S3/cache health, not the extractor.\n- `CONTENT_ERROR_INTERNAL` → the connector's source system (Box/SharePoint/etc.) is unreachable or rate-limiting it — a source-side problem.",
           "fieldConfig": {
@@ -2679,7 +2679,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (error_code) (rate(content_retry_attempts_total{namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "{{error_code}}",
@@ -2692,7 +2692,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- One line per (code, retryable) — use `code` to trace an error spike back to specific URNs.\n- `retryable=true` → content-service retries automatically. `retryable=false` rising → documents need a human or a source-side fix.\n- `CACHE_WRITE_FAILED` is always retryable (our own S3 write treated as transient).\n- `TOO_LARGE` is essentially never retryable — the source object exceeds the connector's size limit.\n- `CONNECTOR_UNAVAILABLE` = no connector answered within PICKUP_TIMEOUT_SECONDS — the request isn't lost, it stays queued on CONTENT_FETCH.",
           "fieldConfig": {
@@ -2733,7 +2733,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (code, retryable) (rate(content_fetch_errors_total{namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "{{code}} (retryable={{retryable}})",
@@ -2746,7 +2746,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Valkey claims taken before a connector fetch or an xberg extraction, so two replicas don't duplicate work. Expect everything but `won` at 0 until KEDA scales past one replica.\n- `won` → this pod took the claim and is doing the work.\n- `lost` → another replica holds it; this pod waits for the output instead.\n- `preempted` → interactive work took a bulk holder's claim — a deliberate duplicate (the displaced holder keeps working).\n- `held_by_self` → this pod found its own earlier claim (usually a fetch claim outliving a reply timeout) — a connector slowdown, not a dedup event.\n- `duplicated` → gave up waiting and did the work anyway (interactive requests only — no redelivery to defer to).\n- `lease_lost` → a renewal found the claim gone mid-work — leading indicator of duplicate work.\n- `unavailable` → Valkey unreachable, dedup silently degraded (still correct, just costs duplicate fetches/extractions).\n- `disabled` → dedup off for that phase (VALKEY_HOST unset, or that phase's TTL zeroed) — should be flat 0 when configured correctly.\n- Watch `disabled` (likely misconfiguration) and `lease_lost` (duplicate work happening now) most closely.",
           "fieldConfig": {
@@ -2783,7 +2783,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (phase, outcome) (rate(content_dedup_claims_total{namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "{{phase}} — {{outcome}}",
@@ -2796,7 +2796,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Rising `peer`/`satisfied` → dedup paying off (waited instead of repeating a fetch/extraction).\n- Rising `connector` → NOT dedup — this request's own claim's connector reply timed out; read as connector slowness.\n- Rising `took_over` → escalate. The previous claim holder died mid-work and this request redid it. Steady trickle = normal pod recycling; a spike = replicas dying under load.\n- `peer` scales with replica count/hot keys; `connector` scales with source-system load — not substitutes for each other.\n- `extract` is always `peer`, never `connector` — extraction is synchronous, nothing can outlive it the way a fetch can.\n- Any non-`satisfied` outcome = a missed optimization, never a failure.\n- `skipped` = no deadline left to wait within (PEER_WAIT_SECONDS / CONNECTOR_WAIT_SECONDS / GET_CONTENT_DEADLINE_SECONDS) — high `skipped` next to flat `satisfied` is a timing-budget problem; retune those seconds, don't chase the claim logic.\n- `expired` (someone still working) and `took_over` (nobody was working) look identical in wall-clock terms but mean opposite things.",
           "fieldConfig": {
@@ -2943,7 +2943,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (phase, source, outcome) (rate(content_dedup_waits_total{namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "{{phase}} — waiting on {{source}} — {{outcome}}",
@@ -2956,7 +2956,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- How long a wait took before it paid off, split by who was waited on. Filtered to outcome=\"satisfied\" — an expired wait always equals its full budget and would flatten every quantile onto the ceiling.\n- PEER_WAIT_SECONDS bounds a peer wait, CONNECTOR_WAIT_SECONDS a connector wait, GET_CONTENT_DEADLINE_SECONDS caps both (same number in dev today only because PEER_WAIT_SECONDS isn't templated).\n- `fetch/peer` ≈ connector latency + remaining holder lease. `fetch/connector` = how far past our own reply timeout the connector ran — use to size PICKUP_TIMEOUT_SECONDS / the worker timeout. `extract/peer` = how long another replica's xberg run took.\n- p50/p95 only. Buckets run to 600s — waits should stay well under that.",
           "fieldConfig": {
@@ -2993,7 +2993,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le, phase, source) (rate(content_dedup_wait_duration_seconds_bucket{namespace=\".*\", job=\".*\", outcome=\"satisfied\"}[5m])))",
               "legendFormat": "p95 {{phase}}/{{source}}",
@@ -3002,7 +3002,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.50, sum by (le, phase, source) (rate(content_dedup_wait_duration_seconds_bucket{namespace=\".*\", job=\".*\", outcome=\"satisfied\"}[5m])))",
               "legendFormat": "p50 {{phase}}/{{source}}",
@@ -3015,7 +3015,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Extractions that finished after the caller left — deliberate, not a leak: canceling xberg mid-flight throws the whole run away, since nothing persists until it returns. Letting it finish means the caller's retry finds cached text instead of re-running.\n- Cost: an extraction slot held for a caller who's gone — pair with \"Extraction slots in use\": rising count while the gate is pinned means part of capacity is committed to callers who left.\n- Steady low rate = design working as intended (bulk requests hitting their delivery deadline).\n- Sustained `interactive` is worse than `bulk` — a human gave up waiting; check GET_CONTENT_DEADLINE_SECONDS against the extraction phase before tuning anything else.",
           "fieldConfig": {
@@ -3052,7 +3052,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (lane) (rate(content_extraction_after_caller_left_total{namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "{{lane}}",
@@ -3067,7 +3067,7 @@
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "title": "What the autoscaler sees vs what is really in flight",
           "description": "- The KEDA trigger runs sum(content_inflight_global) with NO label filter — the series to check before changing the inflight threshold (default 100) or activationThreshold (default 20).\n- Inflated by (1) dual scrape — every pod is scraped twice (kubernetes-services + PodMonitor), doubling an unfiltered sum(); the NATS triggers use max() so they're unaffected, this is the only sum()-based trigger — and (2) no namespace filter — a shared Prometheus counts every namespace, not just .*.\n- Divide by threshold to get the replicas this trigger is asking for. KEDA takes the highest count any trigger requests.",
@@ -3126,7 +3126,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(content_inflight_global)",
               "legendFormat": "KEDA query — unfiltered sum",
@@ -3135,7 +3135,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(content_inflight_global{job=\".*\"})",
               "legendFormat": "job-filtered (removes dual scrape)",
@@ -3144,7 +3144,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(content_inflight_global{job=\".*\", namespace=\".*\"})",
               "legendFormat": "job + namespace filtered",
@@ -3153,7 +3153,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(content_inflight_stream{job=\".*\"})",
               "legendFormat": "stream gauge — zero means a pre-fix build",
@@ -3166,7 +3166,7 @@
           "type": "stat",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "title": "Replicas this trigger is asking for",
           "description": "- ceil(KEDA query / threshold), clamped to maxReplicas (default 5).\n- Red at 5 → pinned at the ceiling — can no longer tell \"full\" from \"far behind\"; avoid this state when picking a new threshold.\n- Admission gate caps globalMaxInflight (deployed 200) per pod — a hard ceiling on the gauge itself.",
@@ -3212,7 +3212,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "clamp_max(ceil(sum(content_inflight_global) / 100), 5)",
               "legendFormat": "replicas requested",
@@ -3225,7 +3225,7 @@
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "title": "Request rate: See Content (gRPC) vs NATS (bulk)",
           "description": "- content_inflight_global has no scope label — request rate by api is the closest proxy: grpc_get_content / grpc_fetch_stream = See Content, nats = scan lane.\n- As of 2026-08-19 no production caller uses gRPC — both See Content series should read flat zero.\n- If flat zero, the KEDA threshold doesn't need to move — nothing new is being added to the sum since the IncInflight scope fix.",
@@ -3317,7 +3317,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (api) (rate(content_requests_total{job=\".*\", namespace=\".*\"}[$__rate_interval]))",
               "legendFormat": "{{api}}",
@@ -3328,7 +3328,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Where a request's bytes actually came from, by request type.\n- Rising \"text already cached\" → TEXT requests answered with zero backend work.\n- Rising \"raw already cached\" + flat \"raw not cached\" → TEXT misses are cheap (extraction only, no connector round-trip).\n- Rising \"raw not cached\" → TEXT requests paying for a connector fetch AND an extraction — the most expensive path.\n- \"Direct RAW request\" lines answer the same question for plain RAW requests, which never run extraction.\n- Caveat: a text-cache miss is counted once per request, but the raw-bucket check underneath is deduplicated across concurrent requests for the same URN (singleflight) — counts aren't guaranteed to add up 1:1 during a concurrent burst.",
           "fieldConfig": {
@@ -3365,7 +3365,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_cache_hits_total{namespace=\".*\", job=\".*\", bucket=\"processed\", phase=\"extract\"}[5m]))",
               "legendFormat": "TEXT request — output already cached (no work needed)",
@@ -3374,7 +3374,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_cache_hits_total{namespace=\".*\", job=\".*\", bucket=\"raw\", phase=\"extract\"}[5m]))",
               "legendFormat": "TEXT request — raw already cached (extracted fresh, no connector call)",
@@ -3383,7 +3383,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_cache_misses_total{namespace=\".*\", job=\".*\", bucket=\"raw\", phase=\"extract\"}[5m]))",
               "legendFormat": "TEXT request — raw not cached (connector fetch required)",
@@ -3392,7 +3392,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_cache_hits_total{namespace=\".*\", job=\".*\", bucket=\"raw\", phase=\"fetch\"}[5m]))",
               "legendFormat": "Direct RAW request — served from cache",
@@ -3401,7 +3401,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_cache_misses_total{namespace=\".*\", job=\".*\", bucket=\"raw\", phase=\"fetch\"}[5m]))",
               "legendFormat": "Direct RAW request — fetched from connector",
@@ -3414,7 +3414,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Successfully extracted documents counted per bucket, split by the extractor's detected mime_type (normalized — charset and other parameters stripped; \"unknown\" means the extractor reported no type at all, or reported one that couldn't be parsed). Stacked, so the top of each bar is every document extracted in that bucket and each band is one mime_type's share of it. Counted once per successful parse, so with EXTRACTION_COMPARISON_ENABLED on, a sampled document contributes to both a kreuzberg and a tika series — this panel does not split by parser_kind; see the Tika comparison dashboard for that breakdown. A shift in mix (e.g. \"unknown\" growing) usually means upstream content-type detection regressed, not that the corpus changed. Pair with Extraction outcomes: this panel only counts successes, so a mime_type dropping out here while overall extraction volume holds steady points at that type failing outright, not disappearing from the corpus.",
           "fieldConfig": {
@@ -3460,7 +3460,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (mime_type) (increase(content_extraction_files_total{namespace=\".*\", job=\".*\"}[$__interval]))",
               "legendFormat": "{{mime_type}}",
@@ -3473,7 +3473,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "kreuzberg's processing_warnings count, summed per document and split by detected mime_type. A clean document contributes nothing to this series by design — zero warnings is not recorded as a zero-value point (see content-service's RecordExtractionDocument) — so any nonzero rate here means some fraction of documents of that type are hitting a non-fatal issue during extraction (e.g. an OCR fallback), not merely that documents are being processed. tika has no equivalent field and always contributes 0, so during a comparison-sampled window this series under-represents total document volume relative to Documents processed by mime type for tika's share — that gap is expected, not missing data. Rising warnings against a flat Documents processed count for the same mime_type is a quality signal on documents you're already handling at the same rate, worth checking against kreuzberg's own logs before assuming a code regression.",
           "fieldConfig": {
@@ -3514,7 +3514,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (mime_type) (rate(content_extraction_warnings_total{namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "{{mime_type}}",
@@ -3527,7 +3527,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Raw read = rate(content_cache_read_bytes_sum{bucket=\"raw\"}) — bytes returned by cache Gets (sha256 safety-net + pre-extraction raw reads).\n- Raw write = rate(content_cache_write_bytes_sum) — bytes PUT into the raw bucket by S3Store (connector uploads).\n- Text write = rate(content_text_cache_stored_bytes_total) — compressed text bytes PUT into the text bucket.\n- No \"text read\" line — content-service never reads the text body back out. Text hits are served HEAD-only (CacheLocation-only delivery); the caller fetches bytes directly from S3, invisible to this service.\n- Raw read ≫ raw write, sustained → repeat reads of already-cached raw objects (sha256 safety-net or pre-extraction lookups on a hot document).\n- Text write ≪ raw write → most raw traffic is RAW requests or direct-store bypasses, not going through extraction.",
           "fieldConfig": {
@@ -3564,7 +3564,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_cache_read_bytes_sum{namespace=\".*\", job=\".*\", bucket=\"raw\"}[5m]))",
               "legendFormat": "raw read",
@@ -3573,7 +3573,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_cache_write_bytes_sum{namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "raw write",
@@ -3582,7 +3582,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_text_cache_stored_bytes_total{namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "text write",
@@ -3595,7 +3595,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Sent = rate(content_extraction_bytes_sent_total) by parser_kind — content bytes handed to kreuzberg/tika, recorded regardless of outcome.\n- Received = rate(content_extraction_bytes_received_total) by parser_kind — extracted text bytes returned, success only.\n- Received ≪ sent → extraction is compressing, as expected for text-dense documents (PDFs/Office docs shrink a lot). A ratio near 1 on a compressible corpus is worth a second look.\n- `tika` series only appear when EXTRACTION_COMPARISON_ENABLED=true (shadow-run comparison) — flat/missing tika lines in normal operation are expected, not a gap.\n- Sent rising with no matching rise in received → extraction attempts are failing — check \"Extraction outcomes\".",
           "fieldConfig": {
@@ -3632,7 +3632,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (parser_kind) (rate(content_extraction_bytes_sent_total{namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "sent — {{parser_kind}}",
@@ -3641,7 +3641,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (parser_kind) (rate(content_extraction_bytes_received_total{namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "received — {{parser_kind}}",
@@ -3654,7 +3654,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Processed-bucket hit ratio split by the serialization the caller asked for.\n- One bucket holds them all (text, markdown, html, djot), so `bucket=\"processed\"` alone cannot tell a markdown hit from a text hit — that is what the `format` label is for. Summing over `format` still gives the complete processed-bucket total.\n- A format's ratio starts at 0 and climbs: switching a caller's format changes the cache key, so every document it had already processed is a miss until it is re-extracted.\n- format=\"unspecified\" means the caller named no format and was served plain text. See the panel beside this one.",
           "fieldConfig": {
@@ -3693,7 +3693,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (format) (rate(content_cache_hits_total{namespace=\".*\", job=\".*\", bucket=\"processed\", phase=\"extract\"}[5m])) / (sum by (format) (rate(content_cache_hits_total{namespace=\".*\", job=\".*\", bucket=\"processed\", phase=\"extract\"}[5m])) + sum by (format) (rate(content_cache_misses_total{namespace=\".*\", job=\".*\", bucket=\"processed\", phase=\"extract\"}[5m])))",
               "legendFormat": "{{format}}",
@@ -3706,7 +3706,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "- Requests that named NO output format and were served plain text.\n- This is the gate on REQUIRE_OUTPUT_FORMAT. While it is above zero, turning that flag on answers those requests with CONTENT_ERROR_INVALID_ARGUMENT (retryable=false) instead of content — so wait for it to reach and hold zero, then flip dev first.\n- Nonzero after every caller is believed updated → a caller was missed, or an old build is still running. It counts lookups rather than callers, so use it as a yes/no signal, not a headcount.\n- Deliberately distinct from format=\"text\": both produce the same cache key and the same extractor request, and are kept apart only so this signal exists.",
           "fieldConfig": {
@@ -3743,7 +3743,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_cache_hits_total{namespace=\".*\", job=\".*\", format=\"unspecified\"}[5m])) + sum(rate(content_cache_misses_total{namespace=\".*\", job=\".*\", format=\"unspecified\"}[5m]))",
               "legendFormat": "requests with no output_format",
@@ -3754,9 +3754,7 @@
           "type": "timeseries"
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "📄 Overview ($client_ds)",
+      "title": "📄 Overview",
       "type": "row"
     },
     {
@@ -3772,7 +3770,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Which backend actually parsed each document, per second.\n\n- kreuzberg — xberg, the default extractor: everything no route claims.\n- tika_routed — Tika as a routed extractor (TIKA_EXTENSIONS), the foreground parse.\n- spreadsheet — xlsxparser over gRPC (SPREADSHEET_EXTENSIONS).\n- skipped — not an extractor: content-service answered before calling one, either because the file was larger than EXTRACTION_MAX_SIZE (status skipped) or because it was zero bytes (status empty_content). These were recorded under kreuzberg until the preflights got a label of their own.\n- unroutable — not an extractor: file types content-service resolved as unroutable are registered to a processor with no backend, so they are answered UNSUPPORTED_TYPE without a round trip. Volume here is documents deliberately not extracted, not failures, and it is excluded from the failure and bytes panels below.\n- tika — the SAMPLED COMPARISON second parse only, not a routing destination. It appears here so it is not mistaken for routed traffic; it is zero unless EXTRACTION_COMPARISON_ENABLED is on.\n\nA routed series at zero while its extensions are being requested is the thing to chase — see the fallback row below for why.",
           "id": 146,
@@ -3817,7 +3815,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (parser_kind) (rate(content_extraction_total{namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "{{parser_kind}}",
@@ -3828,7 +3826,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "The same data as a proportion, so a routing change is visible as a shift rather than as a change in absolute volume. Sums to 1 while comparison is off; above 1 when it is on, because a sampled document is parsed twice.",
           "id": 147,
@@ -3873,7 +3871,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (parser_kind) (rate(content_extraction_total{namespace=\".*\", job=\".*\"}[5m]))\n  / scalar(sum(rate(content_extraction_total{namespace=\".*\", job=\".*\"}[5m])))",
               "legendFormat": "{{parser_kind}}",
@@ -3884,7 +3882,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 148,
           "title": "Extension → parser_kind (selected range)",
@@ -3919,7 +3917,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "format": "table",
               "instant": true,
@@ -3942,7 +3940,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Requests that were MEANT for a routed extractor and took the default one instead.\n\n- not_registered — the extractor could not be built at startup: no address, no client in this image, or an unreachable backend. A FAULT. Sustained non-zero means a backend is down and its documents are quietly being parsed by xberg.\n- not_applicable — the extractor is routed for that extension but cannot serve that request, today meaning an output format it does not produce (xlsxparser is markdown-only, Tika has no djot). Expected traffic, not a fault — this is what explains a quiet routed extractor when callers are asking for a format it cannot make.\n\nThe document is still extracted either way; only the backend differs.",
           "id": 149,
@@ -3987,7 +3985,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (extractor, reason) (rate(content_extraction_routed_fallback_total{namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "{{extractor}} — {{reason}}",
@@ -3998,7 +3996,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Should be ZERO. Non-zero means a routed extractor is configured but was not built at startup, so its file types are silently taking the default extractor. Check the content-service startup log for 'routed extractor unavailable', and whether the backend Service exists and is reachable.",
           "id": 150,
@@ -4048,7 +4046,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum (rate(content_extraction_routed_fallback_total{namespace=\".*\", job=\".*\", reason=\"not_registered\"}[5m]))",
               "legendFormat": "not_registered",
@@ -4059,7 +4057,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Expected, not a fault. A steady rate here with a routed extractor at zero throughput means callers are asking for an output format that extractor cannot produce, so the default extractor is serving them correctly.",
           "id": 151,
@@ -4105,7 +4103,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum (rate(content_extraction_routed_fallback_total{namespace=\".*\", job=\".*\", reason=\"not_applicable\"}[5m]))",
               "legendFormat": "not_applicable",
@@ -4116,7 +4114,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Fraction of extractions served by a routed backend rather than the default one. Drops to zero when routing is off, or when every routed extractor fell back.",
           "id": 152,
@@ -4162,7 +4160,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum (rate(content_extraction_total{namespace=\".*\", job=\".*\", parser_kind=~\"spreadsheet|tika_routed\"}[5m]))\n  /\nsum (rate(content_extraction_total{namespace=\".*\", job=\".*\", parser_kind!~\"unroutable|skipped\", parser_kind!=\"tika\"}[5m]))",
               "legendFormat": "routed share",
@@ -4173,7 +4171,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Non-success extractions per second, split by backend and classified status.\n\nStatus values come from the caller-facing taxonomy in docs/error-codes.md — corrupted, timeout, service_unavailable, file_too_large, unsupported_type, empty_content, canceled.\n\nfile_too_large on tika_routed specifically may mean the Tika write limit (tikaContent output-limits.writeLimit) truncated a document and content-service refused the partial result rather than caching it.",
           "id": 153,
@@ -4218,7 +4216,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (parser_kind, status) (rate(content_extraction_total{namespace=\".*\", job=\".*\", status!=\"success\", status!=\"skipped\", parser_kind!~\"unroutable|skipped\"}[5m]))",
               "legendFormat": "{{parser_kind}} — {{status}}",
@@ -4229,7 +4227,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Failures as a fraction of that backend's own attempts, so a low-volume routed extractor with a high failure rate is as visible as a busy one. Compare backends here rather than on the absolute panel to the left.",
           "id": 154,
@@ -4274,7 +4272,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (parser_kind) (rate(content_extraction_total{namespace=\".*\", job=\".*\", status!=\"success\", status!=\"skipped\", parser_kind!~\"unroutable|skipped\"}[5m]))\n  /\nsum by (parser_kind) (rate(content_extraction_total{namespace=\".*\", job=\".*\", parser_kind!~\"unroutable|skipped\"}[5m]))",
               "legendFormat": "{{parser_kind}}",
@@ -4285,7 +4283,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Time in the extractor itself, per backend.\n\nDo not read tika and tika_routed as the same workload: tika is a background sample of a document xberg also parsed, tika_routed is a foreground parse that is the only one that ran. They were deliberately given different label values so these lines stay separable.\n\nSuccesses only, matching the Tika vs Kreuzberg dashboard: a timed-out extraction would otherwise enter the quantile as its own timeout value and flatten the real distribution.",
           "id": 155,
@@ -4330,7 +4328,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le, parser_kind) (rate(content_extraction_duration_seconds_bucket{namespace=\".*\", job=\".*\", status=\"success\"}[5m])))",
               "legendFormat": "p95 — {{parser_kind}}",
@@ -4341,7 +4339,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "The tail. Spreadsheet backends are the ones to watch here: a large workbook is a single long parse, unlike a document corpus where the tail is usually a stuck request.\n\nSuccesses only, matching the Tika vs Kreuzberg dashboard: a timed-out extraction would otherwise enter the quantile as its own timeout value and flatten the real distribution.",
           "id": 156,
@@ -4386,7 +4384,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum by (le, parser_kind) (rate(content_extraction_duration_seconds_bucket{namespace=\".*\", job=\".*\", status=\"success\"}[5m])))",
               "legendFormat": "p99 — {{parser_kind}}",
@@ -4397,7 +4395,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 157,
           "title": "Failures by extension and status (selected range)",
@@ -4432,7 +4430,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "format": "table",
               "instant": true,
@@ -4455,7 +4453,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 158,
           "title": "Skipped before extraction, by extension and reason (selected range)",
@@ -4490,7 +4488,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "format": "table",
               "instant": true,
@@ -4513,7 +4511,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Document bytes shipped to each backend. For spreadsheet routes this is the compressed workbook, which is far smaller than what comes back.",
           "id": 159,
@@ -4558,7 +4556,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (parser_kind) (rate(content_extraction_bytes_sent_total{namespace=\".*\", job=\".*\", parser_kind!~\"unroutable|skipped\"}[5m]))",
               "legendFormat": "{{parser_kind}}",
@@ -4569,7 +4567,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Extracted text returned, per backend. Watch this against bytes sent for spreadsheets: a measured 5.2MB xlsx expanded to 17.3MB of markdown, and that expansion is what tikaContent's writeLimit bounds. A ratio climbing toward the limit is the early warning before file_too_large starts appearing on the failure panel.",
           "id": 160,
@@ -4614,7 +4612,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (parser_kind) (rate(content_extraction_bytes_received_total{namespace=\".*\", job=\".*\", parser_kind!~\"unroutable|skipped\"}[5m]))",
               "legendFormat": "{{parser_kind}}",
@@ -4625,7 +4623,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Bytes returned divided by bytes sent. A spreadsheet backend sits well above 1 because a compressed workbook expands into markdown text. A sudden climb means documents are producing more text than they used to, which is what fills the text cache and what the write limit eventually stops.",
           "id": 161,
@@ -4670,7 +4668,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (parser_kind) (rate(content_extraction_bytes_received_total{namespace=\".*\", job=\".*\", parser_kind!~\"unroutable|skipped\"}[5m]))\n  /\nsum by (parser_kind) (rate(content_extraction_bytes_sent_total{namespace=\".*\", job=\".*\", parser_kind!~\"unroutable|skipped\"}[5m]))",
               "legendFormat": "{{parser_kind}}",
@@ -4679,9 +4677,7 @@
           ]
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "🔀 Extraction Routing ($client_ds)",
+      "title": "🔀 Extraction Routing",
       "type": "row"
     },
     {
@@ -4697,7 +4693,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Total dual-run comparisons in the selected time range. Each increment represents one file processed by both parsers.",
           "fieldConfig": {
@@ -4743,7 +4739,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(increase(content_extraction_comparison_total{namespace=\".*\", job=\".*\"}[$__range]))",
               "legendFormat": "total comparisons",
@@ -4756,7 +4752,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Number of dual-runs where both parsers succeeded and Tika was faster. High value = Tika wins A/B test on speed.",
           "fieldConfig": {
@@ -4802,7 +4798,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(increase(content_extraction_comparison_total{outcome=\"both_ok\", faster=\"tika\", namespace=\".*\", job=\".*\"}[$__range]))",
               "legendFormat": "tika wins",
@@ -4815,7 +4811,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Kreuzberg failed but Tika succeeded — the most operationally meaningful signal. High value = Tika is more reliable than Kreuzberg on the current workload.",
           "fieldConfig": {
@@ -4865,7 +4861,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(increase(content_extraction_comparison_total{outcome=\"tika_ok_kreuzberg_fail\", namespace=\".*\", job=\".*\"}[$__range]))",
               "legendFormat": "tika rescues",
@@ -4878,7 +4874,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Success rate over time per parser. A persistent gap between kreuzberg and tika indicates a reliability difference. Values below 1.0 warrant investigation of the failure-modes row.",
           "fieldConfig": {
@@ -4918,7 +4914,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_extraction_total{parser_kind=\"kreuzberg\", status=\"success\", namespace=\".*\", job=\".*\"}[5m])) / sum(rate(content_extraction_total{parser_kind=\"kreuzberg\", namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "kreuzberg",
@@ -4927,7 +4923,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_extraction_total{parser_kind=\"tika\", status=\"success\", namespace=\".*\", job=\".*\"}[5m])) / sum(rate(content_extraction_total{parser_kind=\"tika\", namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "tika",
@@ -4940,7 +4936,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Current success rate per parser (last non-null sample). Green ≥ 0.95, yellow ≥ 0.80, red below.",
           "fieldConfig": {
@@ -4996,7 +4992,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_extraction_total{parser_kind=\"kreuzberg\", status=\"success\", namespace=\".*\", job=\".*\"}[5m])) / sum(rate(content_extraction_total{parser_kind=\"kreuzberg\", namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "kreuzberg",
@@ -5005,7 +5001,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(content_extraction_total{parser_kind=\"tika\", status=\"success\", namespace=\".*\", job=\".*\"}[5m])) / sum(rate(content_extraction_total{parser_kind=\"tika\", namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "tika",
@@ -5018,7 +5014,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Distribution of comparison outcomes over the selected time range. both_ok = happy path; kreuzberg_ok_tika_fail / tika_ok_kreuzberg_fail indicate asymmetric reliability; both_fail_* indicate correlated failures.",
           "fieldConfig": {
@@ -5055,7 +5051,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (outcome) (increase(content_extraction_comparison_total{namespace=\".*\", job=\".*\"}[$__range]))",
               "legendFormat": "{{outcome}}",
@@ -5068,7 +5064,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Comparison outcome counts by extension. Sort by a column to find file types driving failures or rescues.",
           "fieldConfig": {
@@ -5106,7 +5102,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (outcome, extension) (increase(content_extraction_comparison_total{namespace=\".*\", job=\".*\"}[$__range]))",
               "format": "table",
@@ -5136,7 +5132,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Per-parser extraction latency for successful extractions. p50/p95/p99 for each parser — 6 series total. Sustained Kreuzberg p99 above Tika p99 is the clearest speed-advantage signal.",
           "fieldConfig": {
@@ -5174,7 +5170,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.50, sum by (le) (rate(content_extraction_duration_seconds_bucket{parser_kind=\"kreuzberg\", status=\"success\", namespace=\".*\", job=\".*\"}[5m])))",
               "legendFormat": "kreuzberg p50",
@@ -5183,7 +5179,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le) (rate(content_extraction_duration_seconds_bucket{parser_kind=\"kreuzberg\", status=\"success\", namespace=\".*\", job=\".*\"}[5m])))",
               "legendFormat": "kreuzberg p95",
@@ -5192,7 +5188,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum by (le) (rate(content_extraction_duration_seconds_bucket{parser_kind=\"kreuzberg\", status=\"success\", namespace=\".*\", job=\".*\"}[5m])))",
               "legendFormat": "kreuzberg p99",
@@ -5201,7 +5197,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.50, sum by (le) (rate(content_extraction_duration_seconds_bucket{parser_kind=\"tika\", status=\"success\", namespace=\".*\", job=\".*\"}[5m])))",
               "legendFormat": "tika p50",
@@ -5210,7 +5206,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le) (rate(content_extraction_duration_seconds_bucket{parser_kind=\"tika\", status=\"success\", namespace=\".*\", job=\".*\"}[5m])))",
               "legendFormat": "tika p95",
@@ -5219,7 +5215,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum by (le) (rate(content_extraction_duration_seconds_bucket{parser_kind=\"tika\", status=\"success\", namespace=\".*\", job=\".*\"}[5m])))",
               "legendFormat": "tika p99",
@@ -5232,7 +5228,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Signed latency difference (Tika − Kreuzberg) in seconds. Negative = Tika is faster. The zero line is the Tika-faster / Tika-slower divider. p50 shows the typical case; p95 shows the tail.",
           "fieldConfig": {
@@ -5301,7 +5297,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.50, sum by (le) (rate(content_extraction_comparison_latency_diff_seconds_bucket{namespace=\".*\", job=\".*\"}[5m])))",
               "legendFormat": "p50 diff (tika − kreuzberg)",
@@ -5310,7 +5306,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le) (rate(content_extraction_comparison_latency_diff_seconds_bucket{namespace=\".*\", job=\".*\"}[5m])))",
               "legendFormat": "p95 diff (tika − kreuzberg)",
@@ -5319,7 +5315,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "0 * sum(rate(content_extraction_comparison_total{namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "zero line",
@@ -5332,7 +5328,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Per-extension success rate and throughput for each parser. Use transformations to compare kreuzberg vs tika side-by-side per extension.",
           "fieldConfig": {
@@ -5384,7 +5380,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (extension, parser_kind) (increase(content_extraction_total{status=\"success\", namespace=\".*\", job=\".*\"}[$__range])) / sum by (extension, parser_kind) (increase(content_extraction_total{namespace=\".*\", job=\".*\"}[$__range]))",
               "format": "table",
@@ -5416,7 +5412,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Rate of Tika-rescued comparisons (kreuzberg failed, tika succeeded) broken down by extension over time. Extensions with consistently high rescue rates are where Kreuzberg has the most coverage gaps.",
           "fieldConfig": {
@@ -5458,7 +5454,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (extension) (rate(content_extraction_comparison_total{outcome=\"tika_ok_kreuzberg_fail\", namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "{{extension}}",
@@ -5471,7 +5467,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Per-parser non-success status rates over time. Divergence between kreuzberg and tika on the same status code (e.g. unsupported_type) indicates a format-coverage gap.",
           "fieldConfig": {
@@ -5513,7 +5509,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (parser_kind, status) (rate(content_extraction_total{status!=\"success\", namespace=\".*\", job=\".*\"}[5m]))",
               "legendFormat": "{{parser_kind}} / {{status}}",
@@ -5526,7 +5522,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Circuit breaker state per parser — 0=closed (healthy), 1=half_open (recovering), 2=open (failing fast). Open state means the parser is shedding all requests via breaker_open status.",
           "fieldConfig": {
@@ -5600,7 +5596,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "content_extraction_circuit_state{parser_kind=\"kreuzberg\", namespace=\".*\", job=\".*\"}",
               "legendFormat": "kreuzberg",
@@ -5609,7 +5605,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "content_extraction_circuit_state{parser_kind=\"tika\", namespace=\".*\", job=\".*\"}",
               "legendFormat": "tika",
@@ -5620,9 +5616,7 @@
           "type": "stat"
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "⚖️ Tika vs Kreuzberg Comparison ($client_ds)",
+      "title": "⚖️ Tika vs Kreuzberg Comparison",
       "type": "row"
     }
   ],
@@ -5638,32 +5632,16 @@
   "templating": {
     "list": [
       {
-        "name": "client_ds",
-        "label": "Clients",
+        "name": "datasource",
+        "label": "Datasource",
         "type": "datasource",
         "query": "prometheus",
         "hide": 0,
-        "includeAll": true,
-        "multi": true,
+        "includeAll": false,
+        "multi": false,
         "current": {
-          "text": [
-            "Demo",
-            "Demo2",
-            "Integration",
-            "IONIS",
-            "KrispyKreme",
-            "SSB",
-            "UAT"
-          ],
-          "value": [
-            "dfmklaiqtfif4c",
-            "efl7hw5ukkwzkd",
-            "efl6f47f8cj5sb",
-            "efs7yusoeq680e",
-            "efs2d1k3se39ca",
-            "dfs2d5r9cp0qob",
-            "efmkjlznz8ykgb"
-          ]
+          "text": "Prometheus",
+          "value": "prometheus"
         }
       }
     ]
