@@ -1,5 +1,5 @@
 {
-  "__comment": "NVisionX Services Detail — merges the platform-service dashboards (Content Service runtime, Credential Manager, Knowledge Hub [sidecar+standalone], Knowledge Service, Registration Service, Request Service, Backend Workers/Archiver/Archiver v2/Enricher - 13 files total) into one file, one collapsed row per service, each repeating per client via the shared Clients picker. Same pattern and same trade-offs as connectors-detail.json (namespace hardcoded to default, per-pod filters dropped to wildcards since they can't cascade correctly under row-repeat). 2026-09-18: built alongside Connectors Detail per manager request for ~8-10 total dashboards, each client-selectable.",
+  "__comment": "NVisionX Services Detail — merges the platform-service dashboards (Content Service runtime, Credential Manager, Knowledge Hub [sidecar+standalone], Knowledge Service, Registration Service, Request Service, Backend Workers/Archiver/Archiver v2/Enricher - 13 files total) into one file, one collapsed row per service, using the single-select Datasource picker. Same pattern and same trade-offs as connectors-detail.json (namespace hardcoded to default, per-pod filters dropped to wildcards since they can't cascade correctly under row-repeat). 2026-09-18: built alongside Connectors Detail per manager request for ~8-10 total dashboards, each client-selectable.",
   "annotations": {
     "list": [
       {
@@ -41,7 +41,7 @@
         "code": {
           "language": "markdown"
         },
-        "content": "**Services Detail** — one section per platform service, each repeating once per client selected in the **Clients** picker (top of page). Expand a service's row to see its full golden-signal, domain-metric, and runtime detail for the selected client(s).\n\n**Note:** as with Connectors Detail, this view aggregates rather than offering a per-pod filter picker - Grafana can't cascade a chained variable correctly once a row repeats per client.",
+        "content": "**Services Detail** — one section per platform service, using the **Datasource** picker (top of page). Expand a service's row to see its full golden-signal, domain-metric, and runtime detail for the selected datasource.\n\n**Note:** as with Connectors Detail, this view aggregates rather than offering a per-pod filter picker - Grafana can't cascade a chained variable correctly once a row repeats per client.",
         "mode": "markdown"
       },
       "pluginVersion": "11.5.2",
@@ -66,7 +66,7 @@
           "description": "CPU seconds burned per second, per pod. 1.0 means one core fully occupied. Read this against the container CPU limit on the row below rather than against the node: extraction runs many documents at once per pod (EXTRACTION_MAX_CONCURRENCY in the applications chart), so a pod can want far more CPU than it is allowed and the excess shows up as throttling, not as a higher line here.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -94,7 +94,7 @@
           "description": "RSS as the kernel sees it. This is the number that gets compared with the container memory limit by the OOM killer, and it includes what the Go runtime has not yet returned to the OS — so it sits above heap in-use and falls more slowly.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -122,7 +122,7 @@
           "description": "Address space reserved, not memory used. Go reserves large arenas up front, so this is normally flat, large, and uninteresting — it is here to distinguish a genuine allocation climb (resident rises with it) from an address-space artefact (only this rises).",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -150,7 +150,7 @@
           "description": "cgroup CPU usage against the configured limit. The limit is plotted from kube-state-metrics rather than drawn as a fixed threshold, so it follows a helm change on the next rollout instead of going stale — the value itself lives in contentService.resources in the applications chart. Requests and limits are set equal for this service, so there is no burst headroom above the line.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -183,7 +183,7 @@
           "description": "Working set against the memory limit — the pair the OOM killer acts on. Worth watching closely here, because the two limits are not treated alike: the runtime sizes GOMAXPROCS from the cgroup CPU quota on its own, but nothing does the same for memory — GOMEMLIMIT defaults to unlimited and neither the binary nor the chart sets it, so the GC will grow the heap toward the cgroup ceiling without ever knowing it is there. A whole document is held in memory while it is extracted and compressed, so headroom is consumed by document size times concurrency, not by steady-state load. Requests equal limits for this service, so the limit line is also the guaranteed allocation.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -216,7 +216,7 @@
           "description": "Fraction of CFS periods in which the container was throttled. Anything sustained above zero means the pod is being held below the CPU it is asking for, which lengthens every latency panel on the other content-service dashboards without producing a single error. Expect this to be the first thing that moves when extraction concurrency is raised.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -245,7 +245,7 @@
           "description": "Goroutine count tracks in-flight work: NATS handlers, both gRPC servers, upload streams and every admitted extraction hold goroutines. It should rise with load and come back to the same floor afterwards. A floor that steps up after each load period and never returns is the leak signal — an extraction that outlived its caller, or a stream that was never closed.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -273,7 +273,7 @@
           "description": "Live heap. Compare its shape with resident memory on the row above: heap that falls while RSS stays high is memory the runtime is holding rather than leaking, whereas both climbing together is the path to an OOM kill.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -301,7 +301,7 @@
           "description": "Longest stop-the-world GC pause per pod. go_gc_duration_seconds is a Prometheus summary, not a histogram: there is no _bucket series, so histogram_quantile cannot be used here. The Go collector exposes quantiles 0, 0.25, 0.5, 0.75 and 1 only — there is no 0.99. quantile=\"1\" is the max pause over the runtime's buffer of recent GC cycles, so it reports the worst recent pause rather than a windowed percentile.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -329,7 +329,7 @@
           "description": "How many OS threads the Go scheduler will run in parallel, against how much CPU the cgroup actually allows. The module is on go 1.26, so the runtime reads the cgroup CPU quota itself and re-checks it periodically: GOMAXPROCS should sit at the CPU limit rounded up and follow a limit change without a restart. Divergence is the finding. A line pinned to the node core count instead means the container-aware default was switched off (GODEBUG containermaxprocs=0, or an explicit GOMAXPROCS env var), and the scheduler is then sizing itself for a machine far larger than the slice the pod owns — which turns into throttling on the row above rather than into more work done. The two series measure different things (threads against cores) and are plotted together only because the gap between them is the point.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -362,7 +362,7 @@
           "description": "Every S3 call, NATS connection, inbound gRPC stream and connector transfer holds a descriptor, so this is the real ceiling on concurrent work per pod. The gap between the two lines is the headroom; open climbing toward max while throughput is flat means descriptors are not being released.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -395,7 +395,7 @@
           "description": "Threads the runtime has created. Blocking syscalls — S3 reads, compression, extractor calls — each pin a thread for their duration, so this rises above GOMAXPROCS under load. A ratchet that never comes down usually means threads parked in blocking calls that are not completing.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -423,7 +423,7 @@
           "description": "How many content-service pods Prometheus is currently scraping. This deployment is KEDA scaled, so the count moves on its own: scale-up appears here and as new series everywhere else on this dashboard, and it is not a restart. Read the per-pod panels above against this — a fleet sum such as extraction slots in use only makes sense divided by the number of pods reporting.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -452,7 +452,7 @@
           "description": "Time since process start. Shutdown here is deliberately slow — the drain budget and the pod's termination grace period are both sized for the longest extraction that can still be running when SIGTERM lands (shutdownTimeoutSeconds and terminationGracePeriodSeconds in the applications chart) — so a rolling update shows a long overlap of old and new pods rather than a clean swap. A sawtooth with a short period is a crash loop, not a deploy.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -480,7 +480,7 @@
           "description": "Restarts of the container inside an existing pod. KEDA replacing pods does not appear here — that is the fleet-size panel — so anything on this one is the container itself dying and being restarted in place.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -508,7 +508,7 @@
           "description": "Reads 1 while the last termination of that container was an OOM kill. This is a state, not a counter: it stays at 1 until the pod is replaced, and a pod that has never terminated reports nothing at all. Paired with the memory-vs-limit panel it separates the two ways this service dies — killed for exceeding the cgroup limit, versus exiting for any other reason.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -531,9 +531,7 @@
           ]
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "📄 Content Service ($client_ds)",
+      "title": "📄 Content Service",
       "type": "row"
     },
     {
@@ -572,7 +570,7 @@
           "description": "Connectors reach this service over gRPC on GRPC_PORT. A pod that is down is a credential lookup failure for every connector; the gRPC row below is that surface's own RED signals.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -621,7 +619,7 @@
           "description": "1 while the JWT authority key set is loaded, 0 while it is unreachable or empty. Zero does not mean this service is down: the gRPC CredentialService that connectors depend on never touches the JWKS, and this is deliberately kept out of the health probes so Kubernetes does not restart the pod or pull it from the Service over it. What it does mean is that every request to the UI-facing Connect API is being rejected, while the gRPC panels below should be entirely unaffected.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -670,7 +668,7 @@
           "description": "Requests to the UI-facing Connect API, health and metrics endpoints included.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -715,7 +713,7 @@
           "description": "Non-2xx responses over the last five minutes.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -764,7 +762,7 @@
           "description": "401 and 403 together. A sustained climb with JWKS Available at 0 is the signature of a JWT-authority outage rather than a caller problem.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -813,7 +811,7 @@
           "description": "HTTP requests currently being served.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -858,7 +856,7 @@
           "description": "keyfunc does not fail when the JWKS host is unreachable -- it serves an empty key set and retries in the background -- so this gauge is the only signal that the UI-facing API is rejecting everything. Alert on it here: it is deliberately not a health check, because a 503 on /health restarts the pod and an unready pod leaves the Service, cutting off the connector gRPC API over a dependency none of them use.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -921,7 +919,7 @@
           "description": "Overlays the 401/403 rate on the gauge. The two moving together is a JWKS outage; 401s without it are ordinary bad tokens.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -971,7 +969,7 @@
           "description": "GetConnectorCredential is the hot path: every connector calls it to resolve a datasource credential before it can read anything.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1016,7 +1014,7 @@
           "description": "code=\"0\" is OK and is excluded. code=\"5\" (NotFound) is a connector asking for a credential that was never provisioned, which is a configuration problem rather than a fault here.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1061,7 +1059,7 @@
           "description": "On the SubsecondLatencyBuckets ladder. A connector blocks on this call before it can fetch anything, so latency here is latency for every scan.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1116,7 +1114,7 @@
           "description": "Share of calls returning a non-OK code.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1161,7 +1159,7 @@
           "description": "Concurrent calls being served.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1206,7 +1204,7 @@
           "description": "Per-route throughput. The Connect RPCs share one path prefix.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1251,7 +1249,7 @@
           "description": "401 and 403 separate out the authentication and authorization failures.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1296,7 +1294,7 @@
           "description": "Buckets are the SubsecondLatencyBuckets ladder this service opts into, so percentiles are meaningful rather than interpolated inside a single bucket.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1341,7 +1339,7 @@
           "description": "Share of responses that are not 2xx.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1386,7 +1384,7 @@
           "description": "Request and response bytes. Credential writes carry an opaque Any, so a sudden change in request size is worth a look.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1436,7 +1434,7 @@
           "description": "Concurrent requests being served.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1481,7 +1479,7 @@
           "description": "Uses the .* variable; the aggregate panels above deliberately ignore it.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1526,7 +1524,7 @@
           "description": "A single pod reporting 0 is that replica's keyfunc, not the authority being down.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1591,7 +1589,7 @@
           "title": "Process CPU (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -1618,7 +1616,7 @@
           "title": "Process Resident Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -1645,7 +1643,7 @@
           "title": "Process Virtual Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -1672,7 +1670,7 @@
           "title": "Container CPU Usage",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -1699,7 +1697,7 @@
           "title": "Container Memory (working set)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -1727,7 +1725,7 @@
           "description": "Each open SSE stream holds goroutines; a rising floor that never comes back down alongside a flat connection gauge is a leak signal.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -1754,7 +1752,7 @@
           "title": "Heap In-Use",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -1782,7 +1780,7 @@
           "description": "Longest stop-the-world GC pause per pod. go_gc_duration_seconds is a Prometheus summary, not a histogram: there is no _bucket series, so histogram_quantile cannot be used here. The Go collector exposes quantiles 0, 0.25, 0.5, 0.75 and 1 only — there is no 0.99. quantile=\"1\" is the max pause over the runtime's buffer of recent GC cycles, so it reports the worst recent pause rather than a windowed percentile.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -1810,7 +1808,7 @@
           "description": "Long-lived SSE streams each hold a socket, so this is the ceiling that limits concurrent UI subscribers.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -1842,7 +1840,7 @@
           "title": "OS Threads",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -1870,7 +1868,7 @@
           "description": "Time since process start. A restart drops every in-memory SSE session, so sawtooth here explains client reconnect storms.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -1897,7 +1895,7 @@
           "title": "Container Restarts (1h increase)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -1919,9 +1917,7 @@
           ]
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "🔑 Credential Manager ($client_ds)",
+      "title": "🔑 Credential Manager",
       "type": "row"
     },
     {
@@ -1959,7 +1955,7 @@
           "title": "Documents by Outcome (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -1987,7 +1983,7 @@
           "title": "Ingest Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2025,7 +2021,7 @@
           "title": "Failure Error Codes (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2053,7 +2049,7 @@
           "title": "Reuse & Success Share",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2086,7 +2082,7 @@
           "title": "In Flight vs Queued",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2119,7 +2115,7 @@
           "title": "Admission Wait p95 by Result",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2147,7 +2143,7 @@
           "title": "Document Lock Wait p95 by Result",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2175,7 +2171,7 @@
           "title": "Ingest Duration Heatmap",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2206,7 +2202,7 @@
           "title": "Failures by Mutation Phase (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2234,7 +2230,7 @@
           "title": "Rollbacks of Partial Writes (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2262,7 +2258,7 @@
           "title": "Ledger Write Failures (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2290,7 +2286,7 @@
           "title": "Destructive-Phase Failure Share",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2318,7 +2314,7 @@
           "title": "Cached Object Size — p50 / p95",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2361,7 +2357,7 @@
           "title": "Achieved Compression Ratio",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2389,7 +2385,7 @@
           "title": "Cache Read p95 & Error Rate",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2422,7 +2418,7 @@
           "title": "Document Bytes Handed to Processing",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2455,7 +2451,7 @@
           "title": "Stage Duration p95",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2483,7 +2479,7 @@
           "title": "Stage Share of Wall Time",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2511,7 +2507,7 @@
           "title": "Processing Duration p95 by Outcome",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2539,7 +2535,7 @@
           "title": "Records / Chunks / Triples per Document",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2582,7 +2578,7 @@
           "title": "Documents In Processing vs Completion Rate",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2615,7 +2611,7 @@
           "title": "Processing Outcomes (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2643,7 +2639,7 @@
           "title": "Vector Operation p95",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2671,7 +2667,7 @@
           "title": "Chunks Written vs Chunks Produced",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2704,7 +2700,7 @@
           "title": "Embedding Batches (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2732,7 +2728,7 @@
           "title": "Graph & Database Write p95",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2765,7 +2761,7 @@
           "title": "Extraction Phase p95",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2793,7 +2789,7 @@
           "title": "Model Calls by Status (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2821,7 +2817,7 @@
           "title": "Tokens per Second",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2849,7 +2845,7 @@
           "title": "Prompt Cache Hit Ratio",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2896,7 +2892,7 @@
           "title": "Container Memory (working set) per Pod",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2924,7 +2920,7 @@
           "title": "Growth Rate (MiB/min)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2952,7 +2948,7 @@
           "title": "Retained Bytes per Completed Upload",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2980,7 +2976,7 @@
           "title": "Process Resident Memory vs Working Set",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -3013,7 +3009,7 @@
           "title": "Memory by Container",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3041,7 +3037,7 @@
           "title": "CPU by Container",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3069,7 +3065,7 @@
           "title": "Restarts by Container (1h increase)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3097,7 +3093,7 @@
           "title": "Incarnation Age",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3125,7 +3121,7 @@
           "title": "GC Pause p95 by Generation",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3153,7 +3149,7 @@
           "title": "GC Collections (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3181,7 +3177,7 @@
           "title": "Objects Collected (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3209,7 +3205,7 @@
           "title": "Uncollectable Objects (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3237,7 +3233,7 @@
           "title": "Event Loop Lag — p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3270,7 +3266,7 @@
           "title": "OS Threads",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3298,7 +3294,7 @@
           "title": "Asyncio Tasks",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3326,7 +3322,7 @@
           "title": "Ingest Slots — In Flight vs Queued",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3359,7 +3355,7 @@
           "title": "Process CPU (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3387,7 +3383,7 @@
           "title": "Open vs Max File Descriptors",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3420,7 +3416,7 @@
           "title": "Ingestion Throughput (context)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3448,7 +3444,7 @@
           "title": "Cumulative Documents This Incarnation",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3495,7 +3491,7 @@
           "title": "Pods Up",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -3543,7 +3539,7 @@
           "title": "RPC Rate",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -3580,7 +3576,7 @@
           "title": "RPC p95",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -3617,7 +3613,7 @@
           "title": "RPC Error Ratio",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -3654,7 +3650,7 @@
           "title": "Request Rate by Procedure",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3682,7 +3678,7 @@
           "title": "p95 by Procedure",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3710,7 +3706,7 @@
           "title": "Connect Codes (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3738,7 +3734,7 @@
           "title": "In Flight by Procedure",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3766,7 +3762,7 @@
           "title": "Vector Search p95",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3794,7 +3790,7 @@
           "title": "Graph Operation p95",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3822,7 +3818,7 @@
           "title": "Neptune Round Trip p95 & Retries",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3855,7 +3851,7 @@
           "title": "Document Database p95 by Operation",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3883,7 +3879,7 @@
           "title": "Model Call Rate by Status",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3911,7 +3907,7 @@
           "title": "Model Call p95 by Model",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3939,7 +3935,7 @@
           "title": "Tokens per Second",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3967,7 +3963,7 @@
           "title": "Tokens per Call",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4000,7 +3996,7 @@
           "title": "Ingest Outcomes (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4028,7 +4024,7 @@
           "title": "Documents In Processing",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4056,7 +4052,7 @@
           "title": "Event Loop Lag p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4089,7 +4085,7 @@
           "title": "Resident Memory by Pod",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4136,7 +4132,7 @@
           "title": "Process CPU (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4164,7 +4160,7 @@
           "title": "Process Resident Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4192,7 +4188,7 @@
           "title": "Container Memory (working set)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4220,7 +4216,7 @@
           "title": "GC Pause p95 by Generation",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4248,7 +4244,7 @@
           "title": "GC Collections (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4276,7 +4272,7 @@
           "title": "Objects Collected (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4304,7 +4300,7 @@
           "title": "Uncollectable Objects (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4332,7 +4328,7 @@
           "title": "Event Loop Lag — p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4365,7 +4361,7 @@
           "title": "OS Threads",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4393,7 +4389,7 @@
           "title": "Asyncio Tasks",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4421,7 +4417,7 @@
           "title": "RPCs In Flight",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4449,7 +4445,7 @@
           "title": "Open vs Max File Descriptors",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4482,7 +4478,7 @@
           "title": "Process Uptime",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4510,7 +4506,7 @@
           "title": "Container Restarts (1h increase)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4538,7 +4534,7 @@
           "title": "Container CPU Usage",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4561,9 +4557,7 @@
           "description": "- The cgroup figure, as opposed to the process figure at the top. A gap between them means other processes in the container."
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "📚 Knowledge Hub ($client_ds)",
+      "title": "📚 Knowledge Hub",
       "type": "row"
     },
     {
@@ -4602,7 +4596,7 @@
           "description": "- Scrape targets reporting `up` for this service in the namespace.\n- Should equal the replica count. Below it means pods are crashlooping or not being scraped.\n- Zero while JE_KNOWLEDGE has a backlog means nothing is consuming the stream.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4650,7 +4644,7 @@
           "description": "- Documents inside a worker right now, summed over pods. Ceiling is WORKER_POOL_SIZE x pods.\n- Non-zero with zero throughput means work is stuck, not idle — that distinction is the whole reason this gauge exists.\n- Zero with a JetStream backlog means handlers are not picking work up at all.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4686,7 +4680,7 @@
           "description": "- `outcome=\"forwarded\"` only — the single outcome meaning the ingester actually accepted the document.\n- This is the real progress number. Every other outcome is forwarded too, but was not ingested.\n- Read against Not Ingested: these two being the same order of magnitude is a problem.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4723,7 +4717,7 @@
           "description": "- `outcome!=\"forwarded\"` — every document that reached a terminal outcome without being ingested.\n- Two different failures land here: `forwarded_not_ingested` is the ingester's own verdict (see Ingest Failure Ratio); `failed_permanent` is this service giving up (see Permanent Failures by Error Code).\n- NOT a loss rate — the item is still forwarded downstream carrying its failure in `knowledge_hub`.\n- Retryable conditions never reach here; they are retried in-process until they resolve.\n- The negative matcher is deliberate: the outcome set is open, so a new terminal value is counted the day it ships rather than going silently missing.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4776,7 +4770,7 @@
           "description": "- 95th percentile of one document's life: first submission to terminal outcome, spanning every in-process retry pass.\n- Buckets run 0.1s to 3600s. A p95 sitting at the top bucket means stuck, not slow — go to the Pipeline dashboard's Convergence panel.\n- Rising while the ingested rate stays flat means documents are waiting on a dependency rather than working.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4813,7 +4807,7 @@
           "description": "- `forwarded_not_ingested` as a share of everything forwarded.\n- The ingester accepted the call and reported success == false, so the item still moves downstream carrying the failure.\n- An ingest-failure rate, not a pipeline-failure rate — the fix is in the ingester or the source content, not here.\n- No clamp on the denominator: with no traffic this returns no data rather than a misleading 0%.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4867,7 +4861,7 @@
           "description": "- `forwarded` = ingested. `forwarded_not_ingested` = the ingester's terminal no. `failed_permanent` = this service gave up.\n- One sample per document, not per attempt — retries are in-process and counted on `document_retries_total`.\n- All three are forwarded downstream. They differ in whether the document was ingested, not in whether it survived.\n- The three together are the true document completion rate; compare it against intake on the Pipeline dashboard.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4895,7 +4889,7 @@
           "description": "- `outcome=\"failed_permanent\"` only, split by the code written into `knowledge_hub.msg`.\n- These are not ItemErrors — the code rides downstream on the document itself.\n- `EXTRACTION_ERROR` / `CONTENT_ERROR` are content-service's terminal verdict. `INGESTER_REJECTED` / `INVALID_INGEST_REQUEST` mean the ingester refused the request shape, which is our bug rather than the document's.\n- A new code appearing is worth chasing. A shifting mix among existing ones usually just means the corpus changed.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4923,7 +4917,7 @@
           "description": "- `ingested` — real progress (`outcome=\"forwarded\"`).\n- `retrying (per pass)` — in-process churn from `document_retries_total`. Counted per pass, so it can exceed the document rate. Not loss, and never sum it with the others.\n- `rejected by ingester` — the ingester's own terminal verdict (`forwarded_not_ingested`).\n- `gave up (this service)` — `failed_permanent`.\n- ingested + rejected + gave up covers every terminal outcome, so those three sum to the document rate. Nothing here is a dropped document.\n- Retries climbing while ingested stays flat is the stall signature — go to Convergence on the Pipeline dashboard.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -4966,7 +4960,7 @@
           "description": "- One document, first submission to terminal outcome, across every retry pass it took.\n- p50 is the common path; p99 is documents waiting on a dependency.\n- p50 flat with p99 climbing means a slow minority, usually content extraction. All three climbing means a dependency is slow for everything.\n- Buckets end at 3600s — anything pinned at the top bucket is stuck, not slow.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5004,7 +4998,7 @@
           "description": "- The same measure split by outcome, because outcomes fail at different speeds.\n- `failed_permanent` usually fails fast, so mixing it in drags the `forwarded` quantile down and hides a real slowdown.\n- Watch `forwarded` alone as the latency SLI.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5032,7 +5026,7 @@
           "description": "- `content` is our GetContent call; `ingester` is our streaming upload.\n- `status=\"success\"` only, so fast failures do not land in the same bucket stream as real work.\n- content approaching CONTENT_GET_TIMEOUT (120s) means we are timing out and re-asking rather than getting answers.\n- ingester climbing toward INGESTER_UPLOAD_TIMEOUT (600s) means uploads are the bottleneck — check Worker Pool on the Pipeline dashboard.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5065,7 +5059,7 @@
           "description": "- Concurrent outbound calls per dependency, service-wide.\n- Localizes a stall: sustained non-zero here with flat throughput points at the named dependency rather than at this service.\n- The ceiling is WORKER_POOL_SIZE — pinned there means every worker is blocked inside that one dependency.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5093,7 +5087,7 @@
           "description": "- Derived from each duration histogram's `_count` with `status=\"error\"`: transport failures plus responses carrying an application error instead of usable data.\n- A content spike with a flat ingester line points at content-service or NATS; both rising together is usually the network or this pod.\n- Errors here are not losses — each becomes a retry or a failure recorded on the document.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5145,7 +5139,7 @@
           "description": "- `multi` and `single` are both upstream batches and differ only in size; `empty` is ACKed without work.\n- A batch is the unit of work and is processed to completion in place — this service does not fan out.\n- Every non-empty batch should eventually be matched by a forwarded one.\n- Batch size is chosen by the producer (the extractor), not here — see the pipeline step's `config`.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5173,7 +5167,7 @@
           "description": "- `received (non-empty)` — batches taken off JetStream.\n- `forwarded success` — every document in the batch reached a terminal outcome and the batch was published on.\n- `forwarded error` — PublishToNext failed, which fails the whole batch and returns it to JobEngine for redelivery.\n- Forwarded lagging received is the normal shape while batches are in flight. A persistent, widening gap means batches are being held — check Retry Queue Depth and Worker Pool.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5206,7 +5200,7 @@
           "description": "- Receipt to forwarding, per batch. Buckets 1s to 8192s (~2.3h).\n- Gated by the slowest document in the batch, because nothing is forwarded until everything is terminal — so this tracks the tail of document latency, not its middle.\n- Large batches make this worse mechanically: halving the producer's batch size roughly halves this without changing per-document latency.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5244,7 +5238,7 @@
           "description": "- The pod was shutting down with documents still retryable, so the ItemBatch goes back to JetStream for another pod.\n- Nothing is lost — content-service serves the redone work from cache and the ingester dedupes on content_sha256.\n- Expect a burst on every deploy. A steady non-zero rate OUTSIDE a deploy is the real signal: batches routinely outlive the pods running them, so either documents are slower than the pod lifetime or pods are being cycled too aggressively.\n- This is the term that makes the counts reconcile: received = forwarded(success) + forwarded(error) + abandoned + still in flight.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5272,7 +5266,7 @@
           "description": "- Documents waiting on a retry, summed across every batch in flight on every pod.\n- THE LIVENESS SIGNAL FOR AN UNBOUNDED LOOP: the retry loop has no attempt cap and no deadline by design, so depth returning to zero is the only evidence that batches converge.\n- A floor that never reaches zero means at least one document is stuck and is holding its whole batch open.\n- The phase names which dependency to go and look at.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5356,7 +5350,7 @@
           "description": "- `content` — content-service has not finished with the document, or our own call timed out, which usually means the same thing.\n- `knowledge_processing` — content resolved and the ingester has not finished. These resume at the ingester and do not re-resolve content.\n- A high content rate with normal completions is ordinary cache-warming on slow extractions.\n- A high rate with no completions is not — go to Convergence below.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5384,7 +5378,7 @@
           "description": "- `retries/s` — retry passes. `completions/s` — documents reaching a terminal outcome. `queued for retry` — current depth.\n- The non-convergence detector, and the first panel to look at when a scan seems stalled.\n- Retries rising while completions stay flat means the loop is spinning on documents it will never finish. Nothing is dropped — that is the design — but nothing progresses either, and every affected batch holds its JetStream message and its workers.\n- Healthy shape: retries and completions move together and depth oscillates back to zero.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5422,7 +5416,7 @@
           "description": "- Retry passes performed per batch. A batch whose documents all succeed first time records 0. Buckets are 0, then 1 to 512.\n- Rising p95 with stable batch duration means many cheap passes; rising together means slow ones.\n- Observed only when a batch finishes, so no data while batches are being received means no batch has completed yet.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5455,7 +5449,7 @@
           "description": "- Passes per batch that made content-service calls. The seed pass asks content about every item, so the minimum is 1, never 0.\n- Counted per pass, not per call: one round means \"this pass asked content about at least one document\", however many that was.\n- Read against Batch Iterations above. Equal values mean the batch went back to content on every pass — a cold corpus where cache-warming is not converging. Iterations well above rounds mean content resolved early and the extra passes belong to the ingester.\n- Rising here alongside CONTENT_TIMEOUT on Retry Reasons is the cache-warming loop working; what it needs is time, not configuration.\n- Observed only when a batch finishes, so no data while batches are being received means no batch has completed yet.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5488,7 +5482,7 @@
           "description": "- Why the loop is turning. The phase alone does not say — the content phase retries on four codes calling for four different responses.\n- `CONTENT_TIMEOUT` — content-service did not answer inside our window; usually a slow extraction and ordinary cache-warming.\n- `GET_CONTENT_FAILED` — the NATS path itself, so a spike is transport, not documents.\n- `CONTENT_ERROR_RETRYABLE` / `EXTRACTION_ERROR_RETRYABLE` — content-service reporting on the document and not having given up on it.\n- `INGESTER_UPLOAD_FAILED` / `INGEST_UNSUCCESSFUL_RETRYABLE` — the ingester; these resume at the ingester without re-resolving content.\n- An EMPTY error_code is not a dependency failure at all: the worker pool refused the submission, which only happens while the pod is draining. Expect it alongside Batches Abandoned and nowhere else.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5516,7 +5510,7 @@
           "description": "- `forwarded` = ingested. `forwarded_not_ingested` = the ingester's own terminal verdict. `failed_permanent` = this service giving up.\n- One sample per document, not per attempt — retries are counted on `document_retries_total` — so this is a true document rate.\n- The document is forwarded in all three cases, carrying its failure in `knowledge_hub`, so none of them is a loss.\n- Compare the sum against intake above to see whether documents are finishing as fast as they arrive.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5600,7 +5594,7 @@
           "description": "- The failure recorded on each document, which is also what downstream reads out of `knowledge_hub.msg`.\n- The empty code is filtered out here; it is the normal case for a clean success.\n- These are NOT ItemErrors — every code here rides downstream on the document instead.\n- The outcome/code pairing is what carries the meaning: the same code under an unexpected outcome is worth chasing.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5628,7 +5622,7 @@
           "description": "- SHOULD SIT AT ZERO.\n- Documents whose verdict could not be written onto the document itself because the payload could not be unmarshalled or re-marshalled — the carrier is the thing that is broken — so they were published as ItemErrors instead.\n- The only path in this service that still writes to the job's item-errors hash.\n- Anything above zero means malformed payloads are arriving from upstream. Fix the producer; there is nothing to tune here.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5672,7 +5666,7 @@
           "description": "- Per document, first submission to terminal outcome, spanning every retry pass rather than only the last. Buckets 0.1s to 3600s.\n- Colour is documents per second landing in each band.\n- A bimodal picture is normal: cache hits low, first-time extractions higher.\n- Weight collecting in the top band means documents are looping, not working — cross-check Convergence.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 9,
@@ -5703,7 +5697,7 @@
           "description": "- The same measure as the heatmap above, as quantiles.\n- p50 is the common path; p99 is documents waiting on a dependency.\n- p50 and p99 diverging means a slow minority. All three rising means a dependency is slow for everything.\n- Batch Duration is gated by the worst document here, so the two panels should move together.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 9,
@@ -5741,7 +5735,7 @@
           "description": "- Split by outcome because outcomes fail at different speeds.\n- `failed_permanent` usually fails fast and drags a combined quantile down, so `forwarded` alone is the number to watch.\n- `forwarded_not_ingested` slower than `forwarded` means the ingester is doing real work before saying no.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 9,
@@ -5769,7 +5763,7 @@
           "description": "- `status` is success only when the call returned a usable cache location. A transport failure, an application error and a missing cache location are all error.\n- This measures OUR call, not content-service's work: our per-call timeout sits below its extraction budget.\n- So a slow document appears here as a timed-out error call and then as a fast success on a later retry once the result is cached.\n- p95 approaching CONTENT_GET_TIMEOUT (120s) means we are re-asking rather than getting answers — check Retry Reasons for CONTENT_TIMEOUT.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5807,7 +5801,7 @@
           "description": "- `status` here reflects only whether the streaming call completed.\n- A terminal frame reporting success == false is still a success on this histogram — that result is carried by the `forwarded_not_ingested` outcome instead.\n- Buckets run to 900s, above INGESTER_UPLOAD_TIMEOUT (600s), so a timeout is separable from a slow upload.\n- This is usually the dominant term in document duration: if p50 is tens of seconds, the worker pool will saturate.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5845,7 +5839,7 @@
           "description": "- Call volume from each histogram's `_count`, split by dependency and status.\n- Content calls exceed document count whenever documents are retrying; ingester calls do the same on the knowledge phase.\n- A rising error share on one dependency with the other flat localizes the fault.\n- Content success count against the document rate shows how much of the work is repeat asking rather than progress.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5878,7 +5872,7 @@
           "description": "- `progress frames/s` — mid-upload frames received. `ingester in flight` — concurrent uploads.\n- The service's own stall signal, and the reason progress frames are counted at all: the frames are otherwise discarded.\n- A flat frame rate together with a non-zero in-flight count is a stalled upload stream.\n- Either one alone is normal — no in-flight means idle, and frames without in-flight cannot happen.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5911,7 +5905,7 @@
           "description": "- `documents in flight` — documents inside a worker right now. `completions/s` — documents reaching a terminal outcome. `{{dependency}} in flight` — which dependency they are sitting in.\n- In flight with no completions and no retries is genuinely stuck inside a dependency call, and the dependency line names which one.\n- In flight with retries climbing is the loop working — that case belongs to Convergence above.\n- Both at zero is idle.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5949,7 +5943,7 @@
           "description": "- One pool per pod, shared by every batch that pod is handling. Both series are pod-wide, not per batch.\n- `executing` — documents a worker is running right now. Hard ceiling: WORKER_POOL_SIZE.\n- `queued` — documents submitted but not yet started. Ceiling: WORKER_QUEUE_DEPTH, plus one more for each handler blocked trying to submit (up to NATS_WORKERS).\n- A document is counted in both for an instant during handoff and never in neither, so the sum is the honest submitted-and-unfinished figure and should never dip.\n- `executing` pinned at WORKER_POOL_SIZE with little queued: the DEPENDENCIES are slow. A bigger pool would only add pressure to them.\n- Sustained queueing while executing sits below its ceiling: the POOL is the bottleneck. WORKER_POOL_SIZE is what to raise.\n- `queued` pinned at WORKER_QUEUE_DEPTH + NATS_WORKERS: every handler is blocked in Submit. A batch submits all of its documents before collecting any result, so in this state no batch reaches its accounting stage — terminal-outcome, retry and forward metrics stop appearing across both dashboards even though uploads are still completing. Reduce the producer's batch size or raise the queue.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6001,7 +5995,7 @@
           "description": "- CPU seconds per second per pod. 1.0 is one full core.\n- This service is I/O-bound — it waits on content-service and the ingester — so CPU should stay low even with the pool full.\n- High CPU with low throughput points at marshalling or logging cost, not document work.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6029,7 +6023,7 @@
           "description": "- Physical memory held by the process, per pod.\n- Should track batch size times document size, not uptime. A monotonic climb across batches is a leak.\n- The container limit is enforced against working set, not this — see Container Memory below.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6057,7 +6051,7 @@
           "description": "- Address space reserved per pod, most of it never resident.\n- Go reserves large arenas, so a big number here is normal and not a problem on its own.\n- Useful only to confirm that a resident-memory climb is real allocation rather than reservation.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6085,7 +6079,7 @@
           "description": "- The same work as Process CPU but measured by the kubelet, and split per container.\n- One series per container in the pod, including sidecars. `knowledge-service-be-go` is the series that corresponds to the Process CPU panel; everything else is a co-tenant.\n- The CPU limit is per container, not per pod — compare each series against its own container's limit.\n- Approaching a limit causes throttling, which surfaces as latency everywhere else rather than as an error.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6113,7 +6107,7 @@
           "description": "- What the kubelet counts against the memory limit, and what triggers an OOM kill. This, not resident memory, is the number to compare against a limit.\n- One series per container in the pod, including sidecars. `knowledge-hub-be-go` runs here as a native sidecar (the ingester on 127.0.0.1:8080) and normally uses an order of magnitude more memory than the service itself.\n- Limits are per container: knowledge-service 512Mi, the knowledge-hub sidecar 1Gi. A summed figure compares against neither.\n- A step up that never comes back down after a large batch is the shape to watch — on whichever series shows it.\n- An OOM kill shows up as a restart on the panel below, not as a spike here.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6141,7 +6135,7 @@
           "description": "- Concurrency is bounded by the worker pool, not by document count: expect roughly WORKER_POOL_SIZE plus the JobEngine handlers plus NATS and runtime goroutines.\n- Should be flat and boring. A climb that does not come back down alongside a flat documents_in_flight is a leak, not load.\n- A step change at a deploy is a config change (pool size, NATS workers), not a leak.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6169,7 +6163,7 @@
           "description": "- Bytes in in-use heap spans, per pod. A sawtooth between GC cycles is normal.\n- The FLOOR of the sawtooth is the real working set — a rising floor is the leak signal, not the peaks.\n- Correlate a rising floor with Goroutines to tell a goroutine leak from a data leak.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6197,7 +6191,7 @@
           "description": "- Longest stop-the-world GC pause per pod.\n- `go_gc_duration_seconds` is a Prometheus summary, not a histogram: there is no `_bucket` series, so `histogram_quantile` cannot be used here. The Go collector exposes quantiles 0, 0.25, 0.5, 0.75 and 1 only — there is no 0.99.\n- `quantile=\"1\"` is the max pause over the runtime's buffer of recent GC cycles, so it reports the worst recent pause rather than a windowed percentile.\n- Milliseconds are normal. This is not what makes this service slow — look at the dependency panels first.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6225,7 +6219,7 @@
           "description": "- `open` is descriptors held; `max` is the process limit.\n- Each NATS connection, gRPC connection and upload stream costs descriptors.\n- `open` climbing toward `max` means connections are not being closed; hitting the limit is abrupt and looks like a dependency outage.\n- A flat open count well below max is the expected shape.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6258,7 +6252,7 @@
           "description": "- OS threads the Go runtime is holding.\n- Grows with blocking syscalls, not with goroutines, so a bounded pool should keep this flat.\n- A climb into the hundreds means something is blocking in syscalls or cgo — the runtime never releases threads once created.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6286,7 +6280,7 @@
           "description": "- Seconds since process start, per pod.\n- A sawtooth back to zero is a restart — cross-check Container Restarts below for the cause.\n- Uptime shorter than typical batch duration means pods are cycled faster than batches can finish; expect Batches Abandoned to be non-zero.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6314,7 +6308,7 @@
           "description": "- Restarts over the trailing hour, split per container so a sidecar restart is not read as a service restart.\n- Any non-zero outside a deploy needs a reason: OOM kill, liveness probe failure, or a panic.\n- A `knowledge-service-be-go` restart returns that pod's in-flight batches to JetStream for redelivery — correlate with Batches Abandoned on the Pipeline dashboard.\n- A `knowledge-hub-be-go` sidecar restart instead breaks in-flight uploads: expect INGESTER_UPLOAD_FAILED retries rather than abandoned batches.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6336,9 +6330,7 @@
           ]
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "🧠 Knowledge Service ($client_ds)",
+      "title": "🧠 Knowledge Service",
       "type": "row"
     },
     {
@@ -6376,7 +6368,7 @@
           "title": "Pods Up",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6425,7 +6417,7 @@
           "description": "Successful RegisterConnector calls in the last 5 minutes (increase on connector_registrations_total).",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6461,7 +6453,7 @@
           "title": "gRPC Requests (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6498,7 +6490,7 @@
           "description": "Fraction of gRPC calls returning a non-OK status code (code != 0).",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6551,7 +6543,7 @@
           "title": "HTTP Requests (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6588,7 +6580,7 @@
           "description": "Fraction of REST requests answered with a 5xx status.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6642,7 +6634,7 @@
           "description": "grpc_active_requests — unary calls currently executing inside the metrics interceptor.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6677,7 +6669,7 @@
           "title": "HTTP In Flight",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6712,7 +6704,7 @@
           "title": "gRPC p95 (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6748,7 +6740,7 @@
           "title": "HTTP p95 (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6785,7 +6777,7 @@
           "description": "connector_registrations_total counts successful RegisterConnector calls. Connectors re-register on every startup, so steps here usually line up with connector rollouts.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -6812,7 +6804,7 @@
           "title": "Registrations by Connector (dashboard window)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -6850,7 +6842,7 @@
           "title": "gRPC Request Rate by Method",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6878,7 +6870,7 @@
           "description": "The `code` label is the numeric gRPC status (0 = OK). The `status` label carries the full formatted status string and is intentionally not used for grouping.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6905,7 +6897,7 @@
           "title": "gRPC In Flight by Method",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6932,7 +6924,7 @@
           "title": "gRPC Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6970,7 +6962,7 @@
           "description": "sum/count over the 5m window — unaffected by the coarse default histogram bucket boundaries, so it is the more trustworthy latency signal for sub-second calls.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6998,7 +6990,7 @@
           "description": "Route is chi's matched pattern (e.g. /api/v1/connectors/{name}/config-schema). Requests matching no route collapse to \"unmatched\".",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7025,7 +7017,7 @@
           "title": "HTTP Request Rate by Status",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7052,7 +7044,7 @@
           "title": "HTTP Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7089,7 +7081,7 @@
           "title": "HTTP Mean Duration by Route",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7117,7 +7109,7 @@
           "description": "Bytes/s in and out, from the http_request_size_bytes / http_response_size_bytes histogram sums. Only non-zero-length bodies are recorded.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7168,7 +7160,7 @@
           "title": "Process CPU (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7195,7 +7187,7 @@
           "title": "Process Resident Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7222,7 +7214,7 @@
           "title": "Process Virtual Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7249,7 +7241,7 @@
           "title": "Container CPU Usage",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7276,7 +7268,7 @@
           "title": "Container Memory (working set)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7303,7 +7295,7 @@
           "title": "Goroutines",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7330,7 +7322,7 @@
           "title": "Heap In-Use",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7358,7 +7350,7 @@
           "description": "Longest stop-the-world GC pause per pod. go_gc_duration_seconds is a Prometheus summary, not a histogram: there is no _bucket series, so histogram_quantile cannot be used here. The Go collector exposes quantiles 0, 0.25, 0.5, 0.75 and 1 only — there is no 0.99. quantile=\"1\" is the max pause over the runtime's buffer of recent GC cycles, so it reports the worst recent pause rather than a windowed percentile.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7385,7 +7377,7 @@
           "title": "Open vs Max FDs",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7417,7 +7409,7 @@
           "title": "OS Threads",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7445,7 +7437,7 @@
           "description": "Time since process start. A sawtooth here is a restart.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7472,7 +7464,7 @@
           "title": "Container Restarts (1h increase)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7494,9 +7486,7 @@
           ]
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "📝 Registration Service ($client_ds)",
+      "title": "📝 Registration Service",
       "type": "row"
     },
     {
@@ -7535,7 +7525,7 @@
           "description": "Single replica by design — SSE sessions are held in memory by the pod serving them.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -7584,7 +7574,7 @@
           "description": "request_service_sse_active_connections — currently open Server-Sent Events result-push connections. This is the metric to scale on if the service ever needs more than one replica.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -7619,7 +7609,7 @@
           "title": "Tests Created (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -7656,7 +7646,7 @@
           "description": "Connection-test jobs the service failed to create (outcome=\"error\").",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -7710,7 +7700,7 @@
           "description": "Connection-test results consumed from NATS.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -7747,7 +7737,7 @@
           "description": "Results that could not be correlated back to a request (e.g. an empty job id). Sustained non-zero means result pushes are being dropped on the floor.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -7801,7 +7791,7 @@
           "description": "request_service_connectiontest_requests_total — job-creation attempts, labelled created / error.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7829,7 +7819,7 @@
           "description": "Share of creation attempts that failed before a job was queued.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7859,7 +7849,7 @@
           "description": "The two legs of the round trip. A persistent gap between created and results means jobs are queued but their results are not coming back over NATS.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7892,7 +7882,7 @@
           "description": "request_service_connectiontest_results_total — how the tested connection actually resolved (success / failure). This is the health of the target systems, not of this service.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7919,7 +7909,7 @@
           "title": "Connect Success Ratio",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7949,7 +7939,7 @@
           "description": "Results dropped because they could not be correlated to an outstanding request.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7977,7 +7967,7 @@
           "description": "request_service_connectiontest_duration_seconds — wall time from the job being created in the job engine to its result arriving over NATS. Derived from the stored request row's created_at, so it spans the whole round trip including the connector's own network connect, not just this service's work.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8015,7 +8005,7 @@
           "description": "The same round trip split by connector. One slow connector shows up here without dragging the aggregate quantiles beside it.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8043,7 +8033,7 @@
           "description": "The histogram only observes results whose request row existed to measure against; a result whose request was never persisted is still stored, but cannot be timed. A persistent gap between these lines means creation-time persistence is failing — look for the 'no stored request to measure against' warning in the service log.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8076,7 +8066,7 @@
           "description": "request_service_connectiontest_inflight — connection tests dispatched with no result recorded yet, read from the pending rows in Postgres at scrape time (so it survives a restart and does not depend on which replica dispatched the job). 'pending' is normal in-flight work and should return to zero between tests; 'stalled' has waited more than 10 minutes and is work the job engine almost certainly never returned. A rising stalled line is the signal the duration histogram cannot give you, because a round trip that never completes is never observed. Reported per pod, so this sums replicas rather than averaging them.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8104,7 +8094,7 @@
           "title": "Active SSE Connections",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8132,7 +8122,7 @@
           "description": "Rate of change of the open-connection gauge. Large symmetric swings mean clients are reconnecting rather than holding a stream.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8160,7 +8150,7 @@
           "description": "Connect RPC traffic. The route label is the raw URL path, which for Connect is the fully-qualified procedure — a bounded set, so no cardinality risk. /metrics, /healthz and /ready are excluded: at a 30s scrape interval they would otherwise dominate the chart. /events is absent by design, since the SSE stream is deliberately left uninstrumented.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8187,7 +8177,7 @@
           "title": "API Request Rate by Status",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8215,7 +8205,7 @@
           "description": "The service opts into pipeline-lib-go's SubsecondLatencyBuckets for this histogram (0.005s-10s), so histogram_quantile is meaningful. The 10s ceiling fits because /events is excluded from instrumentation and every other route returns promptly — the connection test itself is dispatched asynchronously and its multi-minute round trip is measured separately by request_service_connectiontest_duration_seconds.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8242,7 +8232,7 @@
           "title": "API Error Ratio (non-2xx)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8272,7 +8262,7 @@
           "description": "http_active_requests carries no route or method labels, so this covers the whole instrumented surface including /metrics, /healthz and /ready — it cannot be filtered down to API routes. It should sit near zero: the SSE stream is excluded from instrumentation, so long-lived connections never accumulate here.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8300,7 +8290,7 @@
           "description": "Bytes/s in and out, from the http_request_size_bytes / http_response_size_bytes histogram sums. Only non-zero-length bodies are recorded. Throughput uses _sum, which is independent of bucket layout — worth knowing because the two histograms are bucketed differently: response size opts into BodySizeBuckets (256 B-64 MB), while request size is deliberately left on the SDK default, which is the finer of the two below 256 B and suits the small Connect messages and bare probes this service accepts. Size percentiles are therefore only meaningful on the response side. Health and scrape routes are excluded to match the other panels in this row.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8351,7 +8341,7 @@
           "title": "Process CPU (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8378,7 +8368,7 @@
           "title": "Process Resident Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8405,7 +8395,7 @@
           "title": "Process Virtual Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8432,7 +8422,7 @@
           "title": "Container CPU Usage",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8459,7 +8449,7 @@
           "title": "Container Memory (working set)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8487,7 +8477,7 @@
           "description": "Each open SSE stream holds goroutines; a rising floor that never comes back down alongside a flat connection gauge is a leak signal.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8514,7 +8504,7 @@
           "title": "Heap In-Use",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8542,7 +8532,7 @@
           "description": "Longest stop-the-world GC pause per pod. go_gc_duration_seconds is a Prometheus summary, not a histogram: there is no _bucket series, so histogram_quantile cannot be used here. The Go collector exposes quantiles 0, 0.25, 0.5, 0.75 and 1 only — there is no 0.99. quantile=\"1\" is the max pause over the runtime's buffer of recent GC cycles, so it reports the worst recent pause rather than a windowed percentile.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8570,7 +8560,7 @@
           "description": "Long-lived SSE streams each hold a socket, so this is the ceiling that limits concurrent UI subscribers.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8602,7 +8592,7 @@
           "title": "OS Threads",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8630,7 +8620,7 @@
           "description": "Time since process start. A restart drops every in-memory SSE session, so sawtooth here explains client reconnect storms.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8657,7 +8647,7 @@
           "title": "Container Restarts (1h increase)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8679,9 +8669,7 @@
           ]
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "📡 Request Service ($client_ds)",
+      "title": "📡 Request Service",
       "type": "row"
     },
     {
@@ -8773,7 +8761,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "transparent": false
         },
@@ -8832,7 +8820,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -8882,7 +8870,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -8940,7 +8928,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -9008,7 +8996,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -9066,7 +9054,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -9120,13 +9108,13 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -9155,7 +9143,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -9184,7 +9172,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -9217,7 +9205,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -9245,7 +9233,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {},
@@ -9271,7 +9259,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {},
@@ -9297,7 +9285,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -9330,7 +9318,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -9358,7 +9346,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -9471,7 +9459,7 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 387
         },
@@ -9529,7 +9517,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 388
         },
@@ -9579,7 +9567,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 389
         },
@@ -9637,7 +9625,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 390
         },
@@ -9695,7 +9683,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 391
         },
@@ -9763,7 +9751,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 392
         },
@@ -9831,7 +9819,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 393
         },
@@ -9889,7 +9877,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 394
         },
@@ -9943,7 +9931,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 395
         },
@@ -10043,7 +10031,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 396
         },
@@ -10143,7 +10131,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 397
         },
@@ -10197,7 +10185,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 398
         },
@@ -10251,7 +10239,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 399
         },
@@ -10289,7 +10277,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 400
         },
@@ -10325,7 +10313,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 401
         },
@@ -10361,7 +10349,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 402
         },
@@ -10414,7 +10402,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 403
         },
@@ -10464,7 +10452,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 404
         },
@@ -10514,7 +10502,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 405
         },
@@ -10572,7 +10560,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 406
         },
@@ -10630,7 +10618,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 407
         },
@@ -10673,7 +10661,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 408
         },
@@ -10711,7 +10699,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 409
         },
@@ -10744,7 +10732,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 410
         },
@@ -10777,7 +10765,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 411
         },
@@ -10810,7 +10798,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 412
         },
@@ -10850,7 +10838,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 413
         },
@@ -10918,7 +10906,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 414
         },
@@ -10956,7 +10944,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 415
         },
@@ -10999,7 +10987,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 416
         },
@@ -11037,7 +11025,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "id": 417
         },
@@ -11129,7 +11117,7 @@
           "type": "stat",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -11192,7 +11180,7 @@
           "type": "stat",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -11265,7 +11253,7 @@
           "type": "stat",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -11320,7 +11308,7 @@
           "type": "stat",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -11375,7 +11363,7 @@
           "type": "stat",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -11438,7 +11426,7 @@
           "type": "stat",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -11497,7 +11485,7 @@
           "type": "stat",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -11562,7 +11550,7 @@
           "type": "stat",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -11625,7 +11613,7 @@
           "type": "stat",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -11688,13 +11676,13 @@
           "type": "stat",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -11723,7 +11711,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -11752,7 +11740,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -11785,7 +11773,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -11813,7 +11801,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {},
@@ -11839,7 +11827,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {},
@@ -11865,7 +11853,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -11898,7 +11886,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -11926,7 +11914,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -11957,9 +11945,7 @@
           "type": "timeseries"
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "🔧 Backend Workers (Archiver / Archiver v2 / Enricher) ($client_ds)",
+      "title": "🔧 Backend Workers (Archiver / Archiver v2 / Enricher)",
       "type": "row"
     }
   ],
@@ -11976,32 +11962,16 @@
   "templating": {
     "list": [
       {
-        "name": "client_ds",
-        "label": "Clients",
+        "name": "datasource",
+        "label": "Datasource",
         "type": "datasource",
         "query": "prometheus",
         "hide": 0,
-        "includeAll": true,
-        "multi": true,
+        "includeAll": false,
+        "multi": false,
         "current": {
-          "text": [
-            "Demo",
-            "Demo2",
-            "Integration",
-            "IONIS",
-            "KrispyKreme",
-            "SSB",
-            "UAT"
-          ],
-          "value": [
-            "dfmklaiqtfif4c",
-            "efl7hw5ukkwzkd",
-            "efl6f47f8cj5sb",
-            "efs7yusoeq680e",
-            "efs2d1k3se39ca",
-            "dfs2d5r9cp0qob",
-            "efmkjlznz8ykgb"
-          ]
+          "text": "Prometheus",
+          "value": "prometheus"
         }
       }
     ]

@@ -1,5 +1,5 @@
 {
-  "__comment": "NVisionX Connectors Detail — merges all 8 connector dashboards (CIFS, MySQL, PostgreSQL, Snowflake, Box, SharePoint, Xberg, S3 Parquet) that previously lived as up to 24 separate files (Overview/Pipeline/Runtime x 5 V2 connectors, plus 3 standalone V1 connector dashboards) into one file, one collapsed row per connector. Each row repeats per client selected in the Clients picker (same row-repeat pattern already proven in backups-all-clients.json / scan-activity-all-clients.json). Trade-off: the old per-pod and per-query-type/datasource-id filter pickers are dropped (wildcarded to show everything) because Grafana cannot correctly cascade a chained query-type variable per repeated row instance - only non-chained custom-type pickers (the Scanner/Content 'component' split) survive, renamed per-connector to avoid collisions. namespace is hardcoded to 'default', the only namespace actually in use. 2026-09-18: built to replace dashboard sprawl per manager request for ~8-10 total dashboards, each client-selectable.",
+  "__comment": "NVisionX Connectors Detail — merges all 8 connector dashboards (CIFS, MySQL, PostgreSQL, Snowflake, Box, SharePoint, Xberg, S3 Parquet) that previously lived as up to 24 separate files (Overview/Pipeline/Runtime x 5 V2 connectors, plus 3 standalone V1 connector dashboards) into one file, one collapsed row per connector. Rows use the single-select Datasource picker. Trade-off: the old per-pod and per-query-type/datasource-id filter pickers are dropped (wildcarded to show everything) because Grafana cannot correctly cascade a chained query-type variable per repeated row instance - only non-chained custom-type pickers (the Scanner/Content 'component' split) survive, renamed per-connector to avoid collisions. namespace is hardcoded to 'default', the only namespace actually in use. 2026-09-18: built to replace dashboard sprawl per manager request for ~8-10 total dashboards, each client-selectable.",
   "annotations": {
     "list": [
       {
@@ -41,7 +41,7 @@
         "code": {
           "language": "markdown"
         },
-        "content": "**Connectors Detail** — one section per connector, each repeating once per client selected in the **Clients** picker (top of page). Expand a connector's row to see its full golden-signal, business-metric, and runtime detail for the selected client(s).\n\n**Note:** this view intentionally drops the old per-pod and per-query-type filters that existed on the individual connector dashboards — Grafana can't cascade those correctly once a row repeats per client, so they're aggregated here instead. The Scanner/Content split (where a connector has one) is preserved via its own picker.",
+        "content": "**Connectors Detail** — one section per connector, using the **Datasource** picker (top of page). Expand a connector's row to see its full golden-signal, business-metric, and runtime detail for the selected datasource.\n\n**Note:** this view intentionally drops the old per-pod and per-query-type filters that existed on the individual connector dashboards — Grafana can't cascade those correctly once a row repeats per client, so they're aggregated here instead. The Scanner/Content split (where a connector has one) is preserved via its own picker.",
         "mode": "markdown"
       },
       "pluginVersion": "11.5.2",
@@ -85,7 +85,7 @@
           "description": "Files the scanner discovered, totalled over the selected range rather than averaged as a rate. Reads 0 when nothing ran in the window; the backlog panels tell idle from stuck.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -122,7 +122,7 @@
           "description": "Items the scanner handed to the batch sender, totalled over the selected range. Compare against Files Discovered; the difference is in Item Loss.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -159,7 +159,7 @@
           "description": "Files discovered minus items sent over the selected range. Should be 0. A non-zero value is broken down by cause in Items Failed.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -209,7 +209,7 @@
           "description": "Directories published to NATS as separate work, totalled over the selected range. One per subdirectory found, so it tracks the shape of the tree rather than its file count.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -246,7 +246,7 @@
           "description": "Content fetch attempts, totalled over the selected range. Counts every outcome including failures, since the counter is partitioned by error_code.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -283,7 +283,7 @@
           "description": "Items the augmenter processed, totalled over the selected range. All outcomes summed; the per-outcome breakdown is in the Augmenter row.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -320,7 +320,7 @@
           "description": "Directory-processing time per file discovered, from the scan duration total divided by files discovered over the selected range. Includes each directory's fan-out, so trees with more directories read higher.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -356,7 +356,7 @@
           "description": "Average duration of one ACL query during augment, from the ACL duration total divided by items processed. One query per item; the statx and URN resolve each item also needs are not included.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -392,7 +392,7 @@
           "description": "Mean duration of one content fetch, from the fetch duration total divided by the fetch count. Scales with file size rather than file count.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -427,7 +427,7 @@
           "title": "Pods Up",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -475,7 +475,7 @@
           "title": "Restarts (1h)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -527,7 +527,7 @@
           "title": "Mounts Active",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -562,7 +562,7 @@
           "title": "Files Discovered (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -599,7 +599,7 @@
           "description": "Rate of items that never reached the batch sender, both causes summed. marshal_failed is bad data, batch_send_failed is the sender or NATS; the split is on the pipeline board.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -652,7 +652,7 @@
           "title": "Items Sent (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -688,7 +688,7 @@
           "title": "ACL Errors (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -742,7 +742,7 @@
           "description": "Wall-clock to process one directory: listing its entries, statx per file, ACL query when enabled, and publishing the items. Observed once per directory, so it does not measure a whole scan.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -778,7 +778,7 @@
           "description": "Discovered = files that reached processing; sent = items that made it into a batch; failed = items that did not. Discovered equals sent plus failed by construction.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -815,7 +815,7 @@
           "title": "Errors by Source (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -858,7 +858,7 @@
           "description": "Wall-clock to process one directory: listing its entries, statx per file, ACL query when enabled, and publishing the items. Observed once per directory, so it does not measure a whole scan.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -895,7 +895,7 @@
           "title": "Local Stack Depth (DFS backlog)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -928,7 +928,7 @@
           "description": "Messages waiting on the scanner durable. Scanner and augmenter share this one durable, so it blends fork and item-batch work and the two cannot be separated here. Server-side signal from the NATS exporter, so it carries no namespace or pod labels.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -977,7 +977,7 @@
           "description": "Delivered but not yet acked: work currently inside the pods. Also the signal KEDA's ack-capacity trigger scales on. Server-side signal from the NATS exporter (no namespace/pod labels).",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -1026,7 +1026,7 @@
           "description": "Messages redelivered after an ack timeout. Sustained growth with a flat items-sent rate means the connector is not draining. Server-side signal from the NATS exporter, so it carries no namespace or pod labels.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -1079,7 +1079,7 @@
           "description": "Current replicas of the scanner deployment, from the HPA KEDA manages. minReplicaCount is 0, so 0 replicas with an empty queue is normal.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -1115,7 +1115,7 @@
           "description": "Ceiling from the ScaledObject. Replicas pinned here while the backlog grows means the connector is capped, not idle.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -1151,7 +1151,7 @@
           "description": "Per-second growth of the backlog, clamped at 0. Verbatim the query KEDA's trend-based trigger evaluates; above 0.5 it asks for more pods.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -1204,7 +1204,7 @@
           "description": "Backlog on JE_CIFS/cifs-scanner-v1 over time. Scanner and augmenter share this durable, so it blends fork and item-batch work. Server-side signal from the NATS exporter, so it carries no namespace or pod labels.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1242,7 +1242,7 @@
           "description": "current below desired means scaling is in progress or blocked; current pinned at max means capped. Scale-down is deliberately slow (cooldown 900s, 600s stabilization window), so a flat line for ten minutes after a burst is configuration, not a stuck HPA.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1280,7 +1280,7 @@
           "description": "KEDA's ack-capacity trigger: replicas = ceil(ack_pending / 1000). The red line is that threshold; crossing it is what asks for another pod.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1326,7 +1326,7 @@
           "description": "KEDA's trend-based trigger: slope of the backlog over 2m, clamped at 0 so only growth counts. Threshold 0.5, activation 0.1. The pipeline-full trigger is not rendered in dev (capacity is unset), so this plus ack-capacity and pending-wakeup is the whole scaling story.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1372,7 +1372,7 @@
           "description": "Terminal outcome per item the augmenter touched. outcome=\"missing\" is also counted by items_skipped_not_found_total for the same event, so never sum the two.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1590,7 +1590,7 @@
           "title": "Skipped Not-Found (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1617,7 +1617,7 @@
           "title": "Augmenter ACL Query Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -1655,7 +1655,7 @@
           "description": "Content pods scale 0↔N with KEDA — 0 pods with an empty queue is normal.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -1703,7 +1703,7 @@
           "title": "Restarts (1h)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -1755,7 +1755,7 @@
           "title": "Fetches (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -1791,7 +1791,7 @@
           "title": "Fetch p95 (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -1828,7 +1828,7 @@
           "description": "Number of content fetch requests that failed in the last 5 minutes. Counter increase on cifs_content_fetch_total{success=\"false\"}.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -1882,7 +1882,7 @@
           "description": "Bytes per second confirmed by the content transfer service (rate over cifs_content_uploaded_bytes_total).",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -1919,7 +1919,7 @@
           "description": "p95 of successful mount acquires on the content pod. Failed acquires are tracked separately (cifs_content_mount_acquire_failure_duration_seconds).",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -1955,7 +1955,7 @@
           "title": "NATS — Fetch Backlog",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -2004,7 +2004,7 @@
           "description": "error_code=\"NONE\" is the success path; NAK_* codes are infra-level failures.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2057,7 +2057,7 @@
           "title": "Uploaded Bytes (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2085,7 +2085,7 @@
           "description": "Requests currently inside the handler — content-mode saturation signal (the counterpart of the scanner's worker_busy). Authoritative backlog (num_pending) lives on the NATS server.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2112,7 +2112,7 @@
           "title": "NATS — Content Consumer Backlog",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2145,7 +2145,7 @@
           "description": "nats_consumer_num_redelivered for the content durable (content-fetch-cifs). Rising = fetch requests failing and being retried; sustained growth toward MaxDeliver=3 means messages are about to be dropped as poison. Server-side signal from the NATS exporter (no namespace/pod labels).",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2173,7 +2173,7 @@
           "description": "The content deployment scales independently of the scanner, off its own ScaledObject watching CONTENT_FETCH/content-fetch-cifs.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2211,7 +2211,7 @@
           "description": "Signals behind the content ScaledObject. The consumer_name regex covers both the batch durable and the interactive one used by See Content, which has its own interactive-wakeup trigger. Server-side signal from the NATS exporter (no namespace/pod labels).",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2249,7 +2249,7 @@
           "description": "Files gone from the share when the augmenter or the content fetcher returned for them, counted over the last 5 minutes. Decays as the window slides, so it shows current activity rather than a run total. The content half also fires for symlinks and other non-regular files.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2285,7 +2285,7 @@
           "description": "Share of augmented items whose file was already gone, over the selected range. Augment only: content fetches one file per request and has no comparable denominator.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2339,7 +2339,7 @@
           "description": "Missing files split by the stage that found them missing; augment and content fetch are different moments and are diagnosed differently. The content series counts FETCH_ERROR_NOT_FOUND, which also fires for non-regular files.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -2391,7 +2391,7 @@
           "description": "Terminal outcome per file the scanner processed, plotted against the discovery rate. The outcomes sum to discovered; marshal_failed is bad data, batch_send_failed is the sender or NATS.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2424,7 +2424,7 @@
           "description": "forked = directories fanned out to the work channel; local = directories walked inline on the local stack.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2457,7 +2457,7 @@
           "description": "Entries found in one directory, observed once per directory. Files and subdirectories are both counted, so it reads higher than the directory's file count.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2495,7 +2495,7 @@
           "description": "Share of discovered files that made it into a batch. Below 1 means items are dropped between discovery and send. Reads as a gap while nothing is being discovered.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2525,7 +2525,7 @@
           "description": "Absolute loss rate. Sustained above zero means items are not reaching the batch sender; the outcome panel says which of the two causes.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2552,7 +2552,7 @@
           "title": "File Operation Duration p95 by operation",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2579,7 +2579,7 @@
           "title": "Worker Pool — busy / pool size / channel depth",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2616,7 +2616,7 @@
           "title": "Scanner ACL Query Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2653,7 +2653,7 @@
           "title": "Work Channel Wait p95 — submit vs collect",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2685,7 +2685,7 @@
           "title": "Local Stack Depth (DFS backlog)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2713,7 +2713,7 @@
           "description": "Wall-clock to process one directory: listing its entries, statx per file, ACL query when enabled, and publishing the items. Observed once per directory, so it does not measure a whole scan.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2750,7 +2750,7 @@
           "title": "Mount Release After Evict (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2777,7 +2777,7 @@
           "title": "Btime Unavailable (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -2805,7 +2805,7 @@
           "description": "All 12 outcomes: success, missing, stat_failed, acl_error, acl_skipped, build_failed, send_failed, invalid_urn, mount_failed, unc_mismatch, cancelled_stat, cancelled_acl.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3024,7 +3024,7 @@
           "description": "Success and failure acquires are separate histograms so a hung mount.cifs (~120s) does not poison the success p95.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3057,7 +3057,7 @@
           "description": "Time spent blocked publishing augmented items downstream. Sustained growth means backpressure from the stream.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3084,7 +3084,7 @@
           "title": "Augmenter Errors (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3116,7 +3116,7 @@
           "title": "Augmenter ACL Query Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3154,7 +3154,7 @@
           "description": "error_code=\"NONE\" is the success path; NAK_* codes are infra-level failures.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3208,7 +3208,7 @@
           "description": "End-to-end duration per successful fetch request. The histogram intentionally carries only the success label, so percentiles are computed over success=\"true\".",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3246,7 +3246,7 @@
           "description": "Size of files streamed successfully (buckets 1KiB×4^10). Useful for sizing impact of large-payload streaming and spotting outliers.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3284,7 +3284,7 @@
           "description": "Bytes per second confirmed by the content transfer service.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3312,7 +3312,7 @@
           "description": "Success and failure acquires are separate histograms so a hung mount.cifs (~120s) does not poison the success p95.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3345,7 +3345,7 @@
           "description": "Triage table: non-NONE error codes over the last hour. NAK_* codes are infra-level failures (NATS NAK path).",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3383,7 +3383,7 @@
           "description": "CIFS-read + gRPC-upload leg only (the uploadFile call), isolated from mount-acquire and end-to-end so a slow content-service is distinguishable from a slow CIFS read. Success-labelled like fetch duration.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3421,7 +3421,7 @@
           "description": "Saturation signal — requests currently inside the handler (Inc on entry, Dec on exit), the content-mode counterpart of the scanner's worker_busy. Sustained pinning at peak means capacity-bound; the authoritative backlog (num_pending) lives on the NATS server.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3448,7 +3448,7 @@
           "title": "NATS — Content Consumer Backlog",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3481,7 +3481,7 @@
           "description": "Redeliveries on the content durable. Rising means fetch requests are failing and being retried; sustained growth toward MaxDeliver=3 means messages are about to be dropped as poison. Server-side signal from the NATS exporter, so it carries no namespace or pod labels.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3508,7 +3508,7 @@
           "title": "Content Fetch p95 by datasource_id",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3535,7 +3535,7 @@
           "title": "Content Upload p95 by datasource_id",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3563,7 +3563,7 @@
           "description": "Read and upload time per MiB streamed, success path only. Flat while fetch duration climbs means the cost is per request, not per byte. An average of averages: the byte and duration histograms are separate series, so many small files and one large file land on the same point.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3591,7 +3591,7 @@
           "description": "Mean size of what content is moving. Pair it with the panel on the left: a latency jump with a flat mean size is a slowdown, one that tracks mean size is just bigger files.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3637,7 +3637,7 @@
           "title": "Process CPU (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3664,7 +3664,7 @@
           "title": "Process Resident Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3691,7 +3691,7 @@
           "title": "Process Virtual Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3718,7 +3718,7 @@
           "title": "Container CPU Usage",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3745,7 +3745,7 @@
           "title": "Container Memory (working set)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3772,7 +3772,7 @@
           "title": "Goroutines",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3799,7 +3799,7 @@
           "title": "Heap In-Use",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3826,7 +3826,7 @@
           "title": "GC Pause p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3853,7 +3853,7 @@
           "title": "Open vs Max FDs",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3885,7 +3885,7 @@
           "title": "OS Threads",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -3907,9 +3907,7 @@
           ]
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "🗂️ CIFS ($client_ds)",
+      "title": "🗂️ CIFS",
       "type": "row"
     },
     {
@@ -3947,7 +3945,7 @@
           "title": "Pods Up",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -3996,7 +3994,7 @@
           "description": "Open MySQL connections summed across every active scanner pool. Pools are per-datasource and created/evicted at runtime, so this is a scrape-time aggregate, not a fixed ceiling.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4032,7 +4030,7 @@
           "description": "ScanStart handler invocations currently doing database discovery and DatabaseFork fan-out. The per-table leaf work that runs after fan-out is counted separately (see Tables In Flight on the pipeline dashboard).",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4068,7 +4066,7 @@
           "description": "Items successfully submitted through ItemBatchSender.UpsertItem, per second.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4105,7 +4103,7 @@
           "description": "p95 of the ScanStart discovery + fan-out phase. Histogram ladder is 0.5s to ~1024s, so this measures how long it takes to enumerate databases and hand out work — not how long a whole scan takes end to end.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4142,7 +4140,7 @@
           "description": "Query failures against the source database, per second: database_errors_total + table_errors_total. Skipped tables and connector bugs are counted apart — see the Silent-Failure Signals row.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4195,7 +4193,7 @@
           "title": "Throughput & Errors (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -4242,7 +4240,7 @@
           "title": "Scan Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -4280,7 +4278,7 @@
           "description": "Leaf-worker tasks that panicked. Always a connector bug, never a source-database fault — counted apart from table_errors_total so a panic on an unexpected column shape doesn't read as the customer's MySQL refusing a query. Any non-zero value is worth acting on.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4330,7 +4328,7 @@
           "description": "Tables the worker pool refused, run inline on the NATS consumer goroutine instead of being dropped. The pool only refuses after Shutdown, so non-zero means a scan was still fanning out while the process was tearing down — accounting stays exact, but the rest of that database serialises onto one goroutine.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4380,7 +4378,7 @@
           "description": "Tables skipped because INFORMATION_SCHEMA.COLUMNS returned no rows — a missing column-level GRANT, or a table dropped mid-scan. The query succeeded, so this is not a query failure. Alert on a sustained rate, not on any non-zero value.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4430,7 +4428,7 @@
           "description": "Structured errors that never reached the observer, across all reasons (buffer_full, after_close, publish_failed). Non-zero means the job record is showing a truncated view of the scan's failures. Break down by reason on the pipeline dashboard.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4479,7 +4477,7 @@
           "title": "Pods Up",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4528,7 +4526,7 @@
           "description": "Open MySQL connections summed across active content-fetch pools. A climb that does not come back down alongside a non-zero Conn Discard failure is the pool-exhaustion signature described on that panel.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4564,7 +4562,7 @@
           "description": "Content fetch requests currently being processed.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4599,7 +4597,7 @@
           "title": "Fetches (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4636,7 +4634,7 @@
           "description": "p95 end-to-end fetch latency for successful requests only: handler entry (URN parse, datasource resolve, conn acquire) through stream completion and reply publish. Errors are filtered out so a fast failure doesn't flatter the number.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4673,7 +4671,7 @@
           "description": "Content requests that errored in the last 5 minutes — counter increase on mysql_content_requests_total{outcome=\"error\"}.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4726,7 +4724,7 @@
           "title": "Content Requests by Outcome (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -4753,7 +4751,7 @@
           "title": "Content Fetch Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -4791,7 +4789,7 @@
           "description": "Streaming producers that panicked and were recovered. Always a connector bug: the requester is told INTERNAL/retryable and the message is redelivered, so nothing in the request's own outcome says this connector crashed.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4841,7 +4839,7 @@
           "description": "Uploads whose stored size disagreed with the sampled/streamed byte count. The handler NAKs without replying, so a single count is a transient that a redelivery repaired; a sustained rate means the same URN fails verification every attempt, and once MaxDeliver is spent the object proven wrong stays under that URN with no reply ever sent.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4895,7 +4893,7 @@
           "description": "Abandoned result sets whose connection could NOT be discarded (outcome != \"discarded\"). The discard is the only defence against the driver's uncancellable drain of the rest of a multi-GB column — a drain that ignores the query deadline and SIGTERM while holding a pool connection and a worker slot. Non-zero means the byte budget stops bounding what crosses the wire, and the symptom surfaces as pool exhaustion rather than an error.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -4945,7 +4943,7 @@
           "description": "Content fetches whose first random draw fell under MYSQL_CONTENT_SAMPLE_MIN_ROWS and were re-drawn at a higher percent, all outcomes summed. Each re-draw is an extra table scan, so a sustained rate means MYSQL_CONTENT_SAMPLE_PERCENT is set too low for the tables being classified — raise the percent, not the floor. Break down by outcome on the pipeline dashboard: \"failed\" is a different problem and points at the query timeout and the source database.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -5014,7 +5012,7 @@
           "description": "Tables successfully scanned and columns retrieved, per second. Tables that failed or were skipped are not in these counters — see the Errors & Silent Failures row.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5047,7 +5045,7 @@
           "description": "items/s is the connector's own mysql_scanner_items_sent_total. The other two come from the shared ItemBatchSender in pipeline-lib-go and carry no connector prefix, so they are filtered by job — batches/s is how often the batch is flushed to JobEngine.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5085,7 +5083,7 @@
           "description": "ScanStart database discovery + fan-out phase, on a 0.5s–1024s ladder. This runs on the single pod that received the ScanStart message; the leaf work it hands out is not included.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5123,7 +5121,7 @@
           "description": "Query failures against the source database. These are the only two counters that mean \"MySQL refused something\" — everything on the next two panels is deliberately kept out of them.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5156,7 +5154,7 @@
           "description": "Three failure modes counted apart from table_errors_total because none of them is the source database's fault. no visible columns — INFORMATION_SCHEMA.COLUMNS returned nothing (missing column-level GRANT, or a table dropped mid-scan); alert on a sustained rate, not any non-zero value. inline fallback — the worker pool refused a table after Shutdown and the scanner ran it on the consumer goroutine, serialising the rest of that database. table panics — always a connector bug, any non-zero value is worth acting on.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5194,7 +5192,7 @@
           "description": "Structured errors that never reached the observer, so the job record is showing a truncated view of the scan's failures. buffer_full — the buffered channel saturated. after_close — PublishError called after Close. publish_failed — the observer refused or could not be reached; this is the remote failure mode, and without it an unreachable observer used to lose every ItemError while the drop counter stayed at zero. close timeouts counts one abandonment of an unknown number of reports rather than individual errors, which is why it is a separate series: reaching it means publishLoop was parked inside a single publish for the whole flush budget, so check the control plane's health, not the scan.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5227,7 +5225,7 @@
           "description": "Abandoned error-reporter flushes whose background goroutine is still parked in a publish — a live count on this pod, not a rate. Its sibling on the panel to the left counts how many times an abandonment has happened since the pod started; this one is how many are outstanding right now, which is the number that says whether the pod is still healthy. The two differ because an ErrorReporter is built and closed per message (one per ScanStart, one per DatabaseFork): an abandoned flush leaves a goroutine plus its 100-slot buffer behind, and the error that Close's caller returns NAKs the message, so redelivery supplies another fork that does it again. It unwinds on its own — each goroutine exits as soon as its publish returns — so a value that climbs and stays up is a control plane that is not answering, not a leak the connector can close from the inside. On the pinned pipeline-lib-go that publish resolves the job's step through GetJobSettings on a context with no deadline, which is why there is nothing bounding it below the reporter's 5s flush budget. Sustained above zero is alert-worthy; check the control plane, not the scan.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5256,7 +5254,7 @@
           "description": "Scanner-path SQL latency distribution, on a 10ms–20s ladder.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 9,
@@ -5291,7 +5289,7 @@
           "description": "query_type is list_tables (INFORMATION_SCHEMA.TABLES per database) or query_columns (INFORMATION_SCHEMA.COLUMNS per table). A list_tables p95 climbing alone points at a database with a very wide table count; query_columns climbing points at the tables themselves.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 9,
@@ -5319,7 +5317,7 @@
           "description": "Aggregated across every active scanner pool at scrape time. in-use pinned at open with idle at zero is the pool running at its ceiling.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 9,
@@ -5357,7 +5355,7 @@
           "description": "scanstart is the discovery + fan-out phase on the pod that received ScanStart. tables (leaf pool) is the per-table work the fan-out handed to the worker pool — the two are counted separately on purpose, so a busy leaf pool does not look like a stuck ScanStart.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5390,7 +5388,7 @@
           "description": "Observation count on the query-duration histogram — how many scanner-path queries are actually being issued, split by kind.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5417,7 +5415,7 @@
           "title": "Content — In Flight",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5444,7 +5442,7 @@
           "title": "Content Connections by Type",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5481,7 +5479,7 @@
           "title": "Content Requests by outcome (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5509,7 +5507,7 @@
           "description": "End-to-end request latency, split by outcome so a fast failure does not flatter the success distribution: handler entry (URN parse, datasource resolve, conn acquire) through stream completion and reply publish.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5547,7 +5545,7 @@
           "description": "The streaming pipeline only — from the producer goroutine pulling its first row out of MySQL until UploadFrom returns. Excludes handler setup. Query and upload run concurrently, so this reflects whichever leg is slower at any moment; the gap between this and Fetch Duration is setup cost.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5585,7 +5583,7 @@
           "description": "Bytes per successful fetch, taken from UploadResponse.Size — the count the content transfer service actually stored, not Info.Size, which this connector leaves at 0 because a sample's length is unknown until the last row streams. Ladder runs 1KiB to 4GiB.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5623,7 +5621,7 @@
           "description": "Sum of stored bytes per second across successful fetches.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5651,7 +5649,7 @@
           "description": "Sampled rows written per second across successful fetches.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5679,7 +5677,7 @@
           "description": "Average sampled rows per successful fetch (sum / count over the window). Compare against MYSQL_CONTENT_SAMPLE_MIN_ROWS and MAX_ROWS: sitting at the ceiling means the sampler is being capped, sitting at the floor means it is being rescued by re-draws.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5707,7 +5705,7 @@
           "description": "Fetches whose first draw fell under MYSQL_CONTENT_SAMPLE_MIN_ROWS and were re-drawn at a higher percent. recovered — a later draw reached the floor. short — every draw stayed under it, and since the final draw runs at 100% that means the column genuinely holds fewer non-NULL values than the floor, not a sampling miss. failed — a draw errored before finishing, so its row count says nothing about the column; kept separate so a broken query is not read as a small column. A fourth case carries no label and appears in none of these: a draw torn down because the upload died. During a content-service outage the three series therefore do not sum to the number of fetches that re-drew. Sustained recovered/short means raise MYSQL_CONTENT_SAMPLE_PERCENT, not the floor — each re-draw is an extra table scan. Sustained failed is a different problem: look at the query timeout and the source database.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5735,7 +5733,7 @@
           "description": "The percent the streamed draw actually ran at. It equals MYSQL_CONTENT_SAMPLE_PERCENT whenever the first draw was kept, so drift above the configured value is the signal that the row floor is doing the work instead of the percent.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5773,7 +5771,7 @@
           "description": "Abandoned result sets whose driver connection was thrown away rather than drained. discarded — the connection was closed so the driver skips its post-finish drain; the intended path. unsupported — the Querier exposed no raw connection, so nothing could be closed and the DSN's ReadTimeout is the only bound left on the drain. close_error — the raw-connection callback or the Close itself failed, so the drain very likely still happened. Anything other than discarded is worth alerting on: the byte budget stops bounding what crosses the wire, and the symptom is pool exhaustion rather than an error anyone would connect back to sampling.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5801,7 +5799,7 @@
           "description": "producer panics — a streaming producer panicked and was recovered; the requester is told INTERNAL/retryable and the message is redelivered, so nothing in the request's own outcome says this connector crashed. byte mismatch — the stored size disagreed with what was sampled and streamed; the handler NAKs without replying, so one count is a transient a redelivery repaired, while a repeating one means the same URN fails verification every attempt and once MaxDeliver is spent the object proven wrong stays under that URN with no reply ever sent.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5834,7 +5832,7 @@
           "description": "Per-pod so one replica leaking connections stands out from the aggregate.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5880,7 +5878,7 @@
           "title": "Process CPU (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5907,7 +5905,7 @@
           "title": "Process Resident Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5934,7 +5932,7 @@
           "title": "Process Virtual Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5962,7 +5960,7 @@
           "description": "cAdvisor series, so it is selected by pod name rather than by job — the Component variable does not filter this panel.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -5990,7 +5988,7 @@
           "description": "cAdvisor series, so it is selected by pod name rather than by job — the Component variable does not filter this panel. This is the number the OOM killer watches, not process RSS.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6018,7 +6016,7 @@
           "description": "A count that climbs and never comes back down across scans is the leak signature — the leaf worker pool and the content streaming producers are the two places goroutines are spawned per unit of work.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6045,7 +6043,7 @@
           "title": "Heap In-Use",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6073,7 +6071,7 @@
           "description": "go_gc_duration_seconds is a SUMMARY, not a histogram — there is no _bucket series, so histogram_quantile against it returns nothing. These are the pre-computed quantiles the Go collector exports; the available ones are 0, 0.25, 0.5, 0.75 and 1, so there is no p99 to plot. The label is matched with =~ because client_golang formats these values as \"0.0\"/\"1.0\" here while older versions emit \"0\"/\"1\" — an exact quantile=\"1\" silently returns nothing.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6106,7 +6104,7 @@
           "description": "Completed GC cycles per second, from the summary's observation count. A rate that climbs alongside flat heap in-use means allocation churn rather than growth.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6134,7 +6132,7 @@
           "description": "Every pooled MySQL connection is a socket, so an open count converging on max is how connection-pool exhaustion presents at the process level.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6166,7 +6164,7 @@
           "title": "OS Threads",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6188,9 +6186,7 @@
           ]
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "🗄️ MySQL ($client_ds)",
+      "title": "🗄️ MySQL",
       "type": "row"
     },
     {
@@ -6229,7 +6225,7 @@
           "description": "Scanner pods only — the trailing anchor on the job matcher keeps the -content pods out.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6278,7 +6274,7 @@
           "title": "Databases Discovered (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6314,7 +6310,7 @@
           "title": "Schemas Discovered (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6350,7 +6346,7 @@
           "title": "Items Sent (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6387,7 +6383,7 @@
           "description": "The scanner fan-out only: connect, list databases, publish the per-database work items. Not an end-to-end scan duration — the per-schema and per-table work runs in other handler invocations, on other pods, and is not timed today. Buckets are ExponentialBuckets(0.05, 2, 12) — 50ms to ~102s.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6423,7 +6419,7 @@
           "title": "Error Rate (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6476,7 +6472,7 @@
           "title": "Throughput & Errors (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -6533,7 +6529,7 @@
           "title": "Fan-out Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -6570,7 +6566,7 @@
           "title": "Pods Up",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6619,7 +6615,7 @@
           "title": "Fetches (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6656,7 +6652,7 @@
           "description": "Success path only. ContentFetchDuration is labelled by success, and failures time out on a completely different scale, so folding them in would distort the percentile.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6692,7 +6688,7 @@
           "title": "Errors (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6745,7 +6741,7 @@
           "title": "Document Size p95 (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6781,7 +6777,7 @@
           "title": "Cache Write Throughput (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -6817,7 +6813,7 @@
           "title": "Content Requests by Outcome (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -6845,7 +6841,7 @@
           "description": "Success path only, for the same reason as the Fetch p95 stat.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -6902,7 +6898,7 @@
           "description": "The two fan-out stages: pg_database enumeration on the ScanStart handler, then pg_namespace enumeration on each DatabaseFork. Schemas rising with databases flat is normal mid-scan — the forks are being worked through.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6935,7 +6931,7 @@
           "description": "Tables successfully scanned and columns retrieved from pg_catalog. Columns are added per table in the bulk path and per column list in the fallback path, so the ratio between the two lines tracks average table width.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -6968,7 +6964,7 @@
           "description": "Items accepted by ItemBatchSender.UpsertItem, against batches actually published to NATS. UpsertItem only appends to the current batch, so items/s counts items queued; batches/s is incremented after a successful publish. A sustained items/s with batches/s flat is a failing Flush() — items counted but never published. connector_batches_sent_total comes from pipeline-lib-go and is not connector-prefixed, so it is scoped by job here; every connector writes to the same series.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7001,7 +6997,7 @@
           "description": "The ScanStart discovery + fan-out phase only: connect, list databases, publish the DatabaseFork work items. It is not an end-to-end scan duration — the per-schema and per-table work runs in separate handler invocations, on other pods, and is not timed anywhere today.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7044,7 +7040,7 @@
           "description": "Four different failure shapes, deliberately kept apart. database_errors_total: seven increment sites that do not all mean the same thing. Three abort the run outright (maintenance-pool connect, connection verify, list-databases); one takes down a single database's branch (list-schemas); three more fire on per-database pool acquisition, and of those, one falls back to table mode and keeps scanning rather than returning. So a non-zero line here is not proof the scan stopped — read it against Items Sent before treating it as fatal. table_errors_total: a table query failed, or a bulk schema query took a whole schema down. columns_failed_total: individual columns were dropped while the scan otherwise succeeded (per-column anypb/URN/upsert failures) — a non-zero line here with a flat items/s is silent data loss. permissions_failed_total: a table's grants could not be read, so its items shipped with empty permissions — the data is published but degraded, which is why it is not folded into the Error Rate stat.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7087,7 +7083,7 @@
           "description": "Occupancy of the per-pod table worker pool, against its configured size. The pool is per-pod (POSTGRESQL_POOL_WORKERS, 10 in the Helm values), so the series is broken out by pod rather than summed — a sum across pods would sit above the limit line and mean nothing. A pod pegged at the line is the back-pressure signal: tables are waiting on workers, not on PostgreSQL. Only table mode fills the pool; bulk mode walks a schema's tables sequentially and tops out at 1. The limit line is hard-coded from the Helm default and does not follow an override.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7121,7 +7117,7 @@
           "description": "Scan-path SQL latency distribution across the selected query types, on a 50ms-to-~102s ladder.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 9,
@@ -7156,7 +7152,7 @@
           "description": "query_type values are the eight labelled call sites: list_databases and list_schemas (enumeration), count_schema_columns (auto mode's scan-mode decision, once per schema), tables_in_schema, bulk_tables and bulk_columns (the batched crawl path), list_columns (the per-table fallback), and table_permissions — which runs once per table and is normally the dominant query in a scan. A rising list_columns share means the bulk path is falling back more often. This panel also doubles as the scan-mode signal: bulk_tables/bulk_columns traffic means auto chose bulk for that schema, tables_in_schema/list_columns means it chose table mode.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 9,
@@ -7184,7 +7180,7 @@
           "description": "Observations per second per call site, from the histogram's _count series. This is how many queries the connector is issuing, as opposed to how long they take. Expect table_permissions to dominate — it is one query per table — and expect the bulk_* pair to trade off against tables_in_schema/list_columns as auto mode picks a path per schema.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 9,
@@ -7212,7 +7208,7 @@
           "description": "success is a string label, \"true\" or \"false\"; error_code is \"NONE\" on success. Grouping by both keeps the successful and failed paths on the same axis.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7240,7 +7236,7 @@
           "description": "Split by success because a failure's latency measures how fast the handler gave up, not how fast it did the work. A p95 that improves while the error rate climbs is the failure path getting faster, not the fetch path.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7278,7 +7274,7 @@
           "description": "The distinction that matters here is transport versus reply. NAK_UNMARSHAL, NAK_PROCESSING, NAK_MARSHAL_COMPLETED and NAK_PUBLISH_COMPLETED mean the message was NAKed and will be redelivered with no reply sent — a requester waiting on that reply sees a timeout, not an error. The FETCH_ERROR_* codes were answered. Raised by the handler before the query: INVALID_URN, CREDENTIAL_FAILURE, TOO_LARGE and CACHE_WRITE_FAILED. Classified from the driver error: TIMEOUT and READ_ERROR (retryable), CONNECTION_FAILED (SQLSTATE class 08, retryable), NOT_FOUND (42P01/42703), PERMISSION_DENIED (42501), and INTERNAL as the catch-all. PERMISSION_DENIED is the one to watch — it means the content role lost a grant the scanner still has, so items keep shipping while their content never resolves. UNSPECIFIED should never appear; if it does, a nil error reached the classifier.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7307,7 +7303,7 @@
           "description": "Per-pod content fetch rate. A single pod carrying the whole load while others sit idle points at the consumer's work distribution rather than at the connector.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7335,7 +7331,7 @@
           "description": "Successful fetches as a fraction of all fetches over 5 minutes. With no traffic both sides of the division are zero, so the panel draws a gap rather than a value — it never renders 1 out of thin air. A flat 1 is the opposite reading: every fetch in the window succeeded. Pair it with Fetches per Pod to tell \"no failures\" apart from \"no work\".",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7365,7 +7361,7 @@
           "description": "Bytes per content document produced, including what is written to the raw-content-cache. Ladder runs 1KiB to 256MiB (ExponentialBuckets(1024, 4, 10)), so a percentile sitting on the top boundary means the tail is in +Inf and its real size is unknown.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7408,7 +7404,7 @@
           "description": "Rows serialised into each sampled document, on a 10-to-~20k ladder. Read it against Document Size: rows flat while bytes climb means wider rows, not more of them.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7451,7 +7447,7 @@
           "description": "Bytes per second this connector pushes into the raw-content-cache, from the cumulative counter. Only the success path adds to it, so it should track the success line on Content Requests by Outcome.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7497,7 +7493,7 @@
           "title": "Process CPU (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7524,7 +7520,7 @@
           "title": "Process Resident Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7551,7 +7547,7 @@
           "title": "Process Virtual Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7579,7 +7575,7 @@
           "description": "cAdvisor series carry no job label, so this is selected by pod name rather than by job — which means it covers both components and deliberately ignores the Component and Pod pickers. That is the point: it keeps reporting pods that have already churned out of the scrape target list, so container history survives a scale-to-zero. Content pods are identifiable by the -content segment in the series name.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7607,7 +7603,7 @@
           "description": "cAdvisor series carry no job label, so this is selected by pod name rather than by job — which means it covers both components and deliberately ignores the Component and Pod pickers. That is the point: it keeps reporting pods that have already churned out of the scrape target list, so container history survives a scale-to-zero. Content pods are identifiable by the -content segment in the series name. This is the number the OOM killer watches, not process RSS.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7635,7 +7631,7 @@
           "description": "A count that climbs and never comes back down across scans is the leak signature — the schema/table fan-out workers and the content fetch handlers are where goroutines are spawned per unit of work.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7662,7 +7658,7 @@
           "title": "Heap In-Use",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7690,7 +7686,7 @@
           "description": "go_gc_duration_seconds is a SUMMARY, not a histogram — there is no _bucket series, so histogram_quantile against it returns nothing. These are the pre-computed quantiles the Go collector exports; the available ones are 0, 0.25, 0.5, 0.75 and 1, so there is no p99 to plot. The label is matched with =~ because client_golang formats these values as \"0.0\"/\"1.0\" here while older versions emit \"0\"/\"1\" — an exact quantile=\"1\" silently returns nothing.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7723,7 +7719,7 @@
           "description": "Completed GC cycles per second, from the summary's observation count. A rate that climbs alongside flat heap in-use means allocation churn rather than growth.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7751,7 +7747,7 @@
           "description": "Every pooled PostgreSQL connection is a socket, so an open count converging on max is how connection-pool exhaustion presents at the process level. The connector exports no pool gauges of its own, which makes this the closest available proxy.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7783,7 +7779,7 @@
           "title": "OS Threads",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -7805,9 +7801,7 @@
           ]
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "🐘 PostgreSQL ($client_ds)",
+      "title": "🐘 PostgreSQL",
       "type": "row"
     },
     {
@@ -7845,7 +7839,7 @@
           "title": "Pods Up",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -7893,7 +7887,7 @@
           "title": "Items Sent (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -7929,7 +7923,7 @@
           "title": "Scan p95 (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -7965,7 +7959,7 @@
           "title": "Error Rate (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -8019,7 +8013,7 @@
           "description": "Number of ScanStart handler invocations currently executing the prescan + fanout phase. Per-database / per-schema worker activity that runs after fanout is not counted here.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -8054,7 +8048,7 @@
           "title": "Connections (Open)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -8089,7 +8083,7 @@
           "title": "Throughput & Errors (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -8136,7 +8130,7 @@
           "title": "Scan Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -8173,7 +8167,7 @@
           "title": "Pods Up",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -8221,7 +8215,7 @@
           "title": "Connections (Open)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -8256,7 +8250,7 @@
           "title": "Fetches (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -8292,7 +8286,7 @@
           "title": "Fetch p95 (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -8329,7 +8323,7 @@
           "description": "Number of content requests that errored in the last 5 minutes. Counter increase on snowflake_content_requests_total{outcome=\"error\"}.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -8383,7 +8377,7 @@
           "description": "Number of content fetch requests currently being processed.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -8418,7 +8412,7 @@
           "title": "Content Requests by Outcome (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -8445,7 +8439,7 @@
           "title": "Content Fetch Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -8482,7 +8476,7 @@
           "title": "Errors by Code (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -8509,7 +8503,7 @@
           "title": "Errors by Operation (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -8555,7 +8549,7 @@
           "title": "Tables Scanned by Mode (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8582,7 +8576,7 @@
           "title": "Columns Found by Mode (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8609,7 +8603,7 @@
           "title": "Items Sent (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8636,7 +8630,7 @@
           "title": "Scanner Errors (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8668,7 +8662,7 @@
           "title": "Scanner — In Flight",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8705,7 +8699,7 @@
           "title": "Query Duration Heatmap",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 9,
@@ -8739,7 +8733,7 @@
           "title": "Query p95 by query_type",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 9,
@@ -8766,7 +8760,7 @@
           "title": "Scanner Connections by Type",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 9,
@@ -8803,7 +8797,7 @@
           "title": "Content — In Flight",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8830,7 +8824,7 @@
           "title": "Content Connections by Type",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8867,7 +8861,7 @@
           "title": "Content Requests by outcome (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8894,7 +8888,7 @@
           "title": "Content Fetch Duration — p50 / p95 / p99 by outcome",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8932,7 +8926,7 @@
           "description": "Wall-clock duration of the streaming pipeline (Snowflake row pull + UploadFrom). The two legs run concurrently through an io.Pipe, so this reflects the slower of the two at any moment. Replaces the old separate Query Duration and Upload Duration metrics, which can't be measured independently in the streaming architecture.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -8970,7 +8964,7 @@
           "description": "Bytes streamed per successful content fetch (Info.Size echoed back by the content transfer service). Useful for sizing impact of large-payload streaming and spotting outliers.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9008,7 +9002,7 @@
           "description": "Total rows streamed per second across successful content fetches.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9036,7 +9030,7 @@
           "description": "Average rows streamed per successful content fetch (sum / count over a 5-minute window).",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9063,7 +9057,7 @@
           "title": "Content Connections (Open) by Pod",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9091,7 +9085,7 @@
           "description": "Count of times the verify-at-100% branch fired during content sampling. outcome=\"recovered\" means phase-1 SAMPLE SYSTEM returned zero rows on a non-empty table and the re-run rescued data — sustained > 0 means SamplePercent is too low for the row distribution. outcome=\"empty\" means the re-run also returned nothing — table is genuinely empty, no action needed. Replaces the old sample_fallback_total metric.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9118,7 +9112,7 @@
           "title": "Errors by Code and Operation (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -9145,7 +9139,7 @@
           "title": "Connection Test Outcomes (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -9172,7 +9166,7 @@
           "title": "Connection Test Objects Skipped (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -9199,7 +9193,7 @@
           "title": "Connection Test Duration by Depth (p95)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -9245,7 +9239,7 @@
           "title": "Process CPU (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9272,7 +9266,7 @@
           "title": "Process Resident Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9299,7 +9293,7 @@
           "title": "Process Virtual Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9326,7 +9320,7 @@
           "title": "Container CPU Usage",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9353,7 +9347,7 @@
           "title": "Container Memory (working set)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9380,7 +9374,7 @@
           "title": "Goroutines",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9407,7 +9401,7 @@
           "title": "Heap In-Use",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9434,7 +9428,7 @@
           "title": "GC Pause p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9461,7 +9455,7 @@
           "title": "Open vs Max FDs",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9493,7 +9487,7 @@
           "title": "OS Threads",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -9520,7 +9514,7 @@
           "title": "Probe Duration by Depth",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -9557,7 +9551,7 @@
           "title": "Connection Tests In Flight",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -9579,9 +9573,7 @@
           ]
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "❄️ Snowflake ($client_ds)",
+      "title": "❄️ Snowflake",
       "type": "row"
     },
     {
@@ -9619,7 +9611,7 @@
           "title": "Files Discovered (total)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -9656,7 +9648,7 @@
           "title": "Items Sent (total)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -9693,7 +9685,7 @@
           "title": "Item Loss (total)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -9743,7 +9735,7 @@
           "title": "Users Enumerated (total)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -9780,7 +9772,7 @@
           "title": "Folders Forked (total)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -9817,7 +9809,7 @@
           "title": "Content Fetches (total)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -9854,7 +9846,7 @@
           "title": "Users Enumerated",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -9891,7 +9883,7 @@
           "title": "Users Forked",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -9928,7 +9920,7 @@
           "title": "Users Skipped",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -9978,7 +9970,7 @@
           "title": "Skip Rate",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -10015,7 +10007,7 @@
           "title": "Users Skipped by Reason (total in window)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -10145,7 +10137,7 @@
           "title": "User Fan-out over time (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -10178,7 +10170,7 @@
           "title": "Pods Up",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -10228,7 +10220,7 @@
           "title": "Restarts (1h)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -10277,7 +10269,7 @@
           "title": "Files Discovered (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -10313,7 +10305,7 @@
           "title": "Items Sent (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -10349,7 +10341,7 @@
           "title": "Items Failed (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -10399,7 +10391,7 @@
           "title": "Folder p95",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -10436,7 +10428,7 @@
           "title": "Folder Work In-Flight",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -10473,7 +10465,7 @@
           "title": "User Slots Held",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -10510,7 +10502,7 @@
           "title": "Scanner Throughput (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -10823,7 +10815,7 @@
           "title": "Scanner Items by Outcome (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -11133,7 +11125,7 @@
           "title": "Folder Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -11171,7 +11163,7 @@
           "title": "Folders by Outcome (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -11481,7 +11473,7 @@
           "title": "Saturation — in-flight, slots, contention",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -11556,7 +11548,7 @@
           "title": "Scan Durations — three different units",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -11594,7 +11586,7 @@
           "title": "NATS — Scanner Backlog",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -11630,7 +11622,7 @@
           "title": "NATS — In Flight (unacked)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -11666,7 +11658,7 @@
           "title": "NATS — Redelivered",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -11716,7 +11708,7 @@
           "title": "Replicas",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -11752,7 +11744,7 @@
           "title": "Max Replicas",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -11789,7 +11781,7 @@
           "title": "NATS — Backlog Slope (2m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -11826,7 +11818,7 @@
           "title": "NATS — Scanner Consumer Backlog",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -11914,7 +11906,7 @@
           "title": "KEDA — Replicas: current vs desired vs max",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -11952,7 +11944,7 @@
           "title": "KEDA — ack-capacity signal vs threshold",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -11998,7 +11990,7 @@
           "title": "KEDA — trend-based signal vs threshold",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -12044,7 +12036,7 @@
           "title": "KEDA — pending-wakeup signal vs threshold",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -12090,7 +12082,7 @@
           "title": "API Calls (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -12127,7 +12119,7 @@
           "title": "Limiter Wait p95",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -12164,7 +12156,7 @@
           "title": "429s (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -12214,7 +12206,7 @@
           "title": "Slot Deferrals (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "x": 18,
@@ -12251,7 +12243,7 @@
           "title": "API Calls by Endpoint (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -12381,7 +12373,7 @@
           "title": "API Calls by Status (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -12419,7 +12411,7 @@
           "title": "Saturation — leading vs lagging",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -12479,7 +12471,7 @@
           "title": "API Call Duration p95 by Endpoint",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -12602,7 +12594,7 @@
           "title": "Rate Limiter Wait — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -12640,7 +12632,7 @@
           "title": "Augmenter Items by Outcome (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -12950,7 +12942,7 @@
           "title": "last_access Coverage",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -12984,7 +12976,7 @@
           "title": "Augment Batch Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -13022,7 +13014,7 @@
           "title": "Pods Up",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -13071,7 +13063,7 @@
           "title": "Restarts (1h)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -13120,7 +13112,7 @@
           "title": "Fetches (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -13156,7 +13148,7 @@
           "title": "Fetch p95 (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -13192,7 +13184,7 @@
           "title": "Errors (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -13241,7 +13233,7 @@
           "title": "Upload Throughput",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -13553,7 +13545,7 @@
           "title": "Requests In-Flight",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -13589,7 +13581,7 @@
           "title": "NATS — Fetch Backlog",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -13626,7 +13618,7 @@
           "title": "Content Fetches by error_code (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -13816,7 +13808,7 @@
           "title": "Transfer p95 by size_bucket",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -13844,7 +13836,7 @@
           "title": "Uploaded Bytes (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -13871,7 +13863,7 @@
           "title": "NATS — Content Consumer Backlog",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -13959,7 +13951,7 @@
           "title": "KEDA — Content Replicas: current vs desired vs max",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -13996,7 +13988,7 @@
           "title": "KEDA — Content Trigger Signals",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -14034,7 +14026,7 @@
           "title": "KEDA — interactive-wakeup signal vs threshold",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -14080,7 +14072,7 @@
           "title": "Gone — seen in trash by the scan",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -14117,7 +14109,7 @@
           "title": "Gone — deleted per the event stream",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -14154,7 +14146,7 @@
           "title": "Gone — 404 on augment re-fetch",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -14191,7 +14183,7 @@
           "title": "Files Gone by stage (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -14229,7 +14221,7 @@
           "title": "Files Gone % (augment)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -14266,7 +14258,7 @@
           "title": "Slot Requeues (5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "x": 21,
@@ -14303,7 +14295,7 @@
           "id": 438,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "x": 0,
@@ -14317,7 +14309,7 @@
               "refId": "A",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "max(nats_stream_total_messages{stream_name=\"DLQ_CONSUME_BOX\"})"
             }
@@ -14363,7 +14355,7 @@
           "id": 439,
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "x": 6,
@@ -14377,7 +14369,7 @@
               "refId": "A",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "legendFormat": "{{stream_name}}",
               "expr": "max by (stream_name) (nats_stream_total_messages{stream_name=\"DLQ_CONSUME_BOX\"})"
@@ -14449,7 +14441,7 @@
           "title": "Scanner Items by Outcome (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -14764,7 +14756,7 @@
           "title": "Folders by Outcome (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -15074,7 +15066,7 @@
           "title": "Discovery → Sent Conversion",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -15103,7 +15095,7 @@
           "title": "Item Loss (discovered − sent)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -15131,7 +15123,7 @@
           "title": "Users Skipped by Reason (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -15261,7 +15253,7 @@
           "title": "Folder Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -15299,7 +15291,7 @@
           "title": "Mean Cost per Folder",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -15328,7 +15320,7 @@
           "title": "Scan Durations — three different units",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -15366,7 +15358,7 @@
           "title": "Incremental Changes by Outcome (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -15676,7 +15668,7 @@
           "title": "Incremental Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -15714,7 +15706,7 @@
           "title": "Incremental Bailouts (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -15742,7 +15734,7 @@
           "title": "Folder Work In-Flight & User Slots Held",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -15775,7 +15767,7 @@
           "title": "Slot Contention by Datasource (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -15840,7 +15832,7 @@
           "title": "Augmenter Items by Outcome (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -16150,7 +16142,7 @@
           "title": "last_access Result (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -16460,7 +16452,7 @@
           "title": "Events Loaded into the Store (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -16488,7 +16480,7 @@
           "title": "Augment Batch Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -16526,7 +16518,7 @@
           "title": "Skipped Not-Found (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -16554,7 +16546,7 @@
           "title": "Content Fetches by error_code (rate, 5m)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -16744,7 +16736,7 @@
           "title": "Transfer p95 by size_bucket — success",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -16772,7 +16764,7 @@
           "title": "Transfer p95 by size_bucket — failure",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -16800,7 +16792,7 @@
           "title": "Content Fetch Duration — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -16838,7 +16830,7 @@
           "title": "Content Fetch Bytes — p50 / p95 / p99",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -16876,7 +16868,7 @@
           "title": "Uploaded Bytes (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -16904,7 +16896,7 @@
           "title": "Content Fetch p95 by access_id",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -16933,7 +16925,7 @@
           "description": "Triage table: non-NONE error codes over the last hour. NAK_* are infra-level failures on the NATS path, not Box refusing us.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -17125,7 +17117,7 @@
           "title": "Content Requests In-Flight",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -17153,7 +17145,7 @@
           "title": "Average Bytes per Fetch",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -17200,7 +17192,7 @@
           "title": "Process CPU (rate)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -17227,7 +17219,7 @@
           "title": "Process Resident Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -17254,7 +17246,7 @@
           "title": "Process Virtual Memory",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -17282,7 +17274,7 @@
           "description": "Container series carry no job label, so these two select on the pod name instead of ${box_component}. The pattern covers both deployments — box-connector-be-go and box-connector-be-go-content.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -17309,7 +17301,7 @@
           "title": "Container Memory (working set)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -17336,7 +17328,7 @@
           "title": "Goroutines",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -17363,7 +17355,7 @@
           "title": "Heap In-Use",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -17391,7 +17383,7 @@
           "description": "go_gc_duration_seconds is a SUMMARY, not a histogram: there is no _bucket series and histogram_quantile over it returns nothing. Available quantiles are 0, 0.25, 0.5, 0.75 and 1 — there is no 0.99.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -17423,7 +17415,7 @@
           "title": "Open vs Max FDs",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -17455,7 +17447,7 @@
           "title": "OS Threads",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 7,
@@ -17477,9 +17469,7 @@
           ]
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "📦 Box ($client_ds)",
+      "title": "📦 Box",
       "type": "row"
     },
     {
@@ -17498,14 +17488,14 @@
           "description": "Non-zero here means Microsoft Graph is throttling our app registration. This is the metric the whole NXE-2480 hypothesis turns on.\n\nNOTE: if the connector cannot read the HTTP status it falls through to CONNECTION_FAILED instead, so check the breakdown panel too rather than reading a zero here as proof.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "targets": [
             {
               "refId": "A",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(sharepoint_content_fetch_error_total{namespace=~\"default\", pod=~\".*\", code=\"FETCH_ERROR_RATE_LIMITED\"}[5m]))",
               "legendFormat": "",
@@ -17564,14 +17554,14 @@
           "description": "FetchErrorCode as classified by classifyGraphError (internal/fetch/handler.go:339).\n\nRETRYABLE (these are the dangerous ones — content-service will retry each 15x): RATE_LIMITED, CONNECTION_FAILED, TIMEOUT, READ_ERROR, CACHE_WRITE_FAILED\nNON-RETRYABLE (cheap, fail once): NOT_FOUND, PERMISSION_DENIED, INVALID_URN, TOO_LARGE, INTERNAL(4xx)",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "targets": [
             {
               "refId": "A",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (code) (rate(sharepoint_content_fetch_error_total{namespace=~\"default\", pod=~\".*\"}[5m]))",
               "legendFormat": "{{code}}",
@@ -17634,14 +17624,14 @@
           "description": "errors / (errors + successes). A few percent is normal — deleted files and permission denials. What matters is whether those failures are RETRYABLE, which the panel to the left answers.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "targets": [
             {
               "refId": "A",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(sharepoint_content_fetch_error_total{namespace=~\"default\", pod=~\".*\"}[5m])) / (sum(rate(sharepoint_content_fetch_error_total{namespace=~\"default\", pod=~\".*\"}[5m])) + sum(rate(sharepoint_content_fetch_success_total{namespace=~\"default\", pod=~\".*\"}[5m])))",
               "legendFormat": "",
@@ -17704,14 +17694,14 @@
           "description": "Success, error, timeout and too-large rates side by side. TIMEOUT and TOO_LARGE have their own counters and do NOT appear in sharepoint_content_fetch_error_total.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "targets": [
             {
               "refId": "A",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(sharepoint_content_fetch_success_total{namespace=~\"default\", pod=~\".*\"}[5m]))",
               "legendFormat": "success",
@@ -17722,7 +17712,7 @@
               "refId": "B",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(sharepoint_content_fetch_error_total{namespace=~\"default\", pod=~\".*\"}[5m]))",
               "legendFormat": "error",
@@ -17733,7 +17723,7 @@
               "refId": "C",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(sharepoint_content_fetch_timeout_total{namespace=~\"default\", pod=~\".*\"}[5m]))",
               "legendFormat": "timeout",
@@ -17744,7 +17734,7 @@
               "refId": "D",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(sharepoint_content_fetch_too_large_total{namespace=~\"default\", pod=~\".*\"}[5m]))",
               "legendFormat": "too large",
@@ -17807,14 +17797,14 @@
           "description": "End-to-end duration of one ContentFetchRequest inside the connector. Compare against content-service's content_nats_worker_duration_seconds — they measure nearly the same span from opposite ends, and a divergence means time is being spent in the NATS hop.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "targets": [
             {
               "refId": "A",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.50, sum by (le) (rate(sharepoint_content_fetch_duration_seconds_bucket{namespace=~\"default\", pod=~\".*\"}[5m])))",
               "legendFormat": "p50",
@@ -17825,7 +17815,7 @@
               "refId": "B",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le) (rate(sharepoint_content_fetch_duration_seconds_bucket{namespace=~\"default\", pod=~\".*\"}[5m])))",
               "legendFormat": "p95",
@@ -17836,7 +17826,7 @@
               "refId": "C",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.99, sum by (le) (rate(sharepoint_content_fetch_duration_seconds_bucket{namespace=~\"default\", pod=~\".*\"}[5m])))",
               "legendFormat": "p99",
@@ -17899,14 +17889,14 @@
           "description": "Requests leaving the connector toward graph.microsoft.com.\n\nDuring a retry storm this should show the amplification directly: content-service retries each failed document up to 15 times, and every one of those attempts becomes a fresh Graph call.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "targets": [
             {
               "refId": "A",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(graph_requests_total{job=\".*\"}[5m]))",
               "legendFormat": "requests/s",
@@ -17969,14 +17959,14 @@
           "description": "Server errors only. THROTTLING IS 429 AND IS NOT COUNTED HERE. Do not read a flat line as 'Graph was healthy' — see the reference panel at the bottom of this dashboard.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "targets": [
             {
               "refId": "A",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum(rate(graph_requests_5xx{job=\".*\"}[5m]))",
               "legendFormat": "5xx/s",
@@ -18052,14 +18042,14 @@
           "description": "Measured by the connector's TelemetryMiddleware around the whole round trip, including the 302 redirect to the CDN host.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "targets": [
             {
               "refId": "A",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "histogram_quantile(0.95, sum by (le) (rate(graph_request_duration_seconds_bucket{job=\".*\"}[5m])))",
               "legendFormat": "p95",
@@ -18123,7 +18113,7 @@
           "description": "assignSensitivityLabel is the only metered call in Microsoft Graph, at $0.00185 USD each. This is billed calls over the selected time range × that unit price — the real invoice line, not an estimate from outcome arithmetic.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -18182,7 +18172,7 @@
           "description": "Writes actually issued to Graph. Every other outcome is free. A run whose billed count is close to its item count means almost nothing was already correct — check the mapping before repeating it.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -18232,7 +18222,7 @@
           "description": "Label written and the Graph operation reached a terminal success state. This is the only outcome that changed a document.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -18282,7 +18272,7 @@
           "description": "The file already carried the target label, so no Graph call was made and nothing was billed. On a re-run of an unchanged corpus this should dominate; if it is near zero on a second pass, the apply is not sticking.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -18332,7 +18322,7 @@
           "description": "Outcomes that will never succeed on retry: label_missing (an admin deleted it — the MAPPING is stale), unsupported_label, not_appliable (the target is a label group), file_locked (423 on a file SharePoint cannot decrypt), and failed. Non-zero means someone has to change something; re-running only costs money.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -18390,7 +18380,7 @@
           "description": "Graph accepted the write but the operation had not reached a terminal state before the poll window closed. NOT a failure — the apply may still land, and it was already billed. Re-issuing would double-bill and may double-apply, so treat a rising count as a reason to widen LABELSYNC_POLL_WINDOW, never as a reason to retry.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 4,
@@ -18448,7 +18438,7 @@
           "description": "Every document the label-sync handler resolved, by outcome. Stacked, so the total height is throughput. The split between the free outcomes (skipped_already_correct, the pre-flight rejections) and the billed one (applied) is the cost story.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -18505,7 +18495,7 @@
           "description": "Left axis is calls/sec; the second series projects the current rate to USD/hour at $0.00185 per call. Use it to sanity-check a large run before it finishes rather than after the invoice.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -18563,7 +18553,7 @@
           "description": "None of these get better by retrying. label_missing and unsupported_label point at the mapping; not_appliable means the mapped target is a label GROUP rather than a label; file_locked is about the document itself (double-key encrypted, or protected in a way SharePoint cannot decrypt).",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -18616,7 +18606,7 @@
           "description": "deferred_retry_later is 423 fileDecryptionDeferred: the service is saying it can do this, just not now. deferred_label_pending means the mapped label was not in the tenant at write time but the registry saw it live recently, so this is propagation rather than deletion. rejected_label_disabled may reverse when an admin turns the label back on.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -18669,7 +18659,7 @@
           "description": "pending_unterminated against the billed-call rate. The gap is money spent on writes whose outcome we never observed. A persistent gap means the poll window is too short for this tenant, not that the writes failed.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 8,
@@ -18726,7 +18716,7 @@
           "title": "How to read this row",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "gridPos": {
             "h": 9,
@@ -18745,14 +18735,14 @@
           "description": "SHAPE MATTERS MORE THAN VALUE.\n\nsawtooth returning to 0 between scans -> healthy\nmonotonic ratchet never returning to 0 -> the Redis in-flight counter is leaking, and the connector will start blocking on every fetch once all clients exceed maxInflight\n\nSee the panel to the right for the two-minute test that settles it.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "targets": [
             {
               "refId": "A",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "max by (client_id) (graph_client_inflight{job=\".*\"})",
               "legendFormat": "{{client_id}}",
@@ -18814,7 +18804,7 @@
           "title": "How to test the leak",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "options": {
             "mode": "markdown",
@@ -18834,14 +18824,14 @@
           "description": "The SharePoint content connector runs at replicaCount: 1. A restart mid-scan drops every in-flight fetch, and — because the in-flight counters live in Redis rather than in the pod — leaks them.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "targets": [
             {
               "refId": "A",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{pod=~\".*sharepoint.*\"}[10m]))",
               "legendFormat": "{{pod}}",
@@ -18904,14 +18894,14 @@
           "description": "Time the container spent throttled against its CFS quota. A single replica serving the whole bulk content path will show up here before it shows up anywhere else.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "targets": [
             {
               "refId": "A",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (pod) (rate(container_cpu_cfs_throttled_seconds_total{pod=~\".*sharepoint.*\"}[5m]))",
               "legendFormat": "{{pod}}",
@@ -18974,14 +18964,14 @@
           "description": "Downloads are streamed, so this should stay flat regardless of file size. A climb that tracks scan volume means something is buffering whole files.",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "targets": [
             {
               "refId": "A",
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "expr": "sum by (pod) (container_memory_working_set_bytes{pod=~\".*sharepoint.*\"})",
               "legendFormat": "{{pod}}",
@@ -19043,7 +19033,7 @@
           "title": "What this dashboard can and cannot tell you",
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "options": {
             "mode": "markdown",
@@ -19058,9 +19048,7 @@
           "id": 506
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "📄 SharePoint ($client_ds)",
+      "title": "📄 SharePoint",
       "type": "row"
     },
     {
@@ -19076,7 +19064,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Documents extracted per second across all MIME types.",
           "fieldConfig": {
@@ -19126,7 +19114,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum(rate(xberg_extraction_total{namespace=\"default\", job=\".*\"}[5m]))",
@@ -19141,7 +19129,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Fraction of extractions ending in error.",
           "fieldConfig": {
@@ -19200,7 +19188,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum(rate(xberg_extraction_total{status=\"error\", namespace=\"default\", job=\".*\"}[5m])) / sum(rate(xberg_extraction_total{namespace=\"default\", job=\".*\"}[5m]))",
@@ -19215,7 +19203,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Currently running extractions (xberg_extraction_concurrent up-down counter).",
           "fieldConfig": {
@@ -19273,7 +19261,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum(xberg_extraction_concurrent{namespace=\"default\", job=\".*\"})",
@@ -19288,7 +19276,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Extraction cache hits / (hits + misses). No data means the cache is disabled or idle.",
           "fieldConfig": {
@@ -19347,7 +19335,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum(rate(xberg_extraction_cache_hits{namespace=\"default\", job=\".*\"}[5m])) / (sum(rate(xberg_extraction_cache_hits{namespace=\"default\", job=\".*\"}[5m])) + sum(rate(xberg_extraction_cache_misses{namespace=\"default\", job=\".*\"}[5m])))",
@@ -19362,7 +19350,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Extraction throughput split by ok/error status.",
           "fieldConfig": {
@@ -19442,7 +19430,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum by (status) (rate(xberg_extraction_total{namespace=\"default\", job=\".*\"}[5m]))",
@@ -19457,7 +19445,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Wall-clock extraction duration. Xberg records this histogram in milliseconds.",
           "fieldConfig": {
@@ -19537,7 +19525,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "histogram_quantile(0.50, sum by (le) (rate(xberg_extraction_duration_ms_bucket{namespace=\"default\", job=\".*\"}[5m])))",
@@ -19548,7 +19536,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "histogram_quantile(0.95, sum by (le) (rate(xberg_extraction_duration_ms_bucket{namespace=\"default\", job=\".*\"}[5m])))",
@@ -19559,7 +19547,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "histogram_quantile(0.99, sum by (le) (rate(xberg_extraction_duration_ms_bucket{namespace=\"default\", job=\".*\"}[5m])))",
@@ -19574,7 +19562,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Xberg attaches the detected MIME type as the xberg.document.mime_type attribute; it lands in Prometheus as the xberg_document_mime_type label.",
           "fieldConfig": {
@@ -19654,7 +19642,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum by (xberg_document_mime_type) (rate(xberg_extraction_total{namespace=\"default\", job=\".*\"}[5m]))",
@@ -19669,7 +19657,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Which document formats are failing extraction.",
           "fieldConfig": {
@@ -19749,7 +19737,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum by (xberg_document_mime_type) (rate(xberg_extraction_total{status=\"error\", namespace=\"default\", job=\".*\"}[5m]))",
@@ -19764,7 +19752,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Slowest formats first — OCR-heavy formats (scanned PDFs, images) dominate here.",
           "fieldConfig": {
@@ -19844,7 +19832,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "histogram_quantile(0.95, sum by (le, xberg_document_mime_type) (rate(xberg_extraction_duration_ms_bucket{namespace=\"default\", job=\".*\"}[5m])))",
@@ -19859,7 +19847,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Input document size vs extracted content size.",
           "fieldConfig": {
@@ -19939,7 +19927,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "histogram_quantile(0.95, sum by (le) (rate(xberg_extraction_input_size_bytes_bucket{namespace=\"default\", job=\".*\"}[5m])))",
@@ -19950,7 +19938,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "histogram_quantile(0.95, sum by (le) (rate(xberg_extraction_output_size_bytes_bucket{namespace=\"default\", job=\".*\"}[5m])))",
@@ -19965,7 +19953,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Per-stage p95: extraction, post_processing.early/middle/late, validation, chunking, language_detection, token_reduction.",
           "fieldConfig": {
@@ -20045,7 +20033,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "histogram_quantile(0.95, sum by (le, stage) (rate(xberg_pipeline_duration_ms_bucket{namespace=\"default\", job=\".*\"}[5m])))",
@@ -20060,7 +20048,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "OCR backend latency (e.g. tesseract, paddle). Empty when no OCR-requiring documents are processed.",
           "fieldConfig": {
@@ -20140,7 +20128,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "histogram_quantile(0.95, sum by (le, backend, language) (rate(xberg_ocr_duration_ms_bucket{namespace=\"default\", job=\".*\"}[5m])))",
@@ -20155,7 +20143,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Batch extraction request rate by status, with batch duration p95 overlaid (ms).",
           "fieldConfig": {
@@ -20235,7 +20223,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum by (status) (rate(xberg_batch_total{namespace=\"default\", job=\".*\"}[5m]))",
@@ -20246,7 +20234,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "histogram_quantile(0.95, sum by (le) (rate(xberg_batch_duration_ms_bucket{namespace=\"default\", job=\".*\"}[5m])))",
@@ -20261,7 +20249,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Extraction cache traffic.",
           "fieldConfig": {
@@ -20341,7 +20329,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum(rate(xberg_extraction_cache_hits{namespace=\"default\", job=\".*\"}[5m]))",
@@ -20352,7 +20340,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum(rate(xberg_extraction_cache_misses{namespace=\"default\", job=\".*\"}[5m]))",
@@ -20367,7 +20355,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "CPU cores used per xberg pod.",
           "fieldConfig": {
@@ -20447,7 +20435,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"default\", pod=~\".*\", container!=\"\", container!=\"POD\"}[5m]))",
@@ -20462,7 +20450,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Memory working set per xberg pod.",
           "fieldConfig": {
@@ -20542,7 +20530,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"default\", pod=~\".*\", container!=\"\", container!=\"POD\"})",
@@ -20557,7 +20545,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           },
           "description": "Restarts in the last hour per xberg pod.",
           "fieldConfig": {
@@ -20637,7 +20625,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${client_ds}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\", pod=~\".*\"}[1h]))",
@@ -20650,9 +20638,7 @@
           "type": "timeseries"
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "⚡ Xberg Extraction Engine ($client_ds)",
+      "title": "⚡ Xberg Extraction Engine",
       "type": "row"
     },
     {
@@ -20690,7 +20676,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -20718,7 +20704,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -20746,7 +20732,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -20774,7 +20760,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -20802,7 +20788,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -20830,7 +20816,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -20858,7 +20844,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -20886,7 +20872,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -20914,7 +20900,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -20941,7 +20927,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -20968,7 +20954,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -20995,7 +20981,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -21022,7 +21008,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -21054,7 +21040,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         },
         {
@@ -21091,13 +21077,11 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "${client_ds}"
+            "uid": "${datasource}"
           }
         }
       ],
-      "repeat": "client_ds",
-      "repeatDirection": "v",
-      "title": "🪣 S3 Parquet Inventory ($client_ds)",
+      "title": "🪣 S3 Parquet Inventory",
       "type": "row"
     }
   ],
@@ -21114,32 +21098,16 @@
   "templating": {
     "list": [
       {
-        "name": "client_ds",
-        "label": "Clients",
+        "name": "datasource",
+        "label": "Datasource",
         "type": "datasource",
         "query": "prometheus",
         "hide": 0,
-        "includeAll": true,
-        "multi": true,
+        "includeAll": false,
+        "multi": false,
         "current": {
-          "text": [
-            "Demo",
-            "Demo2",
-            "Integration",
-            "IONIS",
-            "KrispyKreme",
-            "SSB",
-            "UAT"
-          ],
-          "value": [
-            "dfmklaiqtfif4c",
-            "efl7hw5ukkwzkd",
-            "efl6f47f8cj5sb",
-            "efs7yusoeq680e",
-            "efs2d1k3se39ca",
-            "dfs2d5r9cp0qob",
-            "efmkjlznz8ykgb"
-          ]
+          "text": "Prometheus",
+          "value": "prometheus"
         }
       },
       {
