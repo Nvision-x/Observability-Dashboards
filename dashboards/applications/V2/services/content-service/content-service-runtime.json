@@ -1,0 +1,345 @@
+{
+  "uid": "apps-v2-content-service-runtime",
+  "title": "Content Service — Runtime",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "service:content-service",
+    "runtime"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-content-service-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "Overview",
+      "type": "link",
+      "url": "/d/content-service?${namespace:queryparam}",
+      "targetBlank": false,
+      "keepTime": true,
+      "icon": "external link",
+      "tooltip": "Requests, cache, extraction, dedup and the KEDA trigger"
+    },
+    {
+      "title": "Extraction Routing",
+      "type": "link",
+      "url": "/d/content-service-extraction-routing?${namespace:queryparam}",
+      "targetBlank": false,
+      "keepTime": true,
+      "icon": "external link",
+      "tooltip": "Which extractor served each extension, and why a routed one did not run"
+    },
+    {
+      "title": "Tika vs Kreuzberg",
+      "type": "link",
+      "url": "/d/content-service-tika-comparison?${namespace:queryparam}",
+      "targetBlank": false,
+      "keepTime": true,
+      "icon": "external link",
+      "tooltip": "Tika and Kreuzberg side by side on the same documents"
+    },
+    {
+      "title": "Applications V2 — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": { "selected": false, "text": "Prometheus", "value": "prometheus-nx" },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(process_start_time_seconds{job=~\".*content-service.*\"}, namespace)",
+        "current": { "selected": true, "text": "default", "value": "default" },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(process_start_time_seconds{job=~\".*content-service.*\", namespace=\"$namespace\"}, pod)",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "enable": true,
+        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\".*content-service.*\"}[5m]) > 0",
+        "name": "Pod Restarts",
+        "tagKeys": "pod",
+        "titleFormat": "Pod Restart"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Process — CPU & Memory",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Process CPU (rate)",
+      "description": "CPU seconds burned per second, per pod. 1.0 means one core fully occupied. Read this against the container CPU limit on the row below rather than against the node: extraction runs many documents at once per pod (EXTRACTION_MAX_CONCURRENCY in the applications chart), so a pod can want far more CPU than it is allowed and the excess shows up as throttling, not as a higher line here.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [
+        { "refId": "A", "expr": "rate(process_cpu_seconds_total{job=~\".*content-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Process Resident Memory",
+      "description": "RSS as the kernel sees it. This is the number that gets compared with the container memory limit by the OOM killer, and it includes what the Go runtime has not yet returned to the OS — so it sits above heap in-use and falls more slowly.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "process_resident_memory_bytes{job=~\".*content-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Process Virtual Memory",
+      "description": "Address space reserved, not memory used. Go reserves large arenas up front, so this is normally flat, large, and uninteresting — it is here to distinguish a genuine allocation climb (resident rises with it) from an address-space artefact (only this rises).",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "process_virtual_memory_bytes{job=~\".*content-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Container — Usage vs Limits",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Container CPU vs limit",
+      "description": "cgroup CPU usage against the configured limit. The limit is plotted from kube-state-metrics rather than drawn as a fixed threshold, so it follows a helm change on the next rollout instead of going stale — the value itself lives in contentService.resources in the applications chart. Requests and limits are set equal for this service, so there is no burst headroom above the line.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*content-service.*\", container=\"content-service\"}[5m]))", "legendFormat": "used {{pod}}" },
+        { "refId": "B", "expr": "sum by (pod) (kube_pod_container_resource_limits{namespace=\"$namespace\", pod=~\".*content-service.*\", container=\"content-service\", resource=\"cpu\"})", "legendFormat": "limit {{pod}}" }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Container Memory (working set) vs limit",
+      "description": "Working set against the memory limit — the pair the OOM killer acts on. Worth watching closely here, because the two limits are not treated alike: the runtime sizes GOMAXPROCS from the cgroup CPU quota on its own, but nothing does the same for memory — GOMEMLIMIT defaults to unlimited and neither the binary nor the chart sets it, so the GC will grow the heap toward the cgroup ceiling without ever knowing it is there. A whole document is held in memory while it is extracted and compressed, so headroom is consumed by document size times concurrency, not by steady-state load. Requests equal limits for this service, so the limit line is also the guaranteed allocation.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*content-service.*\", container=\"content-service\"})", "legendFormat": "working set {{pod}}" },
+        { "refId": "B", "expr": "sum by (pod) (kube_pod_container_resource_limits{namespace=\"$namespace\", pod=~\".*content-service.*\", container=\"content-service\", resource=\"memory\"})", "legendFormat": "limit {{pod}}" }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "CPU throttling (share of periods)",
+      "description": "Fraction of CFS periods in which the container was throttled. Anything sustained above zero means the pod is being held below the CPU it is asking for, which lengthens every latency panel on the other content-service dashboards without producing a single error. Expect this to be the first thing that moves when extraction concurrency is raised.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0 } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace=\"$namespace\", pod=~\".*content-service.*\", container=\"content-service\"}[5m])) / clamp_min(sum by (pod) (rate(container_cpu_cfs_periods_total{namespace=\"$namespace\", pod=~\".*content-service.*\", container=\"content-service\"}[5m])), 1)", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "Go Runtime",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Goroutines",
+      "description": "Goroutine count tracks in-flight work: NATS handlers, both gRPC servers, upload streams and every admitted extraction hold goroutines. It should rise with load and come back to the same floor afterwards. A floor that steps up after each load period and never returns is the leak signal — an extraction that outlived its caller, or a stream that was never closed.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "go_goroutines{job=~\".*content-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Heap In-Use",
+      "description": "Live heap. Compare its shape with resident memory on the row above: heap that falls while RSS stays high is memory the runtime is holding rather than leaking, whereas both climbing together is the path to an OOM kill.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "refId": "A", "expr": "go_memstats_heap_inuse_bytes{job=~\".*content-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "GC Pause (max)",
+      "description": "Longest stop-the-world GC pause per pod. go_gc_duration_seconds is a Prometheus summary, not a histogram: there is no _bucket series, so histogram_quantile cannot be used here. The Go collector exposes quantiles 0, 0.25, 0.5, 0.75 and 1 only — there is no 0.99. quantile=\"1\" is the max pause over the runtime's buffer of recent GC cycles, so it reports the worst recent pause rather than a windowed percentile.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "go_gc_duration_seconds{quantile=\"1\", job=~\".*content-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "GOMAXPROCS vs CPU limit",
+      "description": "How many OS threads the Go scheduler will run in parallel, against how much CPU the cgroup actually allows. The module is on go 1.26, so the runtime reads the cgroup CPU quota itself and re-checks it periodically: GOMAXPROCS should sit at the CPU limit rounded up and follow a limit change without a restart. Divergence is the finding. A line pinned to the node core count instead means the container-aware default was switched off (GODEBUG containermaxprocs=0, or an explicit GOMAXPROCS env var), and the scheduler is then sizing itself for a machine far larger than the slice the pod owns — which turns into throttling on the row above rather than into more work done. The two series measure different things (threads against cores) and are plotted together only because the gap between them is the point.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 17 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "go_sched_gomaxprocs_threads{job=~\".*content-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "GOMAXPROCS {{pod}}" },
+        { "refId": "B", "expr": "sum by (pod) (kube_pod_container_resource_limits{namespace=\"$namespace\", pod=~\".*content-service.*\", container=\"content-service\", resource=\"cpu\"})", "legendFormat": "cpu limit {{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 400,
+      "title": "File Descriptors & Threads",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Open vs Max FDs",
+      "description": "Every S3 call, NATS connection, inbound gRPC stream and connector transfer holds a descriptor, so this is the real ceiling on concurrent work per pod. The gap between the two lines is the headroom; open climbing toward max while throughput is flat means descriptors are not being released.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 25 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "process_open_fds{job=~\".*content-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "open {{pod}}" },
+        { "refId": "B", "expr": "process_max_fds{job=~\".*content-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "max {{pod}}" }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "OS Threads",
+      "description": "Threads the runtime has created. Blocking syscalls — S3 reads, compression, extractor calls — each pin a thread for their duration, so this rises above GOMAXPROCS under load. A ratchet that never comes down usually means threads parked in blocking calls that are not completing.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 25 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "go_threads{job=~\".*content-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 500,
+      "title": "Fleet, Uptime & Restarts",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 },
+      "panels": []
+    },
+    {
+      "id": 40,
+      "type": "timeseries",
+      "title": "Pods scraped (fleet size)",
+      "description": "How many content-service pods Prometheus is currently scraping. This deployment is KEDA scaled, so the count moves on its own: scale-up appears here and as new series everywhere else on this dashboard, and it is not a restart. Read the per-pod panels above against this — a fleet sum such as extraction slots in use only makes sense divided by the number of pods reporting.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 33 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 } },
+      "targets": [
+        { "refId": "A", "expr": "count(up{job=~\".*content-service.*\", namespace=\"$namespace\"} == 1)", "legendFormat": "pods up" }
+      ]
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Process Uptime",
+      "description": "Time since process start. Shutdown here is deliberately slow — the drain budget and the pod's termination grace period are both sized for the longest extraction that can still be running when SIGTERM lands (shutdownTimeoutSeconds and terminationGracePeriodSeconds in the applications chart) — so a rolling update shows a long overlap of old and new pods rather than a clean swap. A sawtooth with a short period is a crash loop, not a deploy.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 33 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "refId": "A", "expr": "time() - process_start_time_seconds{job=~\".*content-service.*\", namespace=\"$namespace\", pod=~\"$pod\"}", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Container Restarts (1h increase)",
+      "description": "Restarts of the container inside an existing pod. KEDA replacing pods does not appear here — that is the fleet-size panel — so anything on this one is the container itself dying and being restarted in place.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 33 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", pod=~\".*content-service.*\", container=\"content-service\"}[1h]))", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 43,
+      "type": "timeseries",
+      "title": "OOMKilled (last termination)",
+      "description": "Reads 1 while the last termination of that container was an OOM kill. This is a state, not a counter: it stays at 1 until the pod is replaced, and a pod that has never terminated reports nothing at all. Paired with the memory-vs-limit panel it separates the two ways this service dies — killed for exceeding the cgroup limit, versus exiting for any other reason.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 33 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 } },
+      "targets": [
+        { "refId": "A", "expr": "max by (pod) (kube_pod_container_status_last_terminated_reason{namespace=\"$namespace\", pod=~\".*content-service.*\", container=\"content-service\", reason=\"OOMKilled\"})", "legendFormat": "{{pod}}" }
+      ]
+    }
+  ]
+}
