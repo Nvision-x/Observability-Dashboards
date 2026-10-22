@@ -1,0 +1,570 @@
+{
+  "extra_sources": [
+    "dashboards/applications/cifs-connector-combined.json",
+    "dashboards/backups/backups-dashboard.json"
+  ],
+  "boards": [
+    {
+      "output": "dashboards/applications/connectors-detail.json",
+      "header": {
+        "annotations": {
+          "list": [
+            {
+              "builtIn": 1,
+              "datasource": {
+                "type": "grafana",
+                "uid": "-- Grafana --"
+              },
+              "enable": true,
+              "hide": true,
+              "iconColor": "rgba(0, 211, 255, 1)",
+              "name": "Annotations & Alerts",
+              "type": "dashboard"
+            }
+          ]
+        },
+        "editable": true,
+        "fiscalYearStartMonth": 0,
+        "graphTooltip": 1,
+        "links": [
+          {
+            "title": "Applications Overview",
+            "type": "link",
+            "url": "/d/nx-applications-overview",
+            "targetBlank": false,
+            "icon": "external link"
+          }
+        ],
+        "preload": false,
+        "refresh": "1m",
+        "schemaVersion": 40,
+        "tags": [
+          "git-sync",
+          "nx",
+          "connectors",
+          "applications",
+          "all-clients"
+        ],
+        "time": {
+          "from": "now-24h",
+          "to": "now"
+        },
+        "timepicker": {},
+        "timezone": "",
+        "title": "Connectors Detail",
+        "uid": "nx-connectors-detail",
+        "version": 1,
+        "weekStart": "",
+        "folderUid": "applications-folder"
+      },
+      "intro": "**Connectors Detail**: one collapsed row per connector, built from that connector's per-cluster boards (overview, pipeline, runtime). Expand a row for its full detail. The namespace picker applies to every row; each connector keeps its own pickers (component, pod, query type, datasource id), labelled with the connector name. Each section header links to the per-cluster board it came from.",
+      "pickers": "show",
+      "shared_vars": [
+        {
+          "name": "namespace",
+          "label": "Namespace",
+          "type": "query",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "query": "label_values(kube_deployment_spec_replicas, namespace)",
+          "definition": "label_values(kube_deployment_spec_replicas, namespace)",
+          "refresh": 1,
+          "sort": 1,
+          "multi": false,
+          "includeAll": false,
+          "hide": 0,
+          "current": {
+            "text": "default",
+            "value": "default"
+          },
+          "options": []
+        }
+      ],
+      "sections": [
+        {
+          "key": "cifs",
+          "label": "CIFS",
+          "title": "🗂️ CIFS",
+          "sources": [
+            "dashboards/applications/V2/connectors/cifs/cifs-overview.json",
+            "dashboards/applications/V2/connectors/cifs/cifs-pipeline.json",
+            "dashboards/applications/V2/connectors/cifs/cifs-runtime.json"
+          ],
+          "unify": {
+            "pod": "cifs-runtime"
+          }
+        },
+        {
+          "key": "mysql",
+          "label": "MySQL",
+          "title": "🗄️ MySQL",
+          "sources": [
+            "dashboards/applications/V2/connectors/mysql/mysql-overview.json",
+            "dashboards/applications/V2/connectors/mysql/mysql-pipeline.json",
+            "dashboards/applications/V2/connectors/mysql/mysql-runtime.json"
+          ],
+          "unify": {
+            "pod": "mysql-runtime"
+          }
+        },
+        {
+          "key": "postgresql",
+          "label": "PostgreSQL",
+          "title": "🐘 PostgreSQL",
+          "sources": [
+            "dashboards/applications/V2/connectors/postgresql/postgresql-overview.json",
+            "dashboards/applications/V2/connectors/postgresql/postgresql-pipeline.json",
+            "dashboards/applications/V2/connectors/postgresql/postgresql-runtime.json"
+          ],
+          "unify": {
+            "pod": "postgresql-runtime"
+          }
+        },
+        {
+          "key": "snowflake",
+          "label": "Snowflake",
+          "title": "❄️ Snowflake",
+          "sources": [
+            "dashboards/applications/V2/connectors/snowflake/snowflake-overview.json",
+            "dashboards/applications/V2/connectors/snowflake/snowflake-pipeline.json",
+            "dashboards/applications/V2/connectors/snowflake/snowflake-runtime.json"
+          ],
+          "unify": {
+            "pod": "snowflake-runtime"
+          }
+        },
+        {
+          "key": "oracle",
+          "label": "Oracle",
+          "title": "🏛️ Oracle",
+          "sources": [
+            "dashboards/applications/V2/connectors/oracle/oracle-overview.json",
+            "dashboards/applications/V2/connectors/oracle/oracle-pipeline.json",
+            "dashboards/applications/V2/connectors/oracle/oracle-runtime.json"
+          ],
+          "unify": {
+            "pod": "oracle-runtime"
+          }
+        },
+        {
+          "key": "box",
+          "label": "Box",
+          "title": "📦 Box",
+          "sources": [
+            "dashboards/applications/V2/connectors/box/box-overview.json",
+            "dashboards/applications/V2/connectors/box/box-pipeline.json",
+            "dashboards/applications/V2/connectors/box/box-runtime.json"
+          ],
+          "unify": {
+            "pod": "box-runtime"
+          }
+        },
+        {
+          "key": "sharepoint",
+          "label": "SharePoint",
+          "title": "📄 SharePoint",
+          "sources": [
+            "dashboards/applications/sharepoint-connector-dashboard.json"
+          ]
+        },
+        {
+          "key": "xberg",
+          "label": "Xberg",
+          "title": "⚡ Xberg Extraction Engine",
+          "sources": [
+            "dashboards/applications/xberg-dashboard.json"
+          ]
+        },
+        {
+          "key": "s3",
+          "label": "S3",
+          "title": "🪣 S3 Parquet Inventory",
+          "sources": [
+            "dashboards/applications/apps-s3-inventory-connector.json"
+          ]
+        }
+      ]
+    },
+    {
+      "output": "dashboards/applications/services-detail.json",
+      "header": {
+        "annotations": {
+          "list": [
+            {
+              "builtIn": 1,
+              "datasource": {
+                "type": "grafana",
+                "uid": "-- Grafana --"
+              },
+              "enable": true,
+              "hide": true,
+              "iconColor": "rgba(0, 211, 255, 1)",
+              "name": "Annotations & Alerts",
+              "type": "dashboard"
+            }
+          ]
+        },
+        "editable": true,
+        "fiscalYearStartMonth": 0,
+        "graphTooltip": 1,
+        "links": [
+          {
+            "title": "Applications Overview",
+            "type": "link",
+            "url": "/d/nx-applications-overview",
+            "targetBlank": false,
+            "icon": "external link"
+          }
+        ],
+        "preload": false,
+        "refresh": "1m",
+        "schemaVersion": 40,
+        "tags": [
+          "git-sync",
+          "nx",
+          "services",
+          "applications",
+          "all-clients"
+        ],
+        "time": {
+          "from": "now-24h",
+          "to": "now"
+        },
+        "timepicker": {},
+        "timezone": "",
+        "title": "Services Detail",
+        "uid": "nx-services-detail",
+        "version": 1,
+        "weekStart": "",
+        "folderUid": "applications-folder"
+      },
+      "intro": "**Services Detail**: one collapsed row per platform service, built from that service's per-cluster boards. Expand a row for its full detail. The namespace picker applies to every row; each service keeps its own pod picker, labelled with the service name. Each section header links to the per-cluster board it came from.",
+      "pickers": "show",
+      "shared_vars": [
+        {
+          "name": "namespace",
+          "label": "Namespace",
+          "type": "query",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "query": "label_values(kube_deployment_spec_replicas, namespace)",
+          "definition": "label_values(kube_deployment_spec_replicas, namespace)",
+          "refresh": 1,
+          "sort": 1,
+          "multi": false,
+          "includeAll": false,
+          "hide": 0,
+          "current": {
+            "text": "default",
+            "value": "default"
+          },
+          "options": []
+        }
+      ],
+      "sections": [
+        {
+          "key": "content_service",
+          "label": "Content Service",
+          "title": "📄 Content Service",
+          "sources": [
+            "dashboards/applications/V2/services/content-service/content-service-runtime.json"
+          ]
+        },
+        {
+          "key": "authz",
+          "label": "Authz",
+          "title": "🛡️ Authz Service",
+          "sources": [
+            "dashboards/applications/V2/services/authz-service/authz-service-overview.json",
+            "dashboards/applications/V2/services/authz-service/authz-service-runtime.json"
+          ]
+        },
+        {
+          "key": "credmgr",
+          "label": "Credential Manager",
+          "title": "🔑 Credential Manager",
+          "sources": [
+            "dashboards/applications/V2/services/credentialmanager/credentialmanager-overview.json",
+            "dashboards/applications/V2/services/credentialmanager/credentialmanager-runtime.json"
+          ]
+        },
+        {
+          "key": "datasource_service",
+          "label": "Datasource Service",
+          "title": "🧭 Datasource Service",
+          "sources": [
+            "dashboards/applications/V2/services/datasource-service/datasource-service-overview.json",
+            "dashboards/applications/V2/services/datasource-service/datasource-service-runtime.json"
+          ]
+        },
+        {
+          "key": "khub_sidecar",
+          "label": "Knowledge Hub (sidecar)",
+          "title": "📚 Knowledge Hub: Ingestor (sidecar in knowledge-service)",
+          "sources": [
+            "dashboards/applications/V2/services/knowledge-hub/knowledge-hub-sidecar-ingest.json",
+            "dashboards/applications/V2/services/knowledge-hub/knowledge-hub-sidecar-runtime.json"
+          ]
+        },
+        {
+          "key": "khub_standalone",
+          "label": "Knowledge Hub (standalone)",
+          "title": "📚 Knowledge Hub: API (standalone)",
+          "sources": [
+            "dashboards/applications/V2/services/knowledge-hub/knowledge-hub-standalone-overview.json",
+            "dashboards/applications/V2/services/knowledge-hub/knowledge-hub-standalone-runtime.json"
+          ]
+        },
+        {
+          "key": "ksvc",
+          "label": "Knowledge Service",
+          "title": "🧠 Knowledge Service",
+          "sources": [
+            "dashboards/applications/V2/services/knowledge-service/knowledge-service-overview.json",
+            "dashboards/applications/V2/services/knowledge-service/knowledge-service-pipeline.json",
+            "dashboards/applications/V2/services/knowledge-service/knowledge-service-runtime.json"
+          ]
+        },
+        {
+          "key": "registration",
+          "label": "Registration",
+          "title": "📝 Registration Service",
+          "sources": [
+            "dashboards/applications/V2/services/registration-service/registration-service-overview.json",
+            "dashboards/applications/V2/services/registration-service/registration-service-runtime.json"
+          ]
+        },
+        {
+          "key": "request",
+          "label": "Request",
+          "title": "📡 Request Service",
+          "sources": [
+            "dashboards/applications/V2/services/request-service/request-service-overview.json",
+            "dashboards/applications/V2/services/request-service/request-service-runtime.json"
+          ]
+        },
+        {
+          "key": "workers",
+          "label": "Workers",
+          "title": "🔧 Backend Workers (Archiver / Archiver v2 / Enricher)",
+          "sources": [
+            "dashboards/applications/backend-workers.json"
+          ]
+        }
+      ]
+    },
+    {
+      "output": "dashboards/infrastructure-overview.json",
+      "header": {
+        "annotations": {
+          "list": [
+            {
+              "builtIn": 1,
+              "datasource": {
+                "type": "grafana",
+                "uid": "-- Grafana --"
+              },
+              "enable": true,
+              "hide": true,
+              "iconColor": "rgba(0, 211, 255, 1)",
+              "name": "Annotations & Alerts",
+              "type": "dashboard"
+            }
+          ]
+        },
+        "editable": true,
+        "fiscalYearStartMonth": 0,
+        "graphTooltip": 1,
+        "links": [],
+        "preload": false,
+        "refresh": "1m",
+        "schemaVersion": 40,
+        "tags": [
+          "git-sync",
+          "nx",
+          "infrastructure",
+          "all-clients"
+        ],
+        "time": {
+          "from": "now-24h",
+          "to": "now"
+        },
+        "timepicker": {},
+        "timezone": "",
+        "title": "Infrastructure Overview",
+        "uid": "nx-infrastructure-overview",
+        "version": 1,
+        "weekStart": ""
+      },
+      "intro": "**Infrastructure Overview**: one collapsed row per infrastructure component (Kong, NATS/JetStream, OpenSearch, Prometheus self-monitoring, Pulsar, GPU/DCGM), built from the per-cluster boards under `dashboards/infrastructure/`. Each component keeps its own pickers, labelled with the component name.",
+      "pickers": "show",
+      "shared_vars": [],
+      "sections": [
+        {
+          "key": "kong",
+          "label": "Kong",
+          "title": "🦍 Kong Gateway",
+          "sources": [
+            "dashboards/infrastructure/kong-dashboard.json"
+          ]
+        },
+        {
+          "key": "nats",
+          "label": "NATS",
+          "title": "📨 NATS / JetStream",
+          "sources": [
+            "dashboards/infrastructure/nats-explorer.json"
+          ]
+        },
+        {
+          "key": "opensearch",
+          "label": "OpenSearch",
+          "title": "🔎 OpenSearch Metrics",
+          "sources": [
+            "dashboards/infrastructure/opensearch-metrics-central.json"
+          ]
+        },
+        {
+          "key": "prometheus",
+          "label": "Prometheus",
+          "title": "🔥 Prometheus Self-Monitoring",
+          "sources": [
+            "dashboards/infrastructure/prometheus2.json"
+          ]
+        },
+        {
+          "key": "pulsar",
+          "label": "Pulsar",
+          "title": "📡 Pulsar",
+          "sources": [
+            "dashboards/infrastructure/pulsar-explorer.json"
+          ]
+        },
+        {
+          "key": "gpu",
+          "label": "GPU",
+          "title": "🖥️ NVIDIA GPU / DCGM",
+          "sources": [
+            "dashboards/infrastructure/nvidia-dcgm-gpu.json"
+          ]
+        }
+      ]
+    },
+    {
+      "output": "dashboards/applications/content-service-legacy.json",
+      "header": {
+        "annotations": {
+          "list": [
+            {
+              "builtIn": 1,
+              "datasource": {
+                "type": "grafana",
+                "uid": "-- Grafana --"
+              },
+              "enable": true,
+              "hide": true,
+              "iconColor": "rgba(0, 211, 255, 1)",
+              "name": "Annotations & Alerts",
+              "type": "dashboard"
+            }
+          ]
+        },
+        "editable": true,
+        "fiscalYearStartMonth": 0,
+        "graphTooltip": 1,
+        "links": [],
+        "preload": false,
+        "refresh": "1m",
+        "schemaVersion": 40,
+        "tags": [
+          "git-sync",
+          "nx",
+          "content-service",
+          "all-clients"
+        ],
+        "time": {
+          "from": "now-24h",
+          "to": "now"
+        },
+        "timepicker": {},
+        "timezone": "",
+        "title": "Content Service (Legacy)",
+        "uid": "nx-content-service-legacy",
+        "version": 1,
+        "weekStart": "",
+        "folderUid": "applications-folder"
+      },
+      "intro": "**Content Service (Legacy V1)**: the pre-V2 Content Service boards (Overview, Extraction Routing, Tika vs Kreuzberg Comparison), one collapsed row each, kept until the V2 Content Service board (in Services Detail) reaches parity.",
+      "pickers": "show",
+      "shared_vars": [
+        {
+          "name": "namespace",
+          "label": "Namespace",
+          "type": "query",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "query": "label_values(kube_deployment_spec_replicas, namespace)",
+          "definition": "label_values(kube_deployment_spec_replicas, namespace)",
+          "refresh": 1,
+          "sort": 1,
+          "multi": false,
+          "includeAll": false,
+          "hide": 0,
+          "current": {
+            "text": "default",
+            "value": "default"
+          },
+          "options": []
+        }
+      ],
+      "sections": [
+        {
+          "key": "cs",
+          "label": "Content Service",
+          "title": "📄 Overview",
+          "sources": [
+            "dashboards/applications/content-service-dashboard.json"
+          ]
+        },
+        {
+          "key": "routing",
+          "label": "Routing",
+          "title": "🔀 Extraction Routing",
+          "sources": [
+            "dashboards/applications/content-service-extraction-routing.json"
+          ]
+        },
+        {
+          "key": "tika",
+          "label": "Tika",
+          "title": "⚖️ Tika vs Kreuzberg Comparison",
+          "sources": [
+            "dashboards/applications/content-service-tika-comparison-dashboard.json"
+          ]
+        }
+      ]
+    },
+    {
+      "output": "dashboards/applications-overview-central.json",
+      "mode": "splice",
+      "marker_panel_id": 10004,
+      "source": "dashboards/applications/V2/applications-overview.json",
+      "link_map": [
+        {
+          "match": "/d/apps-v2-(snowflake|cifs|mysql|postgresql|box|oracle)-overview",
+          "replace": "/d/nx-connectors-detail"
+        },
+        {
+          "match": "/d/apps-v2-[a-z-]+-(overview|ingest)",
+          "replace": "/d/nx-services-detail"
+        }
+      ]
+    }
+  ]
+}
