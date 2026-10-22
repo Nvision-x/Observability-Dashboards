@@ -1,0 +1,1346 @@
+{
+  "uid": "apps-v2-authz-service-overview",
+  "title": "Authz Service — Overview",
+  "description": "Authorization answers for nxmain, the nx-pipeline API and the UI: whether a user may query a datasource, which fields they see, which datasources they can list or guard, and the grant and credential management behind them. The service instruments one thing, every RPC, with the shared gRPC set from pipeline-lib (grpc_requests_total, grpc_request_duration_seconds, grpc_active_requests) over its Connect handler: it serves Connect over HTTP, but the interceptor records each call as an RPC, so there are no http_* series. There are no domain metrics. With METRICS_ENABLED=false only the Go and process collectors are served and every RPC panel is empty.",
+  "folderUid": "apps-v2-authz-service-folder",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "service:authz-service",
+    "overview"
+  ],
+  "timezone": "utc",
+  "editable": null,
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "Authz Service — Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-authz-service-runtime?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(kube_deployment_spec_replicas{deployment=~\".*authz-service.*\"}, namespace)",
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*authz-service.*\", namespace=\"$namespace\"}, pod)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      },
+      {
+        "name": "fault_codes",
+        "type": "constant",
+        "label": "fault_codes",
+        "description": "Codes counted as server faults: Unknown, DeadlineExceeded, ResourceExhausted, Internal, Unavailable, DataLoss.",
+        "query": "2|4|8|13|14|15",
+        "current": {
+          "selected": false,
+          "text": "2|4|8|13|14|15",
+          "value": "2|4|8|13|14|15"
+        },
+        "hide": 2,
+        "skipUrlSync": true
+      },
+      {
+        "name": "rpc_regex",
+        "type": "constant",
+        "label": "rpc_regex",
+        "description": "Strips the Connect procedure prefix from the method label to give the rpc label.",
+        "query": "/nvisionx[.]authz[.]v1[.]AuthzService/(.*)",
+        "current": {
+          "selected": false,
+          "text": "/nvisionx[.]authz[.]v1[.]AuthzService/(.*)",
+          "value": "/nvisionx[.]authz[.]v1[.]AuthzService/(.*)"
+        },
+        "hide": 2,
+        "skipUrlSync": true
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Service Health",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Pods Up",
+      "description": "Pods scraped. The UI manages datasource grants and credentials through this service. nxmain and the nx-pipeline API also ask it whether a user may query a datasource, which fields they see and which datasources they can list, but only when their client.mode is authz-service; in local mode they keep their own checks and never call it. With every pod down, callers in authz-service mode fall back to their own checks, which do not know the datasources this service owns, and the UI's grant and credential screens fail outright.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=~\".*authz-service.*\", namespace=\"$namespace\"})"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Pods Ready",
+      "description": "Pods passing /readyz, from kube-state-metrics. Readiness checks every dependency the pod was configured with: nx-backend's database, the JWKS, and, when set, nx-pipeline's database and this service's own. A pod Up here but not Ready is running and scraped while the Service sends it nothing: the readiness log line names the failing check. Not filtered by Pod: that list only holds pods that have been scraped, which would hide exactly the pod stuck in its migrations init container or crashlooping before /metrics.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(kube_pod_status_ready{namespace=\"$namespace\", pod=~\".*-authz-service-.*\", condition=\"true\"})"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "RPC Rate (5m)",
+      "description": "RPCs per second across all of AuthzService, refused calls included. Every RPC is unary and served over Connect, and the metrics interceptor runs before the token check, so a call refused for its token is counted too. Probes and scrapes are not RPCs and are not in it. With callers in client.mode local, nothing from the query path arrives and this is UI traffic alone, so a near-zero rate is configuration, not an outage.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Server Faults % (5m)",
+      "description": "Share of RPCs that failed on this side: Unknown, DeadlineExceeded, ResourceExhausted, Internal, Unavailable or DataLoss. Unavailable is the common one, and it has two causes that look alike here: a dependency down (a database, auth-service, the credential manager), and a dependency not configured at all. Without NX_PIPELINE_DB_NAME, AUTHZ_DB_NAME or the credential manager, the RPCs that need them answer Unavailable on every call, so a steady non-zero floor since a rollout is configuration; Errors by RPC & Code says which RPCs.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          },
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\", code=~\"$fault_codes\"}[5m])) / clamp_min(sum(rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m])), 0.0001)"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Auth Refusals % (5m)",
+      "description": "Share of RPCs refused as Unauthenticated (no token or API key, or one that failed verification) or PermissionDenied (an unknown or inactive user, or a caller not allowed the RPC). Kept apart from faults because some is normal. A sudden wall of Unauthenticated across every RPC is the JWKS or the API key, not callers: check Pods Ready, which drops with the JWKS. A denial is not an error. CanQuery, HasPermission and IsDatasourceMember answer a refused caller with allowed=false and code 0, so a user being told no counts as OK everywhere on this board.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.05
+              },
+              {
+                "color": "red",
+                "value": 0.25
+              }
+            ]
+          },
+          "decimals": 2
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\", code=~\"7|16\"}[5m])) / clamp_min(sum(rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m])), 0.0001)"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "RPC p95 (5m)",
+      "description": "95th-percentile RPC duration. In client.mode authz-service, nxmain and the nx-pipeline API bound each call at client.timeoutSeconds (2s in the chart) and fall back to their own checks when it fails, so a tail approaching 2s means callers are quietly answering for themselves, not that users are waiting longer. In local mode there is no caller timeout or fallback: the only callers are the UI, and a slow tail is users waiting. Empty while no RPC arrives in the window.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              },
+              {
+                "color": "red",
+                "value": 1.5
+              }
+            ]
+          },
+          "decimals": 3
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "RPCs — Requests",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Request Rate by RPC",
+      "description": "One series per RPC. The method label is the Connect procedure, and only procedures in the proto reach the interceptor (an unknown path is a 404 from the mux), so the series count is bounded by the 22 RPCs. With callers in client.mode authz-service, expect CanQuery, GetFieldPolicy and GetPrincipal to dominate: nxmain and the nx-pipeline API ask them on the query path. In local mode they never call, so only the UI's datasource-management and credential RPCs appear, and those are rare.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(sum by (method) (rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m])), \"rpc\", \"$1\", \"method\", \"$rpc_regex\")",
+          "legendFormat": "{{rpc}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Request Rate by Code",
+      "description": "Every RPC by its result code, OK included. Grouped by code, never by the status label beside it, which is free text. A denial is not an error. CanQuery, HasPermission and IsDatasourceMember answer a refused caller with allowed=false and code 0, so a user being told no counts as OK everywhere on this board.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "0"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "0 OK"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "1 Canceled"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "2"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "2 Unknown"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "3"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "3 InvalidArgument"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "4"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "4 DeadlineExceeded"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "5 NotFound"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "6"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "6 AlreadyExists"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "7"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "7 PermissionDenied"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "8"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "8 ResourceExhausted"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "9"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "9 FailedPrecondition"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "10"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "10 Aborted"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "11"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "11 OutOfRange"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "12"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "12 Unimplemented"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "13"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "13 Internal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "14"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "14 Unavailable"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "15"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "15 DataLoss"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "16"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "16 Unauthenticated"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (code) (rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m]))",
+          "legendFormat": "{{code}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Duration p50 / p95 / p99",
+      "description": "Trustworthy percentiles: the service passes SubsecondLatencyBuckets to the gRPC set explicitly, so the ladder runs 0.005s to 10s rather than the OTel SDK default tuned for milliseconds. In client.mode authz-service, nxmain and the nx-pipeline API bound each call at client.timeoutSeconds (2s in the chart) and fall back to their own checks when it fails, so a tail approaching 2s means callers are quietly answering for themselves, not that users are waiting longer. In local mode there is no caller timeout or fallback: the only callers are the UI, and a slow tail is users waiting.\n\nA call that never returns is never observed, because the histogram records on return, so it moves nothing here: it shows only on RPCs In Flight.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(grpc_request_duration_seconds_bucket{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Duration p95 by RPC",
+      "description": "Which RPC is slow. The query-path RPCs read nx-backend's and nx-pipeline's databases; the credential RPCs call the credential manager, bounded by CREDENTIAL_MANAGER_TIMEOUT, so they sit on a different timescale and should not be read against CanQuery.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 14
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(histogram_quantile(0.95, sum by (le, method) (rate(grpc_request_duration_seconds_bucket{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m]))), \"rpc\", \"$1\", \"method\", \"$rpc_regex\")",
+          "legendFormat": "{{rpc}}"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Error Ratio (non-OK)",
+      "description": "Share of RPCs answered with any non-OK code, with the server-fault share as a second line. The gap between them is callers being refused or rejected, which Errors by Class splits out. clamp_min keeps both ratios defined while the service is idle.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 14
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\", code!=\"0\"}[5m])) / clamp_min(sum(rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m])), 0.0001)",
+          "legendFormat": "non-OK"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\", code=~\"$fault_codes\"}[5m])) / clamp_min(sum(rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m])), 0.0001)",
+          "legendFormat": "server faults"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "RPCs In Flight",
+      "description": "RPCs being handled right now, by RPC. Calls take milliseconds, so a 30s scrape reads 0 almost always, and that is correct. What this catches is a call that never returns, which no other panel can show: a value that climbs and does not come back down, usually a database or the credential manager holding a connection open.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 14
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(sum by (method) (grpc_active_requests{job=~\".*authz-service.*\", namespace=\"$namespace\"}), \"rpc\", \"$1\", \"method\", \"$rpc_regex\")",
+          "legendFormat": "{{rpc}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "RPCs — Errors",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Errors by RPC & Code (rate)",
+      "description": "Which RPC is failing, and how. Codes: 1 Canceled, 2 Unknown, 3 InvalidArgument, 4 DeadlineExceeded, 5 NotFound, 6 AlreadyExists, 7 PermissionDenied, 8 ResourceExhausted, 9 FailedPrecondition, 10 Aborted, 11 OutOfRange, 12 Unimplemented, 13 Internal, 14 Unavailable, 15 DataLoss, 16 Unauthenticated. 2 is any error that is not a Connect error, so an unexpected failure usually lands there. A single RPC at a steady 14 since a rollout is a dependency it needs that is not configured; every RPC at 16 at once is token verification.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(sum by (method, code) (rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\", code!=\"0\"}[5m])), \"rpc\", \"$1\", \"method\", \"$rpc_regex\")",
+          "legendFormat": "{{rpc}} {{code}}"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Error Ratio by RPC (non-OK)",
+      "description": "Error Ratio split by RPC. Read it with the rate beside it: the UI's RPCs are called a handful of times, so one refused call is a large share. A high ratio on a tiny rate is a single refusal, not an outage. An RPC with no errors in the window draws no line.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(sum by (method) (rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\", code!=\"0\"}[5m])) / clamp_min(sum by (method) (rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\"}[5m])), 0.0001), \"rpc\", \"$1\", \"method\", \"$rpc_regex\")",
+          "legendFormat": "{{rpc}}"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Errors by Class",
+      "description": "Non-OK split three ways. Auth refusals are the caller's identity: no or bad token, an unknown or inactive user, or a caller not allowed the RPC. Rejected requests are the request itself: bad arguments, a missing datasource or credential, a write that conflicts, or the caller giving up (Canceled, which is what a caller's own timeout looks like from here). Server faults are this service or what it depends on.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\", code=~\"7|16\"}[5m]))",
+          "legendFormat": "auth refusals (7, 16)"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\", code=~\"1|3|5|6|9|10|11|12\"}[5m]))",
+          "legendFormat": "rejected requests (1, 3, 5, 6, 9, 10, 11, 12)"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(rate(grpc_requests_total{job=~\".*authz-service.*\", namespace=\"$namespace\", code=~\"$fault_codes\"}[5m]))",
+          "legendFormat": "server faults (2, 4, 8, 13, 14, 15)"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Pods Ready vs Pods Up",
+      "description": "The two lines diverging is a pod running and scraped but out of the Service, because /readyz is failing on one of its dependencies. Readiness is not liveness: such a pod is not restarted, it just stops receiving calls, so a gap that persists is a dependency that stays down. Not filtered by Pod: that list only holds pods that have been scraped, which would hide exactly the pod stuck in its migrations init container or crashlooping before /metrics.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(kube_pod_status_ready{namespace=\"$namespace\", pod=~\".*-authz-service-.*\", condition=\"true\"})",
+          "legendFormat": "ready"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(up{job=~\".*authz-service.*\", namespace=\"$namespace\"})",
+          "legendFormat": "up"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 500,
+      "title": "Per-Pod Drill-Down",
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 39
+      },
+      "panels": [
+        {
+          "id": 40,
+          "type": "timeseries",
+          "title": "RPC Rate by Pod",
+          "description": "Which replicas callers are reaching. A pod that is up but receiving nothing is out of the Service, usually not Ready.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 0,
+            "y": 40
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 8,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (pod) (rate(grpc_requests_total{job=~\".*authz-service.*\", pod=~\"$pod\", namespace=\"$namespace\"}[5m]))",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 41,
+          "type": "timeseries",
+          "title": "Server Faults by Pod",
+          "description": "One pod faulting while its peers are clean is that pod's connections or configuration, not the dependency.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 6,
+            "y": 40
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 8,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (pod) (rate(grpc_requests_total{job=~\".*authz-service.*\", pod=~\"$pod\", namespace=\"$namespace\", code=~\"$fault_codes\"}[5m]))",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 42,
+          "type": "timeseries",
+          "title": "p95 by Pod",
+          "description": "A single slow pod points at its own pool or node rather than the database.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 12,
+            "y": 40
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 8,
+                "showPoints": "never"
+              },
+              "decimals": 3
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum by (le, pod) (rate(grpc_request_duration_seconds_bucket{job=~\".*authz-service.*\", pod=~\"$pod\", namespace=\"$namespace\"}[5m])))",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 43,
+          "type": "timeseries",
+          "title": "In Flight by Pod",
+          "description": "Where a stuck call is. Normally 0 on every pod.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 40
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 8,
+                "showPoints": "never"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (pod) (grpc_active_requests{job=~\".*authz-service.*\", pod=~\"$pod\", namespace=\"$namespace\"})",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

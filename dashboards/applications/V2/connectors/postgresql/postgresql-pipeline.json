@@ -1,0 +1,2126 @@
+{
+  "uid": "apps-v2-postgresql-pipeline",
+  "title": "PostgreSQL Connector — Pipeline",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "connector:postgresql",
+    "pipeline"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-postgresql-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "PostgreSQL — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-postgresql-overview?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "PostgreSQL — Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-postgresql-runtime?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "enable": true,
+        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\".*postgresql-connector.*\"}[5m]) > 0",
+        "name": "Pod Restarts",
+        "tagKeys": "pod",
+        "titleFormat": "Pod Restart"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "description": "Fed from kube-state-metrics, never from process_start_time_seconds: postgresql is minReplicaCount 0, so a process-lifecycle metric leaves this variable — and every panel, including the backlog and KEDA rows that survive the sleeping pod — empty in the connector's normal state.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(kube_deployment_spec_replicas{deployment=~\".*postgresql-connector-be-go.*\"}, namespace)",
+        "query": {
+          "query": "label_values(kube_deployment_spec_replicas{deployment=~\".*postgresql-connector-be-go.*\"}, namespace)",
+          "refId": "ns"
+        },
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "description": "allValue is .+ and not .*: where a PodMonitor and a Service-level catch-all scrape the same target, only the PodMonitor copy carries a pod label. In PromQL .* also matches the absent label, which doubles every additive aggregation while leaving percentiles and _sum/_count ratios correct.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(process_start_time_seconds{job=~\".*postgresql-connector-be-go.*\", namespace=\"$namespace\"}, pod)",
+        "query": {
+          "query": "label_values(process_start_time_seconds{job=~\".*postgresql-connector-be-go.*\", namespace=\"$namespace\"}, pod)",
+          "refId": "pod"
+        },
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      },
+      {
+        "name": "query_type",
+        "type": "query",
+        "label": "Query type",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\"}, query_type)",
+        "query": {
+          "query": "label_values(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\"}, query_type)",
+          "refId": "qt"
+        },
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1,
+        "description": "allValue .* on purpose: query_type is a business label, not the duplicate-scrape discriminator."
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "How to read this board",
+      "options": {
+        "mode": "markdown",
+        "content": "**This is the drill-down.** The Overview says *what happened*; this board says *how much it cost* and *how it was distributed*. Nothing here is repeated from the Overview.\n\n**Totals add up every scan in the time range** — narrow the range to one scan to describe one server.\n\n**Time here is database time** — how long the scanner waited on PostgreSQL. Nothing times the connector's own work per table, and queries run in parallel, so a scan takes less wall-clock time than the sum shown here.\n\n**The query type selector** at the top narrows the query panels to one kind of query.\n\nHover the ⓘ on any panel for what it counts, what is normal, and where to look next.",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        }
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1
+    },
+    {
+      "type": "row",
+      "title": "Scanner — Cost & Prediction",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 2
+    },
+    {
+      "type": "stat",
+      "title": "Database Time per Table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Average time PostgreSQL spent answering the scanner, per table**, in milliseconds: every query of the scan (listings, columns, permissions) divided by tables scanned.\n\n**Normal:** a few to tens of ms. Multiply by the number of tables for the database time of a bigger server; the wall-clock scan is shorter because up to 20 tables per pod run in parallel.\n\n**Next:** 'Query Time by Type' on the Overview for which query dominates.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 1,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "1000 * sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s])) / (sum(sum_over_time(((last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s])) > 0)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 6
+      },
+      "id": 3
+    },
+    {
+      "type": "stat",
+      "title": "Database Time per Column",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**The same database time divided by columns instead of tables**, in milliseconds. Columns are read together (one query per table, or per schema in bulk), so this is not how long one column takes.\n\n**Normal:** well under a millisecond in bulk mode. If it stays flat while time per table moves, the tables got wider, not slower.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 2,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "1000 * sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s])) / (sum(sum_over_time(((last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s])) > 0)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 6
+      },
+      "id": 4
+    },
+    {
+      "type": "stat",
+      "title": "Tables per Schema",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Average tables per schema**, empty schemas included.\n\n**Normal:** any number — but databases are rarely uniform. One big schema hides inside an average; it is the one that goes to table mode.\n\n**Next:** 'Schemas by Scan Mode' on the Overview.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 1,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(sum_over_time(((last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s])) / (sum(sum_over_time(((last_over_time(postgresql_connector_schemas_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_schemas_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_schemas_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s])) > 0)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 6
+      },
+      "id": 5
+    },
+    {
+      "type": "stat",
+      "title": "Columns per Table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Average width of a table**, in columns.\n\n**Normal:** any number. A very wide table (hundreds of columns) moves this and the cost per table together.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 1,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(sum_over_time(((last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s])) / (sum(sum_over_time(((last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s])) > 0)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 6
+      },
+      "id": 6
+    },
+    {
+      "type": "heatmap",
+      "title": "Query Duration — distribution",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How long each SQL query took, over time**, filtered by the Query type selector. **How to read it:** time runs left to right, the measured value bottom to top. Each box is 'this many fell in this range, at this moment' — brighter = more; hover a box for the exact count (Value). Colours do not identify individual items.\n\n**Normal:** most boxes at the bottom (under 50 ms). Permission queries run once per table, so they dominate the count.\n\n**Next:** 'Queries by Duration' beside it gives the same counts for the whole range.",
+      "interval": "30s",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "fill": "dark-orange",
+          "scale": "exponential",
+          "exponent": 0.5,
+          "steps": 64,
+          "reverse": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "unit": "s"
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "mode": "single",
+          "yHistogram": true
+        },
+        "legend": {
+          "show": true
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "showValue": "never",
+        "cellValues": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (le) (sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\"}[15s]) * 1)[$__interval:15s]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
+      ],
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "id": 7
+    },
+    {
+      "type": "bargauge",
+      "title": "Queries by Duration (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How many queries took how long**, for the whole range — the heatmap beside it collapsed into one bar per duration range. Only ranges with at least one query are shown.\n\n**Normal:** almost everything in the first bar. Queries above 30 s are cut off by the query timeout (POSTGRESQL_QUERY_TIMEOUT) and fail.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.05\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.05\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.05\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "≤ 0.05 s"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.1\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.1\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.1\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.05\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.05\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.05\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "0.05–0.1 s"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.2\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.2\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.2\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.1\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.1\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.1\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "0.1–0.2 s"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.4\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.4\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.4\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.2\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.2\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.2\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "0.2–0.4 s"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.8\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.8\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.8\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.4\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.4\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.4\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "0.4–0.8 s"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"1.6\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"1.6\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"1.6\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.8\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.8\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"0.8\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "0.8–1.6 s"
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"3.2\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"3.2\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"3.2\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"1.6\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"1.6\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"1.6\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "1.6–3.2 s"
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"6.4\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"6.4\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"6.4\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"3.2\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"3.2\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"3.2\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "3.2–6.4 s"
+        },
+        {
+          "refId": "I",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"12.8\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"12.8\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"12.8\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"6.4\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"6.4\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"6.4\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "6.4–12.8 s"
+        },
+        {
+          "refId": "J",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"25.6\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"25.6\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"25.6\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"12.8\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"12.8\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"12.8\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "12.8–25.6 s"
+        },
+        {
+          "refId": "K",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"51.2\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"51.2\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"51.2\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"25.6\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"25.6\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"25.6\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "25.6–51.2 s"
+        },
+        {
+          "refId": "L",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"102.4\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"102.4\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"102.4\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"51.2\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"51.2\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"51.2\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "51.2–102.4 s"
+        },
+        {
+          "refId": "M",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"+Inf\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"+Inf\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"+Inf\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"102.4\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"102.4\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\", le=\"102.4\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "> 102.4 s"
+        }
+      ],
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "id": 8
+    },
+    {
+      "type": "row",
+      "title": "Scanner — Query Performance",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 19
+      },
+      "id": 9
+    },
+    {
+      "type": "timeseries",
+      "title": "Query p95 by query_type",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How slow the slowest 5% of each kind of query was**, over time.\n\n**Normal:** only readable under sustained load. For a single scan use 'Query Mean by query_type' beside it.\n\n**Next:** the Overview's 'Query Time by Type' for where the time went in total.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "list_databases"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "list_schemas"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "count_schema_columns"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bulk_tables"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bulk_columns"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tables_in_schema"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "list_columns"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "table_permissions"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, query_type) (rate(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\"}[5m])))",
+          "legendFormat": "{{query_type}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 20
+      },
+      "id": 10
+    },
+    {
+      "type": "timeseries",
+      "title": "Query Mean by query_type (5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Average time per query of each kind.** The average is the one that multiplies: average × number of calls = total time.\n\n**Normal:** tens of milliseconds at most; bulk_columns grows with the size of the schema.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "list_databases"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "list_schemas"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "count_schema_columns"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bulk_tables"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bulk_columns"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tables_in_schema"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "list_columns"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "table_permissions"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (query_type) (rate(postgresql_connector_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\"}[5m])) / sum by (query_type) (rate(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\"}[5m]))",
+          "legendFormat": "{{query_type}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 20
+      },
+      "id": 11
+    },
+    {
+      "type": "bargauge",
+      "title": "Query Count by Type (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How many queries of each kind ran** — a count, not time.\n\n**Normal:** list_databases = scans; list_schemas = databases; count_schema_columns = schemas; bulk_tables = bulk schemas; bulk_columns = bulk schemas that have tables; tables_in_schema = table-mode schemas; list_columns = tables read in table mode; table_permissions = every table.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "list_databases"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "list_schemas"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "count_schema_columns"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bulk_tables"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bulk_columns"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tables_in_schema"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "list_columns"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "table_permissions"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (query_type) (sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"$query_type\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "{{query_type}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 20
+      },
+      "id": 12
+    },
+    {
+      "type": "row",
+      "title": "Content — Fetch Duration",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "id": 13
+    },
+    {
+      "type": "timeseries",
+      "title": "Fetch Duration — p50 / p95 by success",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How long samples took, successes and failures apart**, so fast failures do not make successes look quicker than they are.\n\n**Normal:** only readable under sustained load.\n\n**Next:** the heatmap beside it for single requests.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, success) (rate(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[5m])))",
+          "legendFormat": "p50 success={{success}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, success) (rate(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[5m])))",
+          "legendFormat": "p95 success={{success}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 29
+      },
+      "id": 14
+    },
+    {
+      "type": "heatmap",
+      "title": "Fetch Duration — distribution",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How long each sample took, over time**, any outcome. **How to read it:** time runs left to right, the measured value bottom to top. Each box is 'this many fell in this range, at this moment' — brighter = more; hover a box for the exact count (Value). Colours do not identify individual items.\n\n**Normal:** under a second. Sampling reads a share of the whole table, so the big tables are the high boxes.\n\n**Next:** 'Fetches by Duration' beside it.",
+      "interval": "30s",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "fill": "dark-orange",
+          "scale": "exponential",
+          "exponent": 0.5,
+          "steps": 64,
+          "reverse": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "unit": "s"
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "mode": "single",
+          "yHistogram": true
+        },
+        "legend": {
+          "show": true
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "showValue": "never",
+        "cellValues": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (le) (sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__interval:15s]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 29
+      },
+      "id": 15
+    },
+    {
+      "type": "bargauge",
+      "title": "Fetches by Duration (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How many samples took how long**, for the whole range. Only ranges with at least one sample are shown.\n\n**Normal:** almost everything in the first bars.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.05\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.05\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.05\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "≤ 0.05 s"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.1\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.1\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.1\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.05\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.05\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.05\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "0.05–0.1 s"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.2\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.2\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.2\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.1\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.1\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.1\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "0.1–0.2 s"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.4\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.4\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.4\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.2\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.2\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.2\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "0.2–0.4 s"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.8\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.8\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.8\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.4\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.4\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.4\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "0.4–0.8 s"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.6\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.6\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.6\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.8\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.8\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"0.8\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "0.8–1.6 s"
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"3.2\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"3.2\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"3.2\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.6\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.6\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.6\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "1.6–3.2 s"
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"6.4\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"6.4\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"6.4\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"3.2\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"3.2\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"3.2\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "3.2–6.4 s"
+        },
+        {
+          "refId": "I",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"12.8\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"12.8\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"12.8\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"6.4\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"6.4\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"6.4\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "6.4–12.8 s"
+        },
+        {
+          "refId": "J",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"25.6\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"25.6\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"25.6\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"12.8\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"12.8\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"12.8\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "12.8–25.6 s"
+        },
+        {
+          "refId": "K",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"51.2\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"51.2\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"51.2\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"25.6\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"25.6\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"25.6\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "25.6–51.2 s"
+        },
+        {
+          "refId": "L",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"102.4\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"102.4\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"102.4\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"51.2\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"51.2\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"51.2\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "51.2–102.4 s"
+        },
+        {
+          "refId": "M",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"+Inf\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"+Inf\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"+Inf\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"102.4\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"102.4\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"102.4\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "> 102.4 s"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 29
+      },
+      "id": 16
+    },
+    {
+      "type": "row",
+      "title": "Content — Payload & Sampling",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "id": 17
+    },
+    {
+      "type": "bargauge",
+      "title": "Samples by Rows (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How many rows each successful sample had**, for the whole range. The sampler takes 10% of the table, at least 100 and at most 10,000 rows (POSTGRESQL_CONTENT_SAMPLE_PCT / MIN_ROWS / MAX_ROWS).\n\n**Normal:** bars around 100–10,000. Bars below 100 are tables with fewer rows than that, not a broken sampler.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"10.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"10.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"10.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "≤ 10 rows"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"20.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"20.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"20.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"10.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"10.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"10.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "10–20 rows"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"40.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"40.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"40.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"20.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"20.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"20.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "20–40 rows"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"80.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"80.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"80.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"40.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"40.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"40.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "40–80 rows"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"160.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"160.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"160.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"80.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"80.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"80.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "80–160 rows"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"320.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"320.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"320.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"160.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"160.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"160.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "160–320 rows"
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"640.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"640.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"640.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"320.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"320.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"320.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "320–640 rows"
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1280.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1280.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1280.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"640.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"640.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"640.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "640–1280 rows"
+        },
+        {
+          "refId": "I",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"2560.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"2560.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"2560.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1280.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1280.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1280.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "1280–2560 rows"
+        },
+        {
+          "refId": "J",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"5120.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"5120.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"5120.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"2560.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"2560.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"2560.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "2560–5120 rows"
+        },
+        {
+          "refId": "K",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"10240.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"10240.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"10240.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"5120.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"5120.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"5120.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "5120–10240 rows"
+        },
+        {
+          "refId": "L",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"20480.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"20480.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"20480.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"10240.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"10240.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"10240.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "10240–20480 rows"
+        },
+        {
+          "refId": "M",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"+Inf\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"+Inf\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"+Inf\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"20480.0\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"20480.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"20480.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "> 20480 rows"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 38
+      },
+      "id": 18
+    },
+    {
+      "type": "bargauge",
+      "title": "Samples by Size (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How big each uploaded sample was**, for the whole range.\n\n**Normal:** kilobytes. Samples over 100 MB are refused before upload and do not appear here — they show as 'too large' on the Overview.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1024.0\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1024.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1024.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "≤ 1 KiB"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"4096.0\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"4096.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"4096.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1024.0\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1024.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1024.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "1 KiB–4 KiB"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"16384.0\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"16384.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"16384.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"4096.0\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"4096.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"4096.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "4 KiB–16 KiB"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"65536.0\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"65536.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"65536.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"16384.0\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"16384.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"16384.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "16 KiB–64 KiB"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"262144.0\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"262144.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"262144.0\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"65536.0\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"65536.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"65536.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "64 KiB–256 KiB"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.048576e+06\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.048576e+06\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.048576e+06\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"262144.0\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"262144.0\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"262144.0\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "256 KiB–1 MiB"
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"4.194304e+06\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"4.194304e+06\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"4.194304e+06\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.048576e+06\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.048576e+06\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.048576e+06\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "1 MiB–4 MiB"
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.6777216e+07\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.6777216e+07\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.6777216e+07\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"4.194304e+06\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"4.194304e+06\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"4.194304e+06\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "4 MiB–16 MiB"
+        },
+        {
+          "refId": "I",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"6.7108864e+07\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"6.7108864e+07\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"6.7108864e+07\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.6777216e+07\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.6777216e+07\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"1.6777216e+07\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "16 MiB–64 MiB"
+        },
+        {
+          "refId": "J",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"2.68435456e+08\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"2.68435456e+08\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"2.68435456e+08\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"6.7108864e+07\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"6.7108864e+07\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"6.7108864e+07\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "64 MiB–256 MiB"
+        },
+        {
+          "refId": "K",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"+Inf\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"+Inf\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"+Inf\"}[15s]) * 1)[$__range:15s])) - sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"2.68435456e+08\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"2.68435456e+08\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", le=\"2.68435456e+08\"}[15s]) * 1)[$__range:15s]))) > 0",
+          "legendFormat": "> 256 MiB"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 38
+      },
+      "id": 19
+    },
+    {
+      "type": "timeseries",
+      "title": "Upload Throughput (bytes/s)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Sample bytes uploaded to the content service per second**, while samples run.\n\n**Normal:** bursts during a classification job, 0 otherwise.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_content_cache_write_bytes_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[5m]))",
+          "legendFormat": "bytes/s"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 38
+      },
+      "id": 20
+    },
+    {
+      "type": "heatmap",
+      "title": "Sample Rows — distribution",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Rows in each successful sample, over time.** **How to read it:** time runs left to right, the measured value bottom to top. Each box is 'this many fell in this range, at this moment' — brighter = more; hover a box for the exact count (Value). Colours do not identify individual items.\n\n**Normal:** between 100 and 10,000.",
+      "interval": "30s",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "fill": "dark-orange",
+          "scale": "exponential",
+          "exponent": 0.5,
+          "steps": 64,
+          "reverse": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "unit": "short"
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "mode": "single",
+          "yHistogram": true
+        },
+        "legend": {
+          "show": true
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "showValue": "never",
+        "cellValues": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (le) (sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__interval:15s]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 46
+      },
+      "id": 21
+    },
+    {
+      "type": "heatmap",
+      "title": "Sample Size — distribution",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Size of each successful sample, over time.** **How to read it:** time runs left to right, the measured value bottom to top. Each box is 'this many fell in this range, at this moment' — brighter = more; hover a box for the exact count (Value). Colours do not identify individual items.\n\n**Normal:** kilobytes to a few megabytes.",
+      "interval": "30s",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "fill": "dark-orange",
+          "scale": "exponential",
+          "exponent": 0.5,
+          "steps": 64,
+          "reverse": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "unit": "bytes"
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "mode": "single",
+          "yHistogram": true
+        },
+        "legend": {
+          "show": true
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "showValue": "never",
+        "cellValues": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (le) (sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__interval:15s]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 46
+      },
+      "id": 22
+    }
+  ]
+}

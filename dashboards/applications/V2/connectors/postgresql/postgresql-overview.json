@@ -1,0 +1,5738 @@
+{
+  "uid": "apps-v2-postgresql-overview",
+  "title": "PostgreSQL Connector — Overview",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "connector:postgresql",
+    "overview"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-postgresql-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "PostgreSQL — Pipeline",
+      "type": "link",
+      "url": "/d/apps-v2-postgresql-pipeline?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "PostgreSQL — Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-postgresql-runtime?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 — Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "enable": true,
+        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\".*postgresql-connector.*\"}[5m]) > 0",
+        "name": "Pod Restarts",
+        "tagKeys": "pod",
+        "titleFormat": "Pod Restart"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "description": "Fed from kube-state-metrics, never from process_start_time_seconds: postgresql is minReplicaCount 0, so a process-lifecycle metric leaves this variable — and every panel, including the backlog and KEDA rows that survive the sleeping pod — empty in the connector's normal state.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(kube_deployment_spec_replicas{deployment=~\".*postgresql-connector-be-go.*\"}, namespace)",
+        "query": {
+          "query": "label_values(kube_deployment_spec_replicas{deployment=~\".*postgresql-connector-be-go.*\"}, namespace)",
+          "refId": "ns"
+        },
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "description": "allValue is .+ and not .*: where a PodMonitor and a Service-level catch-all scrape the same target, only the PodMonitor copy carries a pod label. In PromQL .* also matches the absent label, which doubles every additive aggregation while leaving percentiles and _sum/_count ratios correct.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(process_start_time_seconds{job=~\".*postgresql-connector-be-go.*\", namespace=\"$namespace\"}, pod)",
+        "query": {
+          "query": "label_values(process_start_time_seconds{job=~\".*postgresql-connector-be-go.*\", namespace=\"$namespace\"}, pod)",
+          "refId": "pod"
+        },
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "How to read this board",
+      "options": {
+        "mode": "markdown",
+        "content": "**Totals add up every scan in the time range.** Two scans of a 139-table server read 278 tables. To count what the server holds, narrow the range to one scan.\n\n**Bars and stats say _how many_. The line charts beside them say _when_.** A scan shorter than ~30 seconds can be invisible on a line chart and still be fully counted in the bars.\n\n**One item = one column.** PostgreSQL sends no table documents, so Items Sent should equal Columns Found exactly.\n\n**What this board cannot tell you:** anything per datasource, per database or per schema (the metrics carry none of those labels — the dead-letter messages and the logs do name them); how many connections PostgreSQL is holding (nothing measures it); and how long a scan took end to end (nothing times it: 'Scan Duration' is read off the first and last activity, ±15 s).\n\nHover the ⓘ on any panel for what it counts, what is normal, and where to look next.",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1
+    },
+    {
+      "type": "row",
+      "title": "Totals in Window",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 2
+    },
+    {
+      "type": "stat",
+      "title": "Duration ±15s",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How long the scan took, end to end**: from the moment its databases were listed to the last table read. With several scans in the range it spans all of them, idle gaps included.\n\n**Normal:** seconds to minutes, precise to about ±15 s: it is read from samples taken every 10–30 s, not timed. **0 s means the whole scan fit between two samples** — it ran and was fast (a 144-table server scans in about a second); the counts beside it show what it did.\n\n**Next:** 'Fan-out over time' in the Scanner row shows the same span as a shape.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max_over_time(timestamp(sum(((last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)) > 0)[$__range:15s]) - min_over_time(timestamp(sum(((last_over_time(postgresql_connector_databases_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_databases_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_databases_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)) > 0)[$__range:15s])"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 7
+      },
+      "id": 3
+    },
+    {
+      "type": "stat",
+      "title": "Databases",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Databases the scan found on the server** and handed out to be scanned, after the configured exclusions.\n\n**Normal:** the number of databases the scan account can see, once per scan in the range.\n\n**Next:** 'Database Failures' in Scan Health for the ones that could not be opened.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_databases_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_databases_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_databases_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 7
+      },
+      "id": 4
+    },
+    {
+      "type": "stat",
+      "title": "Schemas",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Schemas found across those databases**, system schemas excluded.\n\n**Normal:** the user schemas of every scanned database.\n\n**Next:** 'Schemas by Scan Mode' in the funnel for how each one was read.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_schemas_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_schemas_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_schemas_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 7
+      },
+      "id": 5
+    },
+    {
+      "type": "stat",
+      "title": "Tables",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Tables, views, materialized views and foreign tables whose columns were read.**\n\n**Normal:** every relation of every scanned schema. A relation with no columns is skipped in bulk mode and counted in table mode.\n\n**Next:** 'Tables by Outcome' in the funnel.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 7
+      },
+      "id": 6
+    },
+    {
+      "type": "stat",
+      "title": "Columns",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Columns read across all scanned tables.** Each one becomes one item.\n\n**Normal:** roughly tables × average width ('Columns per Table' on the Pipeline board).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 7
+      },
+      "id": 7
+    },
+    {
+      "type": "stat",
+      "title": "Items Sent",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Items handed to the sender for indexing**, one per column. Counted when queued: a batch that then fails to reach the message queue is not subtracted.\n\n**Normal:** exactly Columns Found.\n\n**Next:** 'Items Lost' beside it.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 7
+      },
+      "id": 8
+    },
+    {
+      "type": "stat",
+      "title": "Items Lost",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Columns found but never handed on for indexing**: Columns Found minus Items Sent.\n\n**Normal:** 0. Above 0 means those columns are missing from the index while the scan still finishes green.\n\n**Next:** 'Columns Lost' in Scan Health, and the scanner logs ('buildDocuments', 'Failed to upsert item').",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s]))) or vector(0)) - ((sum(sum_over_time(((last_over_time(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 7
+      },
+      "id": 9
+    },
+    {
+      "type": "stat",
+      "title": "Fetches",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Column samples requested from the content side**, any outcome. Content runs on its own pods, triggered separately from scans.\n\n**Normal:** whatever the downstream classifier asked for; 0 when nothing requested samples.\n\n**Next:** the Content row.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 7
+      },
+      "id": 10
+    },
+    {
+      "type": "row",
+      "title": "Funnel — Database → Schema → Table → Column → Item",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "id": 11
+    },
+    {
+      "type": "stat",
+      "title": "Schema Attempts",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Times a schema was read — attempts, not schemas.** A schema that fails temporarily is retried, up to 5 times, and every try counts here.\n\n**Normal:** equal to Schemas Discovered. Above it means schemas are failing and being retried.\n\n**Next:** 'NATS Redelivered' in the Scanner row and 'Work Lost (DLQ)' beside it.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"bulk_tables|tables_in_schema\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"bulk_tables|tables_in_schema\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=~\"bulk_tables|tables_in_schema\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 12
+      },
+      "id": 12
+    },
+    {
+      "type": "stat",
+      "title": "Items per Column",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Does every column found become an item?**\n\n**Normal:** 100%. Lower means items failed to be built or queued — the scan still looks green.\n\n**Next:** 'Items Lost' for how many.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "dark-green",
+                "value": 0.999
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(sum_over_time(((last_over_time(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s])) / (sum(sum_over_time(((last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s])) > 0)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 12
+      },
+      "id": 13
+    },
+    {
+      "type": "stat",
+      "title": "Batches Published (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Batches of items that actually reached the message queue.** Items are sent 100 at a time, plus one partial batch per schema, so this is roughly Items Sent ÷ 100 + Schemas Discovered.\n\n**Normal:** steady relative to Items Sent. The only trace of a final batch that failed to publish: Items Sent still counts those items, this does not.\n\n**Next:** the scanner logs for 'Failed to flush remaining items'.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(connector_batches_sent_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(connector_batches_sent_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(connector_batches_sent_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 12
+      },
+      "id": 14
+    },
+    {
+      "type": "stat",
+      "title": "Work Lost (DLQ)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Scan work that failed all 5 attempts and was given up on** in the selected range: a scan request, a whole database or a whole schema — not indexed while the scan reports success.\n\n**Normal:** 0. The board cannot name it; each message in the dead-letter queue does: `nats stream get DLQ_CONSUME_POSTGRESQL <seq>`.\n\n**Next:** the Dead Letter Queue row at the bottom.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((max(sum_over_time(((last_over_time(nats_stream_last_seq{stream_name=\"DLQ_CONSUME_POSTGRESQL\"}[15s]) - last_over_time(nats_stream_last_seq{stream_name=\"DLQ_CONSUME_POSTGRESQL\"}[1d] offset 15s)) >= 0 or last_over_time(nats_stream_last_seq{stream_name=\"DLQ_CONSUME_POSTGRESQL\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 12
+      },
+      "id": 15
+    },
+    {
+      "type": "bargauge",
+      "title": "Schemas by Scan Mode (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How each schema was read** (scan mode auto). Bulk = two queries for the whole schema, used below 10,000 columns (POSTGRESQL_BULK_THRESHOLD). Table mode = one query per table, run in parallel, for bigger schemas — or when counting the schema's columns failed. Counts attempts: a retried schema counts again.\n\n**Normal:** mostly bulk. Neither is a problem; table mode is just slower per column. A sudden jump in table mode on the same server means counting columns is failing and schemas are falling back — most often because the server ran out of connections (see Scan Health).\n\n**Next:** the line chart beside it shows when.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bulk"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "table mode"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=\"bulk_tables\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=\"bulk_tables\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=\"bulk_tables\"}[15s]) * 1)[$__range:15s]))) or vector(0))",
+          "legendFormat": "bulk"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=\"tables_in_schema\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=\"tables_in_schema\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=\"tables_in_schema\"}[15s]) * 1)[$__range:15s]))) or vector(0))",
+          "legendFormat": "table mode"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 16
+      },
+      "id": 16
+    },
+    {
+      "type": "timeseries",
+      "title": "Schemas by Scan Mode (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**When schemas were read, by mode**, same colours as the bars beside it.\n\n**Normal:** a bump per scan. A scan shorter than ~30 seconds may not show here at all — the bars still count it.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bulk"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "table mode"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=\"bulk_tables\"}[5m]))",
+          "legendFormat": "bulk"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", query_type=\"tables_in_schema\"}[5m]))",
+          "legendFormat": "table mode"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 16
+      },
+      "id": 17
+    },
+    {
+      "type": "bargauge",
+      "title": "Tables by Outcome (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**What happened to every table.** Scanned = its columns were read. Lost = its column query failed (table mode only; in bulk a failure loses the whole schema, see Scan Health). Permissions missing = scanned, but its column permissions could not be read, so its items went out with empty permissions — a subset of scanned.\n\n**Normal:** only green. Orange needs a grant for the scan account; red needs a look at the scanner logs.\n\n**Next:** the line chart beside it shows when.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tables scanned"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tables lost"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "permissions missing"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s]))) or vector(0))",
+          "legendFormat": "tables scanned"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"table\"}[15s]) - last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"table\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"table\"}[15s]) * 1)[$__range:15s]))) or vector(0))",
+          "legendFormat": "tables lost"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_permissions_failed_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_permissions_failed_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_permissions_failed_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s]))) or vector(0))",
+          "legendFormat": "permissions missing"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 16
+      },
+      "id": 18
+    },
+    {
+      "type": "timeseries",
+      "title": "Tables by Outcome (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**When tables were scanned or lost**, same colours as the bars beside it.\n\n**Normal:** a green bump per scan.\n\n**Next:** the bars beside it for how many.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tables scanned"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tables lost"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "permissions missing"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[5m]))",
+          "legendFormat": "tables scanned"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"table\"}[5m]))",
+          "legendFormat": "tables lost"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_permissions_failed_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[5m]))",
+          "legendFormat": "permissions missing"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 16
+      },
+      "id": 19
+    },
+    {
+      "type": "row",
+      "title": "Scanner — postgresql-connector-be-go",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 20
+    },
+    {
+      "type": "stat",
+      "title": "NATS Backlog",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Work waiting in the queue** (stream JE_POSTGRESQL): scan requests, databases and schemas not picked up yet. This is 'how far behind is it?', and it is readable even while the connector is asleep.\n\n**Normal:** 0 between scans. Growing with no pods running means the connector is not waking up.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_pending{stream_name=\"JE_POSTGRESQL\", consumer_name=\"postgresql-scanner-v1\"})"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 25
+      },
+      "id": 21
+    },
+    {
+      "type": "stat",
+      "title": "NATS In Flight",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Work handed to a pod and not finished yet.** Each message is a whole database or schema.\n\n**Normal:** a few while a scan runs, 0 otherwise. Stuck above 0 while nothing is being scanned means a pod is hung.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_ack_pending{stream_name=\"JE_POSTGRESQL\", consumer_name=\"postgresql-scanner-v1\"})"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 25
+      },
+      "id": 22
+    },
+    {
+      "type": "stat",
+      "title": "NATS Redelivered",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Work being retried after a failure.** A database or schema is retried up to 5 times before going to the dead-letter queue.\n\n**Normal:** 0. A connector failing and retrying in a loop shows up here and nowhere else.\n\n**Next:** Scan Health for what is failing.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_redelivered{stream_name=\"JE_POSTGRESQL\", consumer_name=\"postgresql-scanner-v1\"})"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 25
+      },
+      "id": 23
+    },
+    {
+      "type": "stat",
+      "title": "Replicas",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Scanner pods running now**, as the autoscaler reports them.\n\n**Normal:** 0 between scans, a few during one.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(kube_horizontalpodautoscaler_status_current_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*postgresql-connector-be-go\"})"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 25
+      },
+      "id": 24
+    },
+    {
+      "type": "stat",
+      "title": "Max Replicas",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**The most scanner pods the autoscaler may start** (chart setting autoscaling.maxReplicas, 10 by default).\n\n**Normal:** read it against Replicas: at the ceiling with a growing backlog means the scanner cannot go faster.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*postgresql-connector-be-go\"})"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 25
+      },
+      "id": 25
+    },
+    {
+      "type": "stat",
+      "title": "Backlog Slope (2m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How fast the backlog is growing**, in messages per second. This is exactly what one of the autoscaler's rules looks at.\n\n**Normal:** 0. Above 0.5 the autoscaler adds pods.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 2,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "clamp_min(max(deriv(nats_consumer_num_pending{stream_name=\"JE_POSTGRESQL\", consumer_name=\"postgresql-scanner-v1\"}[2m])), 0)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 25
+      },
+      "id": 26
+    },
+    {
+      "type": "timeseries",
+      "title": "NATS — Scanner Consumer Backlog",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**The queue over time.** Pending = waiting, ack pending = being worked on, redelivered = being retried. Each message is a scan request, a database or a schema, so 3 pending can be three entire schemas.\n\n**Normal:** spikes at the start of a scan that drain to 0.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pending"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ack pending"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "redelivered"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_pending{stream_name=\"JE_POSTGRESQL\", consumer_name=\"postgresql-scanner-v1\"})",
+          "legendFormat": "pending"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_ack_pending{stream_name=\"JE_POSTGRESQL\", consumer_name=\"postgresql-scanner-v1\"})",
+          "legendFormat": "ack pending"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_redelivered{stream_name=\"JE_POSTGRESQL\", consumer_name=\"postgresql-scanner-v1\"})",
+          "legendFormat": "redelivered"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 29
+      },
+      "id": 27
+    },
+    {
+      "type": "timeseries",
+      "title": "KEDA — Replicas: current vs desired vs max",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Pods running, pods wanted, and the ceiling.**\n\n**Normal:** pods stay up ~5–10 minutes after the work ends (cooldown 300 s, scale-down window 300 s, at most half the pods removed per minute). 'It scaled minutes ago and is still the same' is configuration, not a bug.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "current"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "desired"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "max"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(kube_horizontalpodautoscaler_status_current_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*postgresql-connector-be-go\"})",
+          "legendFormat": "current"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*postgresql-connector-be-go\"})",
+          "legendFormat": "desired"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*postgresql-connector-be-go\"})",
+          "legendFormat": "max"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 29
+      },
+      "id": 28
+    },
+    {
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Scanner pods answering right now.**\n\n**Normal:** 0 when idle — the scanner scales to zero between scans. That is not an outage.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(up{job=~\".*postgresql-connector-be-go\", namespace=\"$namespace\", pod=~\"$pod\"}) or vector(0)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 37
+      },
+      "id": 29
+    },
+    {
+      "type": "stat",
+      "title": "Restarts (1h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Scanner container restarts in the last hour.**\n\n**Normal:** 0. Usually the pod ran out of memory (limit 1 GiB) or failed its health check; the work it held is retried.\n\n**Next:** the Runtime board.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", container=\"postgresql-connector-be-go\"}[1h])) or vector(0)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 37
+      },
+      "id": 30
+    },
+    {
+      "type": "stat",
+      "title": "Fan-out Mean",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Only the first step of a scan: connecting, listing the databases and queuing them.** It is NOT how long the whole scan took — databases and schemas are scanned afterwards, possibly on other pods.\n\n**Normal:** well under a second.\n\n**Next:** 'Duration ±15s' in Totals for the whole scan.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 2,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(sum_over_time(((last_over_time(postgresql_connector_scan_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_scan_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_scan_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s])) / (sum(sum_over_time(((last_over_time(postgresql_connector_scan_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_scan_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_scan_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s])) > 0)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 37
+      },
+      "id": 31
+    },
+    {
+      "type": "stat",
+      "title": "Peak In Flight /20",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Most tables this pod was reading at the same time.** Up to 10 schemas at once (POSTGRESQL_NATS_WORKERS), and in table mode up to 10 more tables on the worker pool (POSTGRESQL_POOL_WORKERS) — 20 in all.\n\n**Normal:** below 20. Sampled every 10–30 s, so a small scan can read 0 here and still have run.\n\n**Next:** 'Tables In Flight by pod' in the Queries row.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 20
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((max(max_over_time(sum(postgresql_connector_tables_in_flight{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"})[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 37
+      },
+      "id": 32
+    },
+    {
+      "type": "stat",
+      "title": "Query p95 (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How slow the slowest 5% of the scanner's SQL queries were**, all kinds together.\n\n**Normal:** under a second on a healthy database.\n\n**Next:** 'Query Time by Type' below, and the Pipeline board for each kind.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s]))) >= 0"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 37
+      },
+      "id": 33
+    },
+    {
+      "type": "stat",
+      "title": "Queries Run (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**SQL queries the scanner sent to PostgreSQL**, all kinds.\n\n**Normal:** about 2 per table plus a few per schema: every table gets a permissions query, and in table mode a column query too.\n\n**Next:** 'Query Count by Type' on the Pipeline board.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 37
+      },
+      "id": 34
+    },
+    {
+      "type": "timeseries",
+      "title": "Scanner Throughput (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How fast the scanner is working**, while it works.\n\n**Normal:** only meaningful during a long scan; a short one may read 0 here and still be fully counted in the stats above.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[5m]))",
+          "legendFormat": "tables/s"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_columns_found_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[5m]))",
+          "legendFormat": "columns/s"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_items_sent_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[5m]))",
+          "legendFormat": "items/s"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 41
+      },
+      "id": 35
+    },
+    {
+      "type": "timeseries",
+      "title": "Fan-out over time (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**When the scan ran.** Databases are discovered first, then schemas, then tables; the span from the first to the last movement of 'tables scanned' is the closest thing to how long the whole scan took.\n\n**Normal:** three bumps in that order, close together.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_databases_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[5m]))",
+          "legendFormat": "databases discovered"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_schemas_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[5m]))",
+          "legendFormat": "schemas discovered"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_tables_scanned_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[5m]))",
+          "legendFormat": "tables scanned"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 41
+      },
+      "id": 36
+    },
+    {
+      "type": "timeseries",
+      "title": "KEDA — Scanner Trigger Signals",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**What the scanner's autoscaler looks at.** ack-capacity = work in progress; trend-based = is the queue growing; pending-wakeup = wakes the scanner from zero on the first queued message.\n\n**Normal:** far below the thresholds in the legend. Note the scale: the trend signal is a rate and is tiny next to the others.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_ack_pending{stream_name=\"JE_POSTGRESQL\", consumer_name=\"postgresql-scanner-v1\"})",
+          "legendFormat": "ack-capacity (thr 1000)"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "clamp_min(max(deriv(nats_consumer_num_pending{stream_name=\"JE_POSTGRESQL\", consumer_name=\"postgresql-scanner-v1\"}[2m])), 0)",
+          "legendFormat": "trend-based (thr 0.5)"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_pending{stream_name=\"JE_POSTGRESQL\", consumer_name=\"postgresql-scanner-v1\"})",
+          "legendFormat": "pending-wakeup (thr 1000)"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 41
+      },
+      "id": 37
+    },
+    {
+      "type": "row",
+      "title": "PostgreSQL — Queries & Concurrency",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 49
+      },
+      "id": 38
+    },
+    {
+      "type": "bargauge",
+      "title": "Query Time by Type (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Where the scanner spent its database time**: total seconds per kind of query. table_permissions runs once per table in both modes; list_columns once per table in table mode; bulk_tables + bulk_columns once per schema in bulk mode; the rest once per database or schema.\n\n**Normal:** table_permissions or list_columns on top — they run per table. A per-schema query on top means one schema is very large.\n\n**Next:** the Pipeline board has each kind's percentiles and counts.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "list_databases"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "list_schemas"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "count_schema_columns"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bulk_tables"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bulk_columns"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tables_in_schema"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "list_columns"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "table_permissions"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (query_type) (sum_over_time(((last_over_time(postgresql_connector_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_query_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "{{query_type}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 50
+      },
+      "id": 39
+    },
+    {
+      "type": "timeseries",
+      "title": "Tables In Flight by pod",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Tables each pod was reading at once**, highest value in each minute. The red line is the per-pod ceiling (20).\n\nThe board cannot show connections to PostgreSQL: nothing measures them. For sizing, each scan opens a pool of up to 20 connections per database it reads, per pod, and closes idle ones after ~2.5 minutes — so many databases or many pods can reach the server's max_connections (100 by default) long before this line reaches 20. Measured locally: 15 concurrent scans of a 7-database server filled 100 connections in 2 seconds — all of them idle, held by the scans' pools — and kept the server full for ~3 minutes; 2 scans and 42 databases ended in the dead-letter queue.\n\n**Normal:** below the line. At the line with a growing backlog means the pod is the bottleneck.\n\n**Next:** pg_stat_activity on the server for the real connection count.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (pod) (max_over_time(postgresql_connector_tables_in_flight{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1m]))",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 50
+      },
+      "id": 40
+    },
+    {
+      "type": "row",
+      "title": "Scan Health — Silent Degradation",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 58
+      },
+      "id": 41
+    },
+    {
+      "type": "stat",
+      "title": "Start Failures",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Attempts at starting a scan that failed**: could not connect to the server, verify the connection, or list its databases. Each try counts: the scan request is retried up to 5 times, so one scan that never starts reads 5, and then the whole scan is lost.\n\n**Normal:** 0. Usually wrong host, password or network policy — the scan shows as failed in the UI.\n\n**Next:** the scanner logs ('postgresql.connection.*', 'postgresql.database.list_failed').",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: attempts",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "dark-red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"server\"}[15s]) - last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"server\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"server\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 59
+      },
+      "id": 42
+    },
+    {
+      "type": "stat",
+      "title": "Database Failures",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Attempts at reading a database that failed**: its schemas could not be listed. The most common cause is a database the scan account has no CONNECT privilege on — the failure only shows when the first query runs. Each database is retried up to 5 times, so one lost database reads 5 here and 1 in 'Work Lost (DLQ)'.\n\n**Normal:** 0. Any value is an entire database missing from a scan that otherwise finishes.\n\n**Next:** the scan's error list in the UI names the database ('postgresql.schema.list_failed'). Many at once, across several scans, together with Scan Start Failures and a jump in table-mode schemas, is the server refusing connections ('too many clients'): see 'Tables In Flight by pod'.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: attempts",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"database\"}[15s]) - last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"database\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"database\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 59
+      },
+      "id": 43
+    },
+    {
+      "type": "stat",
+      "title": "Schema Failures",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Attempts at reading a schema that failed**: listing its tables failed, or (bulk mode) reading all its columns at once failed. Retried up to 5 times, so one lost schema reads 5.\n\n**Normal:** 0. In bulk mode one lost schema is every one of its tables.\n\n**Next:** 'Errors by What Was Lost' below; the DLQ row if they were retried 5 times.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: attempts",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"schema\"}[15s]) - last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"schema\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"schema\"}[15s]) * 1)[$__range:15s]))) or vector(0)) + ((sum(sum_over_time(((last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"schema\"}[15s]) - last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"schema\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"schema\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 59
+      },
+      "id": 44
+    },
+    {
+      "type": "stat",
+      "title": "Tables Lost",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Tables whose column query failed** (table mode only). Not retried: the rest of the schema continues, so each one is a distinct table.\n\n**Normal:** 0.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"table\"}[15s]) - last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"table\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"table\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 59
+      },
+      "id": 45
+    },
+    {
+      "type": "stat",
+      "title": "Columns Lost",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Columns that could not be turned into an item or queued.** The table is still counted as scanned.\n\n**Normal:** 0. Anything else means columns missing from the index on a green scan.\n\n**Next:** 'Items Lost' covers these and any other gap between Columns Found and Items Sent.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_columns_failed_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_columns_failed_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_columns_failed_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 59
+      },
+      "id": 46
+    },
+    {
+      "type": "stat",
+      "title": "Permissions Missing",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Tables whose column permissions could not be read.** Their items were still sent, with empty permissions — nothing errors, and access-based classification sees nobody with access.\n\n**Normal:** 0. Usually the scan account cannot read the grant catalog for that schema: grant it, or scan with an owner role.\n\n**Next:** the scanner logs ('Failed to extract permissions').",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_permissions_failed_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) - last_over_time(postgresql_connector_permissions_failed_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_permissions_failed_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 59
+      },
+      "id": 47
+    },
+    {
+      "type": "bargauge",
+      "title": "Errors by What Was Lost (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Every error, by what it cost the scan.** server = the whole scan. database = one database. schema = one schema. table = one table. One error can be a whole database, so read the label before the length of the bar.\n\n**Normal:** empty. Retries count again: a schema retried 5 times reads 5.\n\n**Next:** the line chart beside it shows when.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "server"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "database"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "schema"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "table"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"server\"}[15s]) - last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"server\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"server\"}[15s]) * 1)[$__range:15s]))) or vector(0))",
+          "legendFormat": "server"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"database\"}[15s]) - last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"database\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"database\"}[15s]) * 1)[$__range:15s]))) or vector(0))",
+          "legendFormat": "database"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"schema\"}[15s]) - last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"schema\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"schema\"}[15s]) * 1)[$__range:15s]))) or vector(0)) + ((sum(sum_over_time(((last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"schema\"}[15s]) - last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"schema\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"schema\"}[15s]) * 1)[$__range:15s]))) or vector(0))",
+          "legendFormat": "schema"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"table\"}[15s]) - last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"table\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"table\"}[15s]) * 1)[$__range:15s]))) or vector(0))",
+          "legendFormat": "table"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 63
+      },
+      "id": 48
+    },
+    {
+      "type": "timeseries",
+      "title": "Errors by What Was Lost (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**When errors happened**, same colours as the bars beside it.\n\n**Normal:** flat at 0.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "server"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "database"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "schema"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "table"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"server\"}[5m]))",
+          "legendFormat": "server"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"database\"}[5m]))",
+          "legendFormat": "database"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(rate(postgresql_connector_database_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"schema\"}[5m]))) or vector(0)) + ((sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"schema\"}[5m]))) or vector(0))",
+          "legendFormat": "schema"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_table_errors_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go\", scope=\"table\"}[5m]))",
+          "legendFormat": "table"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 63
+      },
+      "id": 49
+    },
+    {
+      "type": "row",
+      "title": "Content — postgresql-connector-be-go-content",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 71
+      },
+      "id": 50
+    },
+    {
+      "type": "stat",
+      "title": "Pods Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Content pods answering right now.**\n\n**Normal:** 0 when idle — content also scales to zero.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(up{job=~\".*postgresql-connector-be-go-content\", namespace=\"$namespace\", pod=~\"$pod\"}) or vector(0)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 72
+      },
+      "id": 51
+    },
+    {
+      "type": "stat",
+      "title": "Restarts (1h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Content container restarts in the last hour.**\n\n**Normal:** 0. The memory limit is 512 MiB.\n\n**Next:** the Runtime board.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\", container=\"postgresql-connector-be-go-content\"}[1h])) or vector(0)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 72
+      },
+      "id": 52
+    },
+    {
+      "type": "stat",
+      "title": "Fetches",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Column samples requested**, any outcome.\n\n**Normal:** whatever was asked for.\n\n**Next:** 'Content Fetches by Outcome' below.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 72
+      },
+      "id": 53
+    },
+    {
+      "type": "stat",
+      "title": "Content Fetch — mean / p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How long one sample takes**, end to end, failures included. Mean = the typical one; multiply by the number of columns to estimate a bigger job. p95 = the slowest 5%.\n\n**Normal:** well under a second. Sampling reads a share of the whole TABLE (10%, at least 100 and at most 10,000 rows), so every column of a big table is slower.\n\n**Next:** the Pipeline board for the distribution.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 2,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__range:15s])) / (sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__range:15s])) > 0)",
+          "legendFormat": "mean"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__range:15s]))) >= 0",
+          "legendFormat": "p95"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 9,
+        "y": 72
+      },
+      "id": 54
+    },
+    {
+      "type": "stat",
+      "title": "Errors",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Samples that did not succeed**, for any reason.\n\n**Normal:** 0, but not every error is a problem — see the colours in the breakdown.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", success=\"false\"}[15s]) - last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", success=\"false\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", success=\"false\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 14,
+        "y": 72
+      },
+      "id": 55
+    },
+    {
+      "type": "stat",
+      "title": "Fetch Backlog",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Bulk sample requests waiting** (the classifier's queue).\n\n**Normal:** 0 between jobs.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_pending{stream_name=\"CONTENT_FETCH\", consumer_name=\"content-fetch-postgresql\"})"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 17,
+        "y": 72
+      },
+      "id": 56
+    },
+    {
+      "type": "stat",
+      "title": "Interactive Backlog",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**'See content' requests waiting** — a person in the UI is waiting on each of these.\n\n**Normal:** 0 almost always. Anything else means someone is staring at a spinner.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_pending{stream_name=\"CONTENT_FETCH\", consumer_name=\"content-fetch-postgresql-interactive\"})"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 72
+      },
+      "id": 57
+    },
+    {
+      "type": "bargauge",
+      "title": "Content Fetches by Outcome (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**What happened to every sample request.** Green = fine. Yellow = expected (the column or table no longer exists, or the sample is over 100 MB). Orange = configuration (bad request, credential, permission). Red = needs a look. 'reply not sent (retried)' = the sample was uploaded but the answer could not be sent, so the request goes back to the queue and runs again.\n\n**Normal:** mostly green. **'internal' includes a known connector bug:** sampling a column of a VIEW fails (PostgreSQL cannot sample views), so every view column reads red here while the scan is fine. Materialized views work.\n\n**Next:** the line chart beside it shows when; the content logs name the column.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NONE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "success"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_NOT_FOUND"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "not found"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_TOO_LARGE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "too large"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INVALID_URN"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "invalid URN"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CREDENTIAL_FAILURE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "credential failure"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_PERMISSION_DENIED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "permission denied"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_TIMEOUT"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "timeout"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CONNECTION_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "connection failed"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_READ_ERROR"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "read error"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CACHE_WRITE_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "cache write failed"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INTERNAL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "internal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_UNSPECIFIED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "unspecified"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PUBLISH_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "reply not sent (retried)"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (error_code) (sum_over_time(((last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "{{error_code}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 0,
+        "y": 76
+      },
+      "id": 58
+    },
+    {
+      "type": "timeseries",
+      "title": "Content Fetches by Outcome (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**When samples happened and how they ended**, same colours as the bars beside it.\n\n**Normal:** bursts when a classification job runs.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NONE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "success"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_NOT_FOUND"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "not found"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_TOO_LARGE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "too large"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INVALID_URN"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "invalid URN"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CREDENTIAL_FAILURE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "credential failure"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_PERMISSION_DENIED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "permission denied"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_TIMEOUT"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "timeout"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CONNECTION_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "connection failed"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_READ_ERROR"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "read error"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CACHE_WRITE_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "cache write failed"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INTERNAL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "internal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_UNSPECIFIED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "unspecified"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PUBLISH_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "reply not sent (retried)"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (error_code) (rate(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[5m]))",
+          "legendFormat": "{{error_code}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 9,
+        "y": 76
+      },
+      "id": 59
+    },
+    {
+      "type": "stat",
+      "title": "Error Replies Not Sent (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Failed samples whose failure could not be reported back.** The request is dropped anyway (retrying would fail the same way), so whoever asked waits until their own timeout instead of hearing the error.\n\n**Normal:** 0. Anything else points at the message queue, not the database.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_content_error_reply_failed_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_error_reply_failed_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_error_reply_failed_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 76
+      },
+      "id": 60
+    },
+    {
+      "type": "stat",
+      "title": "NATS — Fetch Redelivered",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Sample requests being retried.** Timeouts, lost connections, failed uploads and replies that could not be sent go back to the queue, up to 3 times in all.\n\n**Normal:** 0.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_redelivered{stream_name=\"CONTENT_FETCH\", consumer_name=\"content-fetch-postgresql\"})"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 80
+      },
+      "id": 61
+    },
+    {
+      "type": "timeseries",
+      "title": "NATS — Content Consumer Backlog",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Both content queues over time**: bulk (classifier) and interactive (a person waiting in the UI).\n\n**Normal:** spikes that drain to 0. Each request is tried at most 3 times.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^bulk pending"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^bulk ack pending"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^interactive pending"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^bulk redelivered"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_pending{stream_name=\"CONTENT_FETCH\", consumer_name=\"content-fetch-postgresql\"})",
+          "legendFormat": "bulk pending"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_ack_pending{stream_name=\"CONTENT_FETCH\", consumer_name=\"content-fetch-postgresql\"})",
+          "legendFormat": "bulk ack pending"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_pending{stream_name=\"CONTENT_FETCH\", consumer_name=\"content-fetch-postgresql-interactive\"})",
+          "legendFormat": "interactive pending"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_redelivered{stream_name=\"CONTENT_FETCH\", consumer_name=\"content-fetch-postgresql\"})",
+          "legendFormat": "bulk redelivered"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 84
+      },
+      "id": 62
+    },
+    {
+      "type": "timeseries",
+      "title": "KEDA — Content Replicas: current vs desired vs max",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Content pods running, wanted, and the ceiling** (10 by default).\n\n**Normal:** 0 when idle; pods stay ~5–10 minutes after the last request (cooldown 300 s).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "current"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "desired"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "max"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(kube_horizontalpodautoscaler_status_current_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*postgresql-connector-be-go-content\"})",
+          "legendFormat": "current"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*postgresql-connector-be-go-content\"})",
+          "legendFormat": "desired"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"$namespace\", horizontalpodautoscaler=~\".*postgresql-connector-be-go-content\"})",
+          "legendFormat": "max"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 84
+      },
+      "id": 63
+    },
+    {
+      "type": "timeseries",
+      "title": "KEDA — Content Trigger Signals",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**What the content autoscaler looks at.** The interactive rule exists so a single 'See content' request wakes the pods even when nothing else is queued.\n\n**Normal:** far below the thresholds in the legend.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_ack_pending{stream_name=\"CONTENT_FETCH\", consumer_name=\"content-fetch-postgresql\"})",
+          "legendFormat": "ack-capacity (thr 1000)"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "clamp_min(max(deriv(nats_consumer_num_pending{stream_name=\"CONTENT_FETCH\", consumer_name=\"content-fetch-postgresql\"}[2m])), 0)",
+          "legendFormat": "trend-based (thr 0.5)"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_pending{stream_name=\"CONTENT_FETCH\", consumer_name=\"content-fetch-postgresql\"})",
+          "legendFormat": "pending-wakeup (thr 1000)"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_consumer_num_pending{stream_name=\"CONTENT_FETCH\", consumer_name=\"content-fetch-postgresql-interactive\"})",
+          "legendFormat": "interactive-wakeup (thr 1000)"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 84
+      },
+      "id": 64
+    },
+    {
+      "type": "row",
+      "title": "Content — Sample Quality",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 92
+      },
+      "id": 65
+    },
+    {
+      "type": "stat",
+      "title": "Rows per Sample — mean",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How many rows went into a successful sample**, on average.\n\n**Normal:** between 100 and 10,000 (POSTGRESQL_CONTENT_MIN_ROWS / MAX_ROWS); fewer only for tables with fewer rows. Far below 100 on big tables means samples are coming back thin.\n\n**Next:** 'Samples by Rows' on the Pipeline board.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__range:15s])) / (sum(sum_over_time(((last_over_time(postgresql_connector_content_sample_rows_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_sample_rows_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_sample_rows_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__range:15s])) > 0)"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 93
+      },
+      "id": 66
+    },
+    {
+      "type": "stat",
+      "title": "Sample Size — mean / p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How big the uploaded samples were.**\n\n**Normal:** kilobytes to a few megabytes. Samples over 100 MB are refused (too large).\n\n**Next:** 'Samples by Size' on the Pipeline board.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__range:15s])) / (sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__range:15s])) > 0)",
+          "legendFormat": "mean"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__range:15s]))) >= 0",
+          "legendFormat": "p95"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 93
+      },
+      "id": 67
+    },
+    {
+      "type": "stat",
+      "title": "Bytes Uploaded (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Total sample bytes uploaded to the content service.**\n\n**Normal:** Fetches × mean sample size.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_content_cache_write_bytes_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) - last_over_time(postgresql_connector_content_cache_write_bytes_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_cache_write_bytes_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 93
+      },
+      "id": 68
+    },
+    {
+      "type": "stat",
+      "title": "Samples Too Large (window)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Samples refused for being over 100 MB** (content.maxSizeBytes). The column is not classified.\n\n**Normal:** 0. Only very wide values (large text, bytea, json) times many rows get there.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", error_code=\"FETCH_ERROR_TOO_LARGE\"}[15s]) - last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", error_code=\"FETCH_ERROR_TOO_LARGE\"}[1d] offset 15s)) >= 0 or last_over_time(postgresql_connector_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\", error_code=\"FETCH_ERROR_TOO_LARGE\"}[15s]) * 1)[$__range:15s]))) or vector(0))"
+        }
+      ],
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 93
+      },
+      "id": 69
+    },
+    {
+      "type": "timeseries",
+      "title": "Sample Size — rows and KiB per sample (mean, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How big the successful samples were over time**, on average.\n\n**Normal:** steady for the same tables. A drop in rows with the same tables means the sampler is getting fewer rows back.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_content_sample_rows_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[5m])) / clamp_min(sum(rate(postgresql_connector_content_sample_rows_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[5m])), 1e-9)",
+          "legendFormat": "rows"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(postgresql_connector_content_fetch_bytes_sum{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[5m])) / clamp_min(sum(rate(postgresql_connector_content_fetch_bytes_count{namespace=\"$namespace\", pod=~\"$pod\", job=~\".*postgresql-connector-be-go-content\"}[5m])), 1e-9) / 1024",
+          "legendFormat": "KiB"
+        }
+      ],
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 97
+      },
+      "id": 70
+    },
+    {
+      "type": "row",
+      "title": "Data Loss — Dead Letter Queue",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 104
+      },
+      "id": 71
+    },
+    {
+      "type": "stat",
+      "title": "DLQ Depth",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Scan work that was given up on and is sitting in the dead-letter queue now.** Each message is a scan request, a database or a schema that failed 5 times — not indexed while the scan reported success.\n\n**Normal:** 0. To see which: each message names the database / schema and the last error — `nats stream get DLQ_CONSUME_POSTGRESQL <seq>`.\n\n**Next:** 'Work Lost (DLQ)' in the funnel counts the ones added in the selected range.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(nats_stream_total_messages{stream_name=\"DLQ_CONSUME_POSTGRESQL\"}) or vector(0)"
+        }
+      ],
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 105
+      },
+      "id": 72
+    },
+    {
+      "type": "timeseries",
+      "title": "DLQ Depth over time",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**When work started landing in the dead-letter queue.**\n\n**Normal:** flat at 0. A step up marks the moment a scan started losing work.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (stream_name) (nats_stream_total_messages{stream_name=\"DLQ_CONSUME_POSTGRESQL\"})",
+          "legendFormat": "{{stream_name}}"
+        }
+      ],
+      "gridPos": {
+        "h": 5,
+        "w": 18,
+        "x": 6,
+        "y": 105
+      },
+      "id": 73
+    }
+  ]
+}

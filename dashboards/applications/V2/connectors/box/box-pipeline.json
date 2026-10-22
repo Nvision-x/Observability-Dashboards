@@ -1,0 +1,3241 @@
+{
+  "uid": "apps-v2-box-pipeline",
+  "title": "Box Connector \u2014 Pipeline",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "connector:box",
+    "pipeline"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-box-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "Box \u2014 Overview",
+      "type": "link",
+      "url": "/d/apps-v2-box-overview?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Box \u2014 Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-box-runtime?${namespace:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 \u2014 Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "description": "Fed from kube-state-metrics, never from process_start_time_seconds: box is minReplicaCount 0, so a process-lifecycle metric leaves this variable \u2014 and every panel on the board \u2014 empty in the connector's normal state.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(kube_deployment_spec_replicas{deployment=~\".*box-connector-be-go.*\"}, namespace)",
+        "definition": "label_values(kube_deployment_spec_replicas{deployment=~\".*box-connector-be-go.*\"}, namespace)",
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "description": "allValue is .+ and not .*: every series is scraped twice in dev (PodMonitor plus the kubernetes-services catch-all) and only the PodMonitor copy carries a pod label, which .* would also match, doubling every additive aggregation.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\".*box-connector-be-go.*\", namespace=\"$namespace\"}, pod)",
+        "definition": "label_values(process_start_time_seconds{job=~\".*box-connector-be-go.*\", namespace=\"$namespace\"}, pod)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      },
+      {
+        "name": "datasource_id",
+        "type": "query",
+        "label": "Datasource ID (scan/augment)",
+        "description": "Scanner and augmenter series only. allValue stays .* on purpose \u2014 unlike $pod, some series in those subsystems carry no datasource_id and .+ would drop them.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values({__name__=~\"box_(scanner|augmenter)_.*\", namespace=\"$namespace\"}, datasource_id)",
+        "definition": "label_values({__name__=~\"box_(scanner|augmenter)_.*\", namespace=\"$namespace\"}, datasource_id)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      },
+      {
+        "name": "access_id",
+        "type": "query",
+        "label": "Access ID (content)",
+        "description": "Content mode is labeled by datasource_access_id, not datasource_id: the URN it is handed carries only access, file_id and user_id, so the datasource_id does not exist in that mode. A separate variable rather than one shared 'datasource' \u2014 the two label universes do not join.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values({__name__=~\"box_content_.*\", namespace=\"$namespace\"}, datasource_access_id)",
+        "definition": "label_values({__name__=~\"box_content_.*\", namespace=\"$namespace\"}, datasource_access_id)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "enable": true,
+        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\".*box-connector.*\"}[5m]) > 0",
+        "name": "Pod Restarts",
+        "tagKeys": "pod",
+        "titleFormat": "Pod Restart"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "How to read this board",
+      "options": {
+        "mode": "markdown",
+        "content": "**This is the drill-down.** The Overview says *what happened*; this board says *where, for which datasource, and at what cost*. Use the datasource selector at the top to narrow everything to one datasource.\n\n**Totals count only what happened inside the time range** \u2014 narrow it to one scan to describe one Box tenant.\n\nHover the \u24d8 on any panel for what it counts, what is normal, and where to look next.",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        }
+      },
+      "id": 300,
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Scanner \u2014 Discovery & Funnel",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "panels": [],
+      "description": "The funnel checks itself: files_discovered minus the sum over every items_processed outcome is zero unless some exit path in processFolder is uninstrumented. Everything in this row is per datasource, which is what turns 'something is losing files' into 'this tenant is losing files'."
+    },
+    {
+      "id": 101,
+      "type": "timeseries",
+      "title": "Scanner Items by Outcome (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 70,
+            "lineWidth": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "forked"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upserted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "discovered"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_inactive"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent_without_acl"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "missing"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "miss"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deleted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_collab"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "getfile_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "build_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upsert_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "publish_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "delete_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "discovered"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (outcome) (rate(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "description": "**What happened to every file the scanner saw**, as a rate, stacked by outcome. The 'discovered' line is not part of the stack \u2014 it is the total the stack should add up to.\n\n**Normal:** the stack reaches the discovered line, almost all of it sent. A scan shorter than ~30 seconds may not show here; the Overview's Totals row counts it. Filter by $datasource_id to see one datasource.\n\n**Next:** 'Item Loss (discovered \u2212 sent)' below."
+    },
+    {
+      "id": 102,
+      "type": "timeseries",
+      "title": "Folders by Outcome (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 70,
+            "lineWidth": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "forked"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upserted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "discovered"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_inactive"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent_without_acl"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "missing"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "miss"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deleted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_collab"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "getfile_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "build_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upsert_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "publish_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "delete_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (rate(box_scanner_folders_processed_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "description": "**When subfolders were queued, skipped or failed to queue**, per datasource. Every subfolder becomes its own message; 'skipped collab' is a folder owned by another user, left for that user's own scan.\n\n**Normal:** forked and skipped collab only. 'Publish failed' means a whole subtree was not scanned until that message is retried.\n\n**Next:** 'Folders Forked' on the Overview."
+    },
+    {
+      "id": 103,
+      "type": "timeseries",
+      "title": "Discovery \u2192 Sent Conversion",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 3
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", outcome=\"sent\"}[5m])) / clamp_min(sum(rate(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])), 0.001)",
+          "legendFormat": "conversion"
+        }
+      ],
+      "description": "**Share of discovered files that were sent** (sent \u00f7 discovered).\n\n**Normal:** 1 (100%). Files already in Box's trash also lower it, so a little under 1 is expected. Only meaningful while a scan runs; short scans may not show.\n\n**Next:** 'Item Loss' beside it for the absolute number."
+    },
+    {
+      "id": 104,
+      "type": "timeseries",
+      "title": "Item Loss (discovered \u2212 sent)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(box_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])) - sum(rate(box_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", outcome=\"sent\"}[5m]))",
+          "legendFormat": "loss /s"
+        }
+      ],
+      "description": "**Files seen minus files sent, per second.** Includes files skipped because they were in Box's trash.\n\n**Normal:** near 0. This is a different question from the conversion ratio: 99% on a huge tenant can leak more files than 60% on a tiny one.\n\n**Next:** 'Scanner Items by Outcome' to see which outcome the gap is."
+    },
+    {
+      "id": 105,
+      "type": "timeseries",
+      "title": "Users Skipped by Reason (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 70,
+            "lineWidth": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deactivated"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deactivated_midscan"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "not_found"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tos_required"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "permission_denied"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "traverse_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (reason) (rate(box_scanner_users_skipped_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "{{reason}}"
+        }
+      ],
+      "description": "**Users skipped, by reason, as a rate.** These users' files were never discovered, so the file funnel above cannot show this loss at all.\n\n**Normal:** only deactivated and terms-of-service. Permission denied is broken configuration; traverse failed is a real error and is counted on every retry.\n\n**Next:** 'Users Skipped by Reason' on the Overview for counts."
+    },
+    {
+      "type": "row",
+      "id": 120,
+      "title": "Scanner \u2014 Cost & Prediction",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "panels": [],
+      "description": "What a unit of work costs, and what a bigger tenant would cost. The three durations at the right are three different units of work and are NOT comparable with each other \u2014 they share a panel for scale only."
+    },
+    {
+      "id": 121,
+      "type": "timeseries",
+      "title": "Folder Duration \u2014 p50 / p95 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 22
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (sum_over_time(((last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (sum_over_time(((last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "description": "**Folder time as percentiles over the selected time range, per datasource.** One folder = one Box listing plus what it queues and sends: the connector's real unit of work.\n\n**Normal:** p50 and p95 under about a second. Read the latest value; it covers the whole range.\n\n**Next:** 'Mean Cost per Folder' beside it."
+    },
+    {
+      "id": 122,
+      "type": "timeseries",
+      "title": "Mean Cost per Folder",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 22
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(box_scanner_folder_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])) / clamp_min(sum(rate(box_scanner_folder_duration_seconds_count{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])), 0.001)",
+          "legendFormat": "seconds per folder"
+        }
+      ],
+      "description": "**Average seconds per folder.** Multiply it by a folder count to estimate a larger tenant: 'if this enterprise grew 10x, how much folder work is that?'.\n\n**Normal:** around half a second to a second, most of it Box's own response time. Only drawn while folders are being processed.\n\n**Next:** 'API Call Duration p95 by Endpoint' on the Overview to see if Box is the slow part."
+    },
+    {
+      "id": 123,
+      "type": "timeseries",
+      "title": "Scan Durations \u2014 three different units",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 22
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_fanout_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_fanout_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_fanout_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "fan-out p95"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "incremental p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_root_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_root_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_root_folder_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "root folder p95"
+        }
+      ],
+      "description": "**Three different timings, drawn together for scale only.** Fan-out = logging in, listing users and queuing one scan per user; it does NOT include scanning their folders, which happens in other messages on other pods. Incremental = a whole incremental scan including its enrichment. Root folder = one user's top-level folder only.\n\n**Normal:** fan-out in seconds, root folder under a few seconds. If fan-out and folder times come out similar, something is not measuring what it should.\n\n**Next:** 'Incremental Duration' in the next row."
+    },
+    {
+      "type": "row",
+      "id": 140,
+      "title": "Scanner \u2014 Incremental",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "panels": [],
+      "description": "An incremental run reads Box's /events stream from the stored cursor, dedupes, applies deletes and augments the changed files inline. It lists no folders at all, so the scanner's folder panels stay flat while an incremental runs."
+    },
+    {
+      "id": 141,
+      "type": "timeseries",
+      "title": "Incremental Changes by Outcome (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 70,
+            "lineWidth": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "forked"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upserted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "discovered"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_inactive"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent_without_acl"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "missing"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "miss"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deleted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_collab"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "getfile_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "build_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upsert_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "publish_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "delete_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (rate(box_scanner_incremental_changes_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "description": "**What incremental scans did with each changed file**, as a rate: upserted (sent again), deleted, delete failed, or skipped. 'Deleted' is Box's cleanest 'file gone' signal \u2014 an explicit delete or trash event.\n\n**Normal:** mostly upserted, some deleted, delete failed at 0. A failed delete leaves a removed file in the index.\n\n**Next:** 'Incremental Bailouts'."
+    },
+    {
+      "id": 142,
+      "type": "timeseries",
+      "title": "Incremental Duration \u2014 p50 / p95 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (sum_over_time(((last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (sum_over_time(((last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(box_scanner_incremental_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "description": "**How long one incremental scan takes**, as percentiles over the selected time range. Unlike the fan-out, this really is the whole job: reading changes, removing duplicates, deletes and enrichment.\n\n**Normal:** seconds to a few minutes, growing with how much changed.\n\n**Next:** 'Scan Mode Decisions' to check incremental scans are running at all."
+    },
+    {
+      "id": 143,
+      "type": "timeseries",
+      "title": "Incremental Bailouts (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(box_scanner_incremental_bailout_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "bailouts /s"
+        }
+      ],
+      "description": "**Incremental scans that switched themselves to a full scan** because too much had changed \u2014 more than BOX_INCREMENTAL_MAX_RATIO (5% by default) of the known files.\n\n**Normal:** 0 or rare. Frequent bailouts are expensive: each one is a full scan.\n\n**Next:** 'Scan Mode Decisions' beside it."
+    },
+    {
+      "id": 144,
+      "type": "timeseries",
+      "title": "Scan Mode Decisions (increase, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 39
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 70,
+            "lineWidth": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "incremental / cursor_fresh"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "full / cursor_stale"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "full / no_cursor"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (mode, reason) (increase(box_scanner_scan_mode_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "{{mode}} / {{reason}}"
+        }
+      ],
+      "description": "**Which mode each scan was allowed to run in, and why**, counted per 5 minutes. No cursor = nothing to read changes from. Cursor stale = the last full scan is older than BOX_INCREMENTAL_MAX_AGE_HOURS (168 h). Cursor fresh = incremental.\n\n**Normal:** mostly incremental. No cursor sustained means incremental is broken, not idle \u2014 that once disabled it for good while every scan reported success. Cursor stale sustained means the scan schedule and that setting disagree. This is the decision before the run: an incremental run can still bail out to full, so incremental minus bailouts is what really stayed incremental.\n\n**Next:** 'Incremental Bailouts'."
+    },
+    {
+      "type": "row",
+      "id": 160,
+      "title": "Scanner \u2014 Saturation",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "panels": [],
+      "description": "The two things that bound scan speed: per-user admission slots (Box rate-limits per impersonated user and the cap is shared across pods) and the client-side rate limiter against the app-wide ceiling."
+    },
+    {
+      "id": 161,
+      "type": "timeseries",
+      "title": "Folder Work In-Flight & User Slots Held",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 48
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(box_scanner_folder_work_in_flight{namespace=\"$namespace\", pod=~\"$pod\"})",
+          "legendFormat": "folder work in flight"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(box_scanner_user_slots_held{namespace=\"$namespace\", pod=~\"$pod\"})",
+          "legendFormat": "user slots held"
+        }
+      ],
+      "description": "**Folders being worked on right now, and per-user slots held**, summed over scanner pods. Not split by datasource: the slots are per user, and the deferral counter is per datasource, so the two cannot be joined.\n\n**Normal:** flat at 0 while pods sleep. Slots at the cap (BOX_USER_MAX_CONCURRENCY, 5 per user) with deferrals rising means that cap limits speed. Flat at 0 WITH load would mean the counting is broken.\n\n**Next:** 'Slot Contention by Datasource' beside it."
+    },
+    {
+      "id": 162,
+      "type": "timeseries",
+      "title": "Slot Contention by Datasource (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 48
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^requeues.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^deferrals.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (datasource_id) (rate(box_scanner_user_slot_requeues_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "requeues \u00b7 {{datasource_id}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (datasource_id) (rate(box_scanner_user_slot_deferrals_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "deferrals \u00b7 {{datasource_id}}"
+        }
+      ],
+      "description": "**What happens when a user has no free slot, per datasource.** Requeue = the folder is re-queued as a fresh message with a full set of attempts. Deferral = it is put back for retry, spending one of its 5 attempts; for folders that only happens after BOX_USER_SLOT_MAX_REQUEUE (50) re-queues.\n\n**Normal:** requeues up with deferrals at 0 is healthy contention. Deferrals above 0 is the last warning before folders and their subtrees are thrown away. Both at 0 = no contention.\n\n**Next:** 'DLQ Depth' on the Overview."
+    },
+    {
+      "type": "row",
+      "id": 180,
+      "title": "Augmenter \u2014 Outcomes & Coverage",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      },
+      "panels": [],
+      "description": "The augment path is the only source of ACLs in the connector: the scanner's collaboration fetch is commented out in folder_work.go to save API tokens."
+    },
+    {
+      "id": 181,
+      "type": "timeseries",
+      "title": "Augmenter Items by Outcome (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 57
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 70,
+            "lineWidth": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "forked"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upserted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "discovered"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_inactive"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent_without_acl"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "missing"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "miss"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deleted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_collab"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "getfile_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "build_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upsert_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "publish_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "delete_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (rate(box_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "description": "**What happened to each file the enrichment step re-fetched**, as a rate per datasource. Exactly one outcome per file, so the stack adds up to the batch. 'Sent without ACL' = the access list could not be read and the file went out without it: degraded success, and also the only count of access-list failures. 'Missing' = Box answered 404.\n\n**Normal:** mostly sent. Rising 'sent without ACL' means incomplete access data; 'get file failed', build or send failures should be 0.\n\n**Next:** 'Skipped Not-Found' below."
+    },
+    {
+      "id": 182,
+      "type": "timeseries",
+      "title": "last_access Result (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 57
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 70,
+            "lineWidth": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "forked"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upserted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "discovered"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_inactive"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sent_without_acl"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "missing"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "miss"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deleted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped_collab"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "getfile_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "build_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upsert_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "publish_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "delete_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (result) (rate(box_augmenter_last_access_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "{{result}}"
+        }
+      ],
+      "description": "**Last-access lookups that found a real date (hit) or not (miss)**, as a rate. As a ratio it tells how much of the last-access date we send is real rather than unknown.\n\n**Normal:** a steady hit share.\n\n**Next:** 'Events Loaded into the Store' beside it."
+    },
+    {
+      "id": 183,
+      "type": "timeseries",
+      "title": "Events Loaded into the Store (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 57
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(box_augmenter_events_loaded_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "events /s"
+        }
+      ],
+      "description": "**Box access events loaded into the connector's last-access store on each refresh**, per second. This is what the hit rate depends on.\n\n**Normal:** bumps at each refresh. A hit rate falling while this goes to 0 is a stale store, not a data problem.\n\n**Next:** 'last_access Result'."
+    },
+    {
+      "id": 185,
+      "type": "timeseries",
+      "title": "Skipped Not-Found (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 65
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (datasource_id) (rate(box_augmenter_items_skipped_not_found_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "{{datasource_id}}"
+        }
+      ],
+      "description": "**Files Box no longer had (404) when the enrichment step went back for them**, per datasource. The same event as 'missing' in the outcome panel; it exists separately so alerts can ignore this expected signal.\n\n**Normal:** small. Never add it to the outcome panel \u2014 that would count the same files twice.\n\n**Next:** 'Files Gone' row on the Overview."
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Content \u2014 Fetch & Streaming",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 73
+      },
+      "panels": [],
+      "description": "Filtered by $access_id, not $datasource_id: content mode is handed a URN carrying only access, file_id and user_id, so the datasource_id genuinely does not exist here. The 'unknown' value is the bounded sentinel for failures that happen before the URN is parsed."
+    },
+    {
+      "id": 201,
+      "type": "timeseries",
+      "title": "Content Fetches by error_code (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 74
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 70,
+            "lineWidth": 0
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NONE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_NOT_FOUND"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_TOO_LARGE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_TIMEOUT"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_PERMISSION_DENIED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_RATE_LIMITED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NAK_PROCESSING"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NAK_UNMARSHAL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NAK_MARSHAL_COMPLETED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NAK_PUBLISH_COMPLETED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CREDENTIAL_FAILURE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INVALID_URN"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CONNECTION_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INTERNAL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_READ_ERROR"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CACHE_WRITE_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (error_code) (rate(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_access_id=~\"$access_id\"}[5m]))",
+          "legendFormat": "{{error_code}}"
+        }
+      ],
+      "description": "**How file fetches ended**, as a rate, filtered by $access_id. NONE = success. Timeouts and too-large are outcome codes, not separate counters. The NAK_* codes are failures in the message-queue handling itself (unreadable request, or the reply could not be sent); those messages are retried.\n\n**Normal:** mostly NONE. A short job may barely show \u2014 the Overview's bar chart counts it.\n\n**Next:** 'Fetch Errors by error_code' table below."
+    },
+    {
+      "id": 202,
+      "type": "timeseries",
+      "title": "Transfer p95 by size_bucket \u2014 success",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 74
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, size_bucket) (rate(box_content_transfer_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_access_id=~\"$access_id\", success=\"true\"}[5m])))",
+          "legendFormat": "{{size_bucket}}"
+        }
+      ],
+      "description": "**How long successful download-plus-upload takes, per file size** (95th percentile). Sizes are cut at 1 MiB, 10 MiB and 100 MiB; 'unknown' means Box did not send the size.\n\n**Normal:** grows with size. If small files are slow too, the cost is per file (Box latency), not per byte.\n\n**Next:** 'Transfer p95 by size_bucket \u2014 failure' beside it."
+    },
+    {
+      "id": 203,
+      "type": "timeseries",
+      "title": "Transfer p95 by size_bucket \u2014 failure",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 74
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, size_bucket) (rate(box_content_transfer_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_access_id=~\"$access_id\", success=\"false\"}[5m])))",
+          "legendFormat": "{{size_bucket}}"
+        }
+      ],
+      "description": "**The same timing for transfers that failed, per file size.** The size is known before the transfer starts, so failures can be split too: a 80 MiB file dying halfway and a 2 KiB file that never opens are different incidents.\n\n**Normal:** empty. Long times on large files point at timeouts; short times on small files at access errors.\n\n**Next:** 'Fetch Errors by error_code'."
+    },
+    {
+      "id": 204,
+      "type": "timeseries",
+      "title": "Content Fetch Duration \u2014 p50 / p95 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 82
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(box_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_access_id=~\"$access_id\", success=\"true\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(box_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_access_id=~\"$access_id\", success=\"true\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(box_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_access_id=~\"$access_id\", success=\"true\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "description": "**How long one successful fetch takes end to end**, as percentiles. Failures are kept out so a slow failure does not distort the success numbers.\n\n**Normal:** seconds for ordinary files; the p99 reflects the largest files.\n\n**Next:** 'Content Fetch p95 by access_id' to find which datasource is slow."
+    },
+    {
+      "id": 205,
+      "type": "timeseries",
+      "title": "Content Fetch Bytes \u2014 p50 / p95 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 82
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(box_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(box_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(box_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "description": "**Size of successfully fetched files**, as percentiles. Not split by datasource. The size steps go from 1 KiB to 256 MiB; anything larger falls off the top and the percentile cannot place it.\n\n**Normal:** depends on the tenant; mostly under a few MiB.\n\n**Next:** 'Transfer p95 by size_bucket \u2014 success'."
+    },
+    {
+      "id": 206,
+      "type": "timeseries",
+      "title": "Uploaded Bytes (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 82
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (datasource_access_id) (rate(box_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_access_id=~\"$access_id\"}[5m]))",
+          "legendFormat": "{{datasource_access_id}}"
+        }
+      ],
+      "description": "**Bytes sent to the content service per second, per datasource access**, as confirmed by the content service.\n\n**Normal:** bursts during jobs, 0 otherwise.\n\n**Next:** 'Average Bytes per Fetch'."
+    },
+    {
+      "id": 207,
+      "type": "timeseries",
+      "title": "Content Fetch p95 by access_id",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 90
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, datasource_access_id) (rate(box_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_access_id=~\"$access_id\", success=\"true\"}[5m])))",
+          "legendFormat": "{{datasource_access_id}}"
+        }
+      ],
+      "description": "**Which datasource access is slow** (95th percentile of successful fetches). 'unknown' means the request failed before the connector could tell which datasource it belonged to.\n\n**Normal:** similar lines. One line far above the rest points at that tenant's files or Box account.\n\n**Next:** 'Transfer p95 by size_bucket \u2014 success' to see whether it is just bigger files."
+    },
+    {
+      "id": 208,
+      "type": "table",
+      "title": "Fetch Errors by error_code (increase, 1h)",
+      "description": "**Fetch errors by code over the last hour**, for triage. NAK_* codes are failures in the message-queue handling, not Box refusing us.\n\n**Normal:** empty. NOT_FOUND is expected (file deleted since the scan); credential or permission codes need configuration fixes; timeouts and rate limiting are back-pressure.\n\n**Next:** 'Content Fetches by error_code' for when.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 90
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NONE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_NOT_FOUND"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_TOO_LARGE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_TIMEOUT"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_PERMISSION_DENIED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_RATE_LIMITED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NAK_PROCESSING"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NAK_UNMARSHAL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NAK_MARSHAL_COMPLETED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NAK_PUBLISH_COMPLETED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CREDENTIAL_FAILURE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INVALID_URN"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CONNECTION_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_INTERNAL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_READ_ERROR"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FETCH_ERROR_CACHE_WRITE_FAILED"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (error_code) (increase(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_access_id=~\"$access_id\", error_code!=\"NONE\"}[1h])) > 0",
+          "format": "table",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 209,
+      "type": "timeseries",
+      "title": "Content Requests In-Flight",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 98
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(box_content_requests_in_flight{namespace=\"$namespace\", pod=~\"$pod\"})",
+          "legendFormat": "in flight"
+        }
+      ],
+      "description": "**File fetches running right now**, summed over content pods. This is the content side's measure of how busy it is.\n\n**Normal:** 0 when idle; at most 10 per pod (contentFetch.workers) during a job.\n\n**Next:** 'KEDA \u2014 Content Replicas' on the Overview."
+    },
+    {
+      "id": 210,
+      "type": "timeseries",
+      "title": "Average Bytes per Fetch",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 98
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(box_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_access_id=~\"$access_id\"}[5m])) / clamp_min(sum(rate(box_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_access_id=~\"$access_id\", success=\"true\"}[5m])), 0.001)",
+          "legendFormat": "bytes per fetch"
+        }
+      ],
+      "description": "**Average bytes per successful fetch.** An average only: one 1 GB file and a thousand 1 KB files land on the same point as a thousand medium files.\n\n**Normal:** stable for a given tenant. Use it as a quick sanity check; the size percentile panels are the real answer.\n\n**Next:** 'Content Fetch Bytes \u2014 p50 / p95 / p99'."
+    }
+  ]
+}

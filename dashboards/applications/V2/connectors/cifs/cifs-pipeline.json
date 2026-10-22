@@ -1,0 +1,1369 @@
+{
+  "uid": "apps-v2-cifs-pipeline",
+  "title": "CIFS Connector \u2014 Pipeline",
+  "description": "The per-stage detail, for when the overview has already said something is wrong and you need to find where. Not an on-call board: you come here with a hypothesis.",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "connector:cifs",
+    "pipeline"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-cifs-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "CIFS \u2014 Overview",
+      "type": "link",
+      "url": "/d/apps-v2-cifs-overview?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "CIFS \u2014 Runtime",
+      "type": "link",
+      "url": "/d/apps-v2-cifs-runtime?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 \u2014 Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(kube_deployment_spec_replicas{deployment=~\".*cifs-connector-be-go.*\"}, namespace)",
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "component",
+        "type": "custom",
+        "label": "Component",
+        "query": "All : .*cifs-connector-be-go.*, Scanner : .*cifs-connector-be-go, Content : .*cifs-connector-be-go-content",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": ".*cifs-connector-be-go.*"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": ".*cifs-connector-be-go.*"
+          },
+          {
+            "selected": false,
+            "text": "Scanner",
+            "value": ".*cifs-connector-be-go"
+          },
+          {
+            "selected": false,
+            "text": "Content",
+            "value": ".*cifs-connector-be-go-content"
+          }
+        ],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\"$component\", namespace=\"$namespace\"}, pod)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      },
+      {
+        "name": "datasource_id",
+        "type": "query",
+        "label": "Datasource ID",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values({__name__=~\"cifs_(scanner|augmenter|content)_.*\", namespace=\"$namespace\"}, datasource_id)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1,
+        "definition": "label_values({__name__=~\"cifs_(scanner|augmenter|content)_.*\", namespace=\"$namespace\"}, datasource_id)"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "How to read this board",
+      "options": {
+        "mode": "markdown",
+        "content": "**This is the drill-down.** The Overview says *what happened*; this board says *where, for which datasource, and at what cost*. Use the datasource selector at the top to narrow everything to one datasource.\n\n**Totals count only what happened inside the time range** \u2014 narrow it to one scan to describe one share.\n\nHover the \u24d8 on any panel for what it counts, what is normal, and where to look next.",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        }
+      },
+      "id": 301,
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Scanner \u2014 Discovery & Throughput",
+      "description": "How fast it discovers, and whether anything is lost between discovering and sending.",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Scanner Items by Outcome (rate)",
+      "description": "**What happened to each file the scanner found, over time, against the discovery rate.** Sent = handed on for indexing; marshal_failed = the file's metadata could not be turned into a document (bad data); batch_send_failed = the sender or NATS refused it (infrastructure). The outcomes always add up to discovered. Filtered by the datasource selector.\n\n**Normal:** everything sent. A scan shorter than ~30s may barely show on this rate; the Overview's (window) counts have the exact numbers.\n\n**Next:** the error stream / logs for the paths; bad data and infrastructure failures are fixed in different places.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "discovered"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (outcome) (rate(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Directories Forked vs Local (rate)",
+      "description": "**Subfolders handed off as separate work (forked) versus walked by the same pod (local), over time.** A folder is only walked locally when handing it off failed \u2014 usually because the work stream is full. Not filtered by datasource.\n\n**Normal:** local at 0. Local above 0 means back-pressure on the work stream: the pod carries the tree alone, slower, but nothing is lost.\n\n**Next:** 'Local Stack Depth' below and 'NATS Backlog' on the Overview.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(cifs_scanner_directories_forked_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "forked"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(cifs_scanner_directories_local_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "local"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Entries per Directory \u2014 p50 / p95 / p99",
+      "description": "**How many entries one folder holds: typical (p50), large (p95) and largest (p99).** Files and subfolders both count, so it reads higher than a folder's file count. One measurement per folder. Filtered by the datasource selector.\n\n**Normal:** depends on the share. Very large folders explain slow p99 in 'Directory Processing'.\n\n**Next:** 'Directory Processing \u2014 p50 / p95 / p99'.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (sum_over_time(((last_over_time(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (sum_over_time(((last_over_time(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_files_per_scan_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Discovery \u2192 Sent Conversion",
+      "description": "**Share of found files that were handed on for indexing.**\n\n**Normal:** 100%. Below means files are being lost between discovery and send. It shows a gap while nothing is being discovered.\n\n**Next:** 'Scanner Items by Outcome' for the cause.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "max": 1,
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", outcome=\"sent\"}[5m])) / clamp_min(sum(rate(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])), 0.0001)",
+          "legendFormat": "sent / discovered"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Item Loss (discovered \u2212 sent)",
+      "description": "**Files lost between discovery and send, per second (found minus sent).**\n\n**Normal:** 0. Sustained above zero means files are not reaching the sender.\n\n**Next:** 'Scanner Items by Outcome' says which of the two causes.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(cifs_scanner_files_discovered_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])) - sum(rate(cifs_scanner_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", outcome=\"sent\"}[5m]))",
+          "legendFormat": "items lost/s"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 150,
+      "title": "Scanner \u2014 Workers & File Operations",
+      "description": "Where the time goes inside a directory, and whether workers are waiting rather than working.",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 19
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "File Operation Duration p95 by operation",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(cifs_scanner_file_operation_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "description": "**95th-percentile time of each per-file step: reading file metadata (lstat), looking up the owner name, and building the document.** Not filtered by datasource.\n\n**Normal:** sub-millisecond to a few milliseconds. A slow metadata read means the file server is slow; a slow owner lookup means name resolution is.\n\n**Next:** 'Directory Processing \u2014 p50 / p95 / p99'."
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Worker Pool \u2014 busy / pool size / channel depth",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(cifs_scanner_worker_busy{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"})",
+          "legendFormat": "busy"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(cifs_scanner_smb_pool_size{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"})",
+          "legendFormat": "pool size"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(cifs_scanner_work_channel_depth{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"})",
+          "legendFormat": "channel depth"
+        }
+      ],
+      "description": "**The scanner's permissions (ACL) worker pool: workers busy, pool size, and requests waiting in its queue.** Only used when the job enables permissions (skip_acl=false); otherwise all flat. Pool size is CPUs \u00d7 50 (poolSizePerCPU) \u2014 about 100 at the 500m CPU limit \u2014 and the queue holds 16\u00d7 that.\n\n**Normal:** busy below pool size and the queue mostly empty. Busy pinned at the pool size with a full queue means the file server's permission queries are the bottleneck.\n\n**Next:** 'Work Channel Wait p95' and 'Scanner ACL Query Duration'."
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Scanner ACL Query Duration \u2014 p50 / p95 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(cifs_scanner_acl_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_scanner_acl_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(cifs_scanner_acl_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "description": "**Time of one permissions (ACL) query from the scanner: typical (p50), slow (p95) and worst (p99).** Only when the job enables permissions (skip_acl=false); flat otherwise. Filtered by the datasource selector.\n\n**Normal:** tens of milliseconds. Rises mean the file server answers security queries slowly.\n\n**Next:** 'Worker Pool' and the Overview's 'Errors by Source'."
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Work Channel Wait p95 \u2014 submit vs collect",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 27
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_scanner_work_channel_submit_wait_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))",
+          "legendFormat": "submit wait p95"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_scanner_result_collect_wait_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))",
+          "legendFormat": "result collect p95"
+        }
+      ],
+      "description": "**How long the scanner waited to queue a permissions request (submit) and to get a result back (collect), 95th percentile.**\n\n**Normal:** both near 0. High submit wait = the worker queue is full; high collect wait = workers are slow to answer, i.e. the file server.\n\n**Next:** 'Worker Pool \u2014 busy / pool size / channel depth'."
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Local Stack Depth (DFS backlog)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 27
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(cifs_scanner_local_stack_depth{namespace=\"$namespace\", pod=~\"$pod\"})",
+          "legendFormat": "max depth"
+        }
+      ],
+      "description": "**Folders a scanner pod is walking itself because it could not hand them off.** One value per pod, not split by datasource.\n\n**Normal:** 0. Above 0 means the work stream is pushing back (it holds up to 1 GiB and refuses new messages when full).\n\n**Next:** 'Directories Forked vs Local'."
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Directory Processing \u2014 p50 / p95 / p99",
+      "description": "**Time to process one folder: typical (p50), slow (p95) and worst (p99).** One measurement per folder \u2014 listing, metadata reads, the permissions query when enabled, and handing off subfolders. It does not measure a whole scan. Filtered by the datasource selector.\n\n**Normal:** milliseconds for ordinary folders; the top folder of a big tree can take seconds because it hands off one message per subfolder.\n\n**Next:** 'Entries per Directory' and 'File Operation Duration'.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 27
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (sum_over_time(((last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (sum_over_time(((last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (sum_over_time(((last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) - last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[1d] offset 15s)) >= 0 or last_over_time(cifs_scanner_scan_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[15s]) * 1)[$__range:15s])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 250,
+      "type": "row",
+      "title": "Scanner \u2014 Mounts & Data Quality",
+      "description": "Whether the SMB mount is the bottleneck, and how much of what reports success is degraded success.",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "panels": []
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Mount Release After Evict (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 35
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(cifs_scanner_mount_release_after_evict_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "release after evict"
+        }
+      ],
+      "description": "**Releases of a share mount that had already been dropped (for example because it died mid-batch).** Several items finishing against a dead mount each release it once; this is informative, not a bug. Not filtered by datasource.\n\n**Normal:** 0 or rare. Frequent bursts mean mounts keep dying under load.\n\n**Next:** 'Augmenter Mount Acquire' and 'Content Mount Acquire' for failed mounts."
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Btime Unavailable (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 35
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (datasource_id) (rate(cifs_scanner_btime_unavailable_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "{{datasource_id}}"
+        }
+      ],
+      "description": "**Files whose real creation time was not available, so 'Created' fell back to the last-change time.**\n\n**Normal:** 0 per datasource. Steady counts on one datasource = that file server does not report creation time (older Samba, some NAS); every datasource at once = the node's kernel is too old. Only this panel tells whether 'Created' is real.\n\n**Next:** split per datasource with the selector."
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Augmenter \u2014 Outcomes & Mounts",
+      "description": "The augment breakdown: outcome by type, and what acquiring the mount costs.",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Augmenter Items by Outcome (rate, stacked)",
+      "description": "**Every augment outcome over time, stacked.** success, missing (file gone), stat_failed, acl_error, acl_skipped (no SMB target \u2014 sent without permissions), build_failed, send_failed, invalid_urn, mount_failed, unc_mismatch (the credential now points at a different share; item skipped), cancelled_stat / cancelled_acl (dropped by a shutdown, not a real failure). Filtered by the datasource selector.\n\n**Normal:** almost all success. unc_mismatch means someone re-pointed a credential; mount_failed means the share is unreachable.\n\n**Next:** the Overview's 'Augmenter Items by Outcome (window)' for exact counts.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 43
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 30
+          },
+          "color": {
+            "mode": "palette-classic-by-name"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "success"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "missing"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "acl_skipped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "stat_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "acl_error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "build_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "send_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "invalid_urn"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "mount_failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unc_mismatch"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cancelled_stat"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cancelled_acl"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (rate(cifs_augmenter_items_processed_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Augmenter Mount Acquire p95 \u2014 success vs failure",
+      "description": "**95th-percentile time to mount the share during augment, successful and failed mounts shown separately.** Kept apart so a mount that hangs ~120s before failing does not distort the success line.\n\n**Normal:** success near 0 when already mounted, up to a second or two for a fresh mount; failure line absent.\n\n**Next:** the 'mount_failed' outcome in 'Augmenter Items by Outcome'.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 43
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_augmenter_mount_acquire_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))",
+          "legendFormat": "success p95"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_augmenter_mount_acquire_failure_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))",
+          "legendFormat": "failure p95"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Augmenter Publish Blocked \u2014 p99",
+      "description": "**Worst-case (p99) time augment workers waited for their turn to publish items.** Workers share one sender; every so often a publish goes to NATS and everyone else waits, for up to 5 minutes if the stream is full. Not filtered by datasource.\n\n**Normal:** milliseconds. Hundreds of milliseconds or more means back-pressure from the stream.\n\n**Next:** 'NATS Backlog' on the Overview.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 43
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(cifs_augmenter_publish_blocked_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Augmenter Errors (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(cifs_augmenter_acl_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "acl errors"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (datasource_id) (rate(cifs_augmenter_items_skipped_not_found_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "skipped not-found \u2014 {{datasource_id}}"
+        }
+      ],
+      "description": "**Augment permission-query errors and files skipped because they are gone, per second.** The permissions series is not split by datasource; the not-found series follows the selector. A failed permission query still sends the item, without permissions.\n\n**Normal:** permission errors at 0; a trickle of not-found is normal churn.\n\n**Next:** 'Augmenter Items by Outcome' for the full picture."
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Augmenter ACL Query Duration \u2014 p50 / p95 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(cifs_augmenter_acl_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_augmenter_acl_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(cifs_augmenter_acl_query_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "description": "**Time of one permissions (ACL) query during augment: typical (p50), slow (p95) and worst (p99).** Filtered by the datasource selector.\n\n**Normal:** tens of milliseconds; rises mean the file server answers slowly.\n\n**Next:** 'Augmenter Errors' if queries start failing."
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "Content \u2014 Fetch & Streaming",
+      "description": "Latency and volume of the download. The percentiles average 1KiB and 1GiB files together \u2014 read effective throughput before concluding anything got slower.",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 57
+      },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Content Fetches by error_code (rate, stacked)",
+      "description": "**Content downloads per second by result code, stacked.** NONE is success. FETCH_ERROR_* are classified failures (not found, permission denied, too large, timeout\u2026); NAK_* are messaging failures where the request could not be read or the reply could not be sent, and it is retried.\n\n**Normal:** almost all NONE. A short burst may barely show on a 5-minute rate; the Overview's (window) bar has exact counts.\n\n**Next:** 'Fetch Errors by error_code' below.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 58
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 30
+          },
+          "color": {
+            "mode": "palette-classic-by-name"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "NONE"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (error_code) (rate(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m]))",
+          "legendFormat": "{{error_code}}"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Content Fetch Duration \u2014 p50 / p95 / p99",
+      "description": "**End-to-end time of one successful content download: typical (p50), slow (p95) and worst (p99).** Failed downloads are recorded separately and left out, so a slow failure does not distort these. Filtered by the datasource selector.\n\n**Normal:** seconds or less; grows with file size.\n\n**Next:** 'Content Upload Duration' to tell share reading/upload from mounting.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 58
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(cifs_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", success=\"true\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", success=\"true\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(cifs_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", success=\"true\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Content Fetch Bytes \u2014 p50 / p95 / p99",
+      "description": "**Size of successfully downloaded files: typical (p50), large (p95) and largest (p99).** Not filtered by datasource.\n\n**Normal:** depends on the share; files above 100 MiB are refused as too large.\n\n**Next:** 'Content Latency per MiB' and 'Average Bytes per Fetch'.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 58
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(cifs_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(cifs_content_fetch_bytes_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "Content Mount Acquire p95 \u2014 success vs failure",
+      "description": "**95th-percentile time to mount the share for a content download, successful and failed mounts shown separately.** Kept apart so a mount that hangs ~120s before failing does not distort the success line.\n\n**Normal:** near 0 when already mounted, up to a second or two for a fresh mount; failure line absent.\n\n**Next:** 'Fetch Errors by error_code' for connection failures.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 65
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_content_mount_acquire_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))",
+          "legendFormat": "success p95"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_content_mount_acquire_failure_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\"}[5m])))",
+          "legendFormat": "failure p95"
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "type": "table",
+      "title": "Fetch Errors by error_code (increase, 1h)",
+      "description": "**Failed content downloads in the last hour, by result code.** NAK_* codes are messaging failures (request unreadable, reply not sent) and are retried; FETCH_ERROR_* are classified failures. Timeouts, connection, read and upload errors are retried up to 3 times; the rest are final.\n\n**Normal:** empty or a few FETCH_ERROR_NOT_FOUND (which on CIFS also covers symlinks and other non-regular files).\n\n**Next:** the per-datasource p95 panels below.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 65
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (error_code) (increase(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", error_code!=\"NONE\"}[1h])) > 0",
+          "format": "table",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "type": "timeseries",
+      "title": "Content Upload Duration \u2014 p50 / p95 / p99",
+      "description": "**Time of the read-from-share + send-to-content-service step of a successful download: p50, p95, p99.** Isolated from mounting and the rest of the request, so a slow content service can be told apart from a slow share read.\n\n**Normal:** most of the download time for large files.\n\n**Next:** 'Content Fetch Duration' \u2014 if that rises and this does not, the extra time is in mounting or messaging.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 65
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(cifs_content_upload_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", success=\"true\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(cifs_content_upload_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", success=\"true\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(cifs_content_upload_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", success=\"true\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "type": "timeseries",
+      "title": "Content Fetch p95 by datasource_id",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 72
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, datasource_id) (rate(cifs_content_fetch_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", success=\"true\"}[5m])))",
+          "legendFormat": "{{datasource_id}}"
+        }
+      ],
+      "description": "**95th-percentile successful download time, one line per datasource.**\n\n**Normal:** similar lines for similar shares. One line far above the rest points at that share or its file server.\n\n**Next:** 'Content Upload p95 by datasource_id' beside it."
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Content Upload p95 by datasource_id",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 72
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, datasource_id) (rate(cifs_content_upload_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\", datasource_id=~\"$datasource_id\", success=\"true\"}[5m])))",
+          "legendFormat": "{{datasource_id}}"
+        }
+      ],
+      "description": "**95th-percentile read-and-upload time of successful downloads, one line per datasource.**\n\n**Normal:** similar lines for similar shares. One datasource high here but not in mount time means reading that share is slow.\n\n**Next:** 'Content Mount Acquire' for mounting time."
+    },
+    {
+      "id": 50,
+      "type": "timeseries",
+      "title": "Content Latency per MiB (interim)",
+      "description": "**Read-and-upload time per MiB delivered, successful downloads only.** Total read-and-upload time divided by total bytes in each 5-minute window, so many small files and one large file land on the same point, and fixed per-file overhead makes small files look expensive. Not filtered by datasource.\n\n**Normal:** steady. Flat while download time climbs means the cost is per request, not per byte.\n\n**Next:** 'Average Bytes per Fetch' beside it.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 79
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1048576 * (sum(rate(cifs_content_upload_duration_seconds_sum{namespace=\"$namespace\", pod=~\"$pod\", success=\"true\"}[5m])) / sum(rate(cifs_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "seconds per MiB"
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "type": "timeseries",
+      "title": "Average Bytes per Fetch",
+      "description": "**Average size of a successfully downloaded file.** Not filtered by datasource.\n\n**Normal:** depends on the share. Pair it with the panel on the left: a latency jump with flat size is a slowdown; one that tracks size is just bigger files.\n\n**Next:** 'Content Latency per MiB'.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 79
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(cifs_content_uploaded_bytes_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m])) / sum(rate(cifs_content_fetch_total{namespace=\"$namespace\", pod=~\"$pod\", success=\"true\"}[5m]))",
+          "legendFormat": "bytes per successful fetch"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,515 @@
+{
+  "uid": "apps-v2-cifs-runtime",
+  "title": "CIFS Connector \u2014 Runtime",
+  "description": "Process health, not work health. Answers whether the connector is sound as a program \u2014 CPU, memory, goroutines, descriptors \u2014 once the pipeline board has ruled out the workload.",
+  "tags": [
+    "git-sync",
+    "apps-v2",
+    "connector:cifs",
+    "runtime"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "folderUid": "apps-v2-cifs-folder",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "CIFS \u2014 Overview",
+      "type": "link",
+      "url": "/d/apps-v2-cifs-overview?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "CIFS \u2014 Pipeline",
+      "type": "link",
+      "url": "/d/apps-v2-cifs-pipeline?${namespace:queryparam}&${component:queryparam}",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "title": "Applications V2 \u2014 Overview",
+      "type": "link",
+      "url": "/d/apps-v2-overview",
+      "targetBlank": false,
+      "icon": "dashboard"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "prometheus-nx"
+        },
+        "hide": 0,
+        "refresh": 1
+      },
+      {
+        "name": "namespace",
+        "type": "query",
+        "label": "Namespace",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(kube_deployment_spec_replicas{deployment=~\".*cifs-connector-be-go.*\"}, namespace)",
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "component",
+        "type": "custom",
+        "label": "Component",
+        "query": "All : .*cifs-connector-be-go.*, Scanner : .*cifs-connector-be-go, Content : .*cifs-connector-be-go-content",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": ".*cifs-connector-be-go.*"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": ".*cifs-connector-be-go.*"
+          },
+          {
+            "selected": false,
+            "text": "Scanner",
+            "value": ".*cifs-connector-be-go"
+          },
+          {
+            "selected": false,
+            "text": "Content",
+            "value": ".*cifs-connector-be-go-content"
+          }
+        ],
+        "hide": 0,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "label": "Pod",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(process_start_time_seconds{job=~\"$component\", namespace=\"$namespace\"}, pod)",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "enable": true,
+        "expr": "changes(kube_pod_info{namespace=\"$namespace\", pod=~\".*cifs-connector.*\"}[5m]) > 0",
+        "name": "Pod Restarts",
+        "tagKeys": "pod",
+        "titleFormat": "Pod Restart"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "How to read this board",
+      "options": {
+        "mode": "markdown",
+        "content": "**Is the connector itself healthy?** CPU, memory, Go runtime and file handles for the scanner and content pods. Use the *component* selector at the top to look at one of them.\n\n**Empty is normal:** both deployments scale to zero between jobs, so this board only has data while something runs.\n\nHover the \u24d8 on any panel for what it shows, what is normal, and where to look next.",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        }
+      },
+      "id": 401,
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Process \u2014 CPU & Memory",
+      "description": "Whether the process keeps growing or settles.",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Process CPU (rate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(process_cpu_seconds_total{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}[5m])",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "**CPU used by the connector process, per pod (1 = 100% = one full core).**\n\n**Normal:** the scanner is limited to 500m (50%) and content to 250m (25%). Sitting at the limit during a job means the pod is throttled and runs slower.\n\n**Next:** 'Container CPU Usage' for the container's view."
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Process Resident Memory",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "process_resident_memory_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "**Memory actually held in RAM by the connector process, per pod.**\n\n**Normal:** rises during a job and settles afterwards. The limit is 1 GiB for the scanner and 512 MiB for content; reaching it gets the pod killed and restarted.\n\n**Next:** 'Heap In-Use' to see whether it is Go data or something else."
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Process Virtual Memory",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "process_virtual_memory_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "**Address space reserved by the process, per pod.** Mostly reservations, not real memory use, so it is far larger than resident memory.\n\n**Normal:** large and flat. Only steady growth over many jobs is worth a look.\n\n**Next:** 'Process Resident Memory' for real usage."
+    },
+    {
+      "type": "row",
+      "id": 200,
+      "title": "Container \u2014 Resource Usage",
+      "description": "The same seen from the cgroup: this is what decides an OOMKill, not what the process reports.",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Container CPU Usage",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\".*cifs-connector.*\", container!=\"\", container!=\"POD\"}[5m]))",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "**CPU used by each CIFS pod's containers (1 = 100% = one full core).** Covers scanner and content pods regardless of the component selector.\n\n**Normal:** below the limit: 500m (50%) for the scanner, 250m (25%) for content. Flat at the limit means the pod is throttled.\n\n**Next:** 'Process CPU' for the process alone."
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Container Memory (working set)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\".*cifs-connector.*\", container!=\"\", container!=\"POD\"})",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "**Memory the kernel counts against each CIFS pod (working set), the number used to decide out-of-memory kills.** Covers scanner and content pods regardless of the component selector.\n\n**Normal:** below the limit: 1 GiB for the scanner, 512 MiB for content. Climbing to it ends in a restart.\n\n**Next:** 'Restarts (1h)' on the Overview."
+    },
+    {
+      "type": "row",
+      "id": 300,
+      "title": "Go Runtime",
+      "description": "Goroutines and GC. A goroutine count that rises and never falls is a leak, not load.",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Goroutines",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "go_goroutines{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "**Concurrent tasks (goroutines) inside the process, per pod.**\n\n**Normal:** rises with work \u2014 the scanner runs up to ~100 permission workers per datasource when permissions are enabled \u2014 and returns to a low base afterwards. A base that keeps climbing between jobs is a leak.\n\n**Next:** 'OS Threads' and 'Heap In-Use'."
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Heap In-Use",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "go_memstats_heap_inuse_bytes{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "**Memory held by live Go data, per pod.**\n\n**Normal:** rises during a job and drops after garbage collection. Close to resident memory is normal; much lower means the rest is outside Go (e.g. the kernel mount).\n\n**Next:** 'Process Resident Memory'."
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "GC Pause \u2014 max & median",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "go_gc_duration_seconds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\", quantile=\"1\"}",
+          "legendFormat": "max {{pod}}"
+        },
+        {
+          "refId": "B",
+          "expr": "go_gc_duration_seconds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\", quantile=\"0.5\"}",
+          "legendFormat": "p50 {{pod}}"
+        }
+      ],
+      "description": "**How long the program pauses to clean up memory, per pod.** Max = the longest pause, median = a typical one. (This panel used to ask for a p99, which this metric cannot provide \u2014 it always came back empty.)\n\n**Normal:** a few milliseconds. Pauses of hundreds of milliseconds mean memory pressure and stall everything the pod is doing.\n\n**Next:** 'Heap In-Use' \u2014 bigger heaps take longer to clean."
+    },
+    {
+      "type": "row",
+      "id": 400,
+      "title": "File Descriptors & Threads",
+      "description": "Whether it is approaching the descriptor limit, which in a file connector is a real ceiling.",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Open vs Max FDs",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 29
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "process_open_fds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "open {{pod}}"
+        },
+        {
+          "refId": "B",
+          "expr": "process_max_fds{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "max {{pod}}"
+        }
+      ],
+      "description": "**Open files and network connections (file descriptors) against the per-process maximum, per pod.**\n\n**Normal:** far below the maximum, back to a low base after a job. Open climbing toward max means connections or files are not being closed, and new SMB connections will start failing.\n\n**Next:** 'Errors by Source' on the Overview for connection failures."
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "OS Threads",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 29
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "go_threads{job=~\"$component\", namespace=\"$namespace\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "**Operating-system threads used by the process, per pod.**\n\n**Normal:** a few tens and stable. Threads grow when calls block in the kernel \u2014 e.g. reads from an unresponsive share \u2014 so a jump here during a job points at a hung mount.\n\n**Next:** 'Mount Acquire' panels on the Pipeline board."
+    }
+  ]
+}
