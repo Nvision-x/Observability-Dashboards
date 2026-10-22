@@ -12,9 +12,8 @@ loads. Nothing else in the repo is synced.
 
 ## Two kinds of board, one tree
 
-- **Per-cluster boards**: one board per component view (`dashboards/applications/V2/...`,
-  `dashboards/applications/*.json`, `dashboards/infrastructure/*.json`). These are the
-  ones you edit.
+- **Per-cluster boards**: one board per component view (`dashboards/applications/V2/...`
+  and the V1-era boards at the top of `dashboards/`). These are the ones you edit.
 - **Consolidated boards** for the central Grafana: Connectors Detail, Services Detail,
   Infrastructure Overview, Content Service (Legacy), and the V2 section of Applications
   Overview. These are **generated** from the per-cluster boards by `tools/build-detail.py`

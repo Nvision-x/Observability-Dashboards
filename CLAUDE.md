@@ -19,19 +19,22 @@ Every Grafana syncs every file under `dashboards/`, so both kinds exist everywhe
 dashboards/
   cluster-health-overview.json, global-monitoring.json      # hand-maintained landing pages (Grafana root)
   applications-overview-central.json                         # hand-maintained, except its V2 section (GENERATED)
-  infrastructure-overview.json                               # GENERATED from dashboards/infrastructure/*
+  infrastructure-overview.json                               # GENERATED from the infra boards below
+  kong-dashboard.json, nats-explorer.json, opensearch-metrics-central.json, prometheus2.json,
+  pulsar-explorer.json, nvidia-dcgm-gpu.json                 # per-cluster infra boards (sources)
+  sharepoint-connector-dashboard.json, xberg-dashboard.json, apps-s3-inventory-connector.json,
+  content-service-*.json                                     # per-cluster V1-era boards (sources)
+  *.json (others at the top level)                           # per-cluster V1 boards, not generated from
   applications/
     connectors-detail.json                                   # GENERATED from the connector boards
     services-detail.json                                     # GENERATED from the service boards
     content-service-legacy.json                              # GENERATED from content-service-*.json
-    sharepoint-connector-dashboard.json, xberg-dashboard.json, apps-s3-inventory-connector.json,
-    backend-workers.json, cifs-connector-combined.json, content-service-*.json   # per-cluster (V1 era)
+    backend-workers.json                                     # source of the Backend Workers row
     V2/
       applications-overview.json                             # per-cluster V2 roll-up
       connectors/<name>/<name>-{overview,pipeline,runtime}.json
       services/<name>/<name>-{overview,runtime}.json
-  infrastructure/                                            # per-cluster: Kong, NATS, OpenSearch, Prometheus, Pulsar, GPU
-  backups/  scans/                                           # hand-maintained (backups-dashboard.json is per-cluster)
+  backups/  scans/                                           # hand-maintained central boards
 folders/                                                     # folder definitions (documentation only, not synced)
   connectors/  services/                                     # V2 component folders
 tools/
@@ -51,8 +54,8 @@ alerts/  datasources/                                        # not synced (see b
 |---|---|---|
 | `dashboards/applications/connectors-detail.json` | `nx-connectors-detail` | V2 CIFS, MySQL, PostgreSQL, Snowflake, Oracle, Box boards; SharePoint, Xberg, S3 Parquet boards |
 | `dashboards/applications/services-detail.json` | `nx-services-detail` | V2 Content Service, Authz, Credential Manager, Datasource Service, Knowledge Hub (sidecar, standalone), Knowledge Service, Registration, Request boards; Backend Workers |
-| `dashboards/infrastructure-overview.json` | `nx-infrastructure-overview` | `dashboards/infrastructure/*.json` |
-| `dashboards/applications/content-service-legacy.json` | `nx-content-service-legacy` | the three `content-service-*.json` boards |
+| `dashboards/infrastructure-overview.json` | `nx-infrastructure-overview` | Kong, NATS, OpenSearch, Prometheus, Pulsar, NVIDIA GPU boards |
+| `dashboards/applications/content-service-legacy.json` | `content-service` | the three `content-service-*.json` boards (the per-cluster Content Service board is `content-service-cluster`) |
 | `dashboards/applications-overview-central.json`, panels after row id 10004 only | `nx-applications-overview` | `dashboards/applications/V2/applications-overview.json` (drill-down links rewritten to the consolidated boards) |
 
 The exact list is `tools/detail-boards.json`. Each generated file says so in its `__generated` key and in its first text panel.
@@ -75,8 +78,10 @@ On a merge conflict in a generated file, do not resolve it by hand: take either 
 
 - One collapsed row per section; inside it, each source board under a small header that links back to the per-cluster board. A source's own rows become text headers (Grafana does not support rows inside a collapsed row).
 - Panel ids are renumbered across the board; dashboard-level links of the sources are dropped.
-- Variables: `$datasource` becomes the board's single hidden datasource variable. On Connectors/Services Detail and Content Service (Legacy), `$namespace` becomes one shared picker fed from `kube_deployment_spec_replicas` (resolves at 0 replicas). Every other variable is prefixed with the section key (`cifs_pod`, `box_datasource_id`, `sharepoint_job`) and labelled with the component name. Identical definitions within a section share one picker; a section's `unify` entry in the manifest forces one definition (used for `pod`, which differs only by the `$component` chain between a connector's overview and runtime boards). Knowledge Hub sidecar and standalone are separate sections because their pod pickers must not merge.
-- `"pickers": "hide"` on a board in the manifest hides every per-section picker (they stay on All). The default is `"show"`.
+- Variables: `$datasource` becomes the board's single hidden datasource variable. Every other source variable is prefixed with the section key (`cifs_pod`, `box_datasource_id`, `sharepoint_job`). Identical definitions within a section share one variable; a section's `unify` entry forces one definition (used for `pod`); Knowledge Hub sidecar and standalone are separate sections so their pods never mix.
+- **Every generated board is built with `"pickers": "hide"`, so it looks and queries exactly as the hand-made boards did on main before generation:** each per-section variable becomes a hidden constant `.*` (and any `label="$x"` on it becomes `=~`), `namespace` is a hidden constant `default` on Connectors and Services Detail, and only the variables listed in `keep_vars` stay real pickers (the Scanner/Content component pickers of Connectors Detail, with the same names, defaults and visibility as before). For per-pod, query-type or datasource-id filtering, use the per-cluster board each section header links to.
+- `"pickers": "show"` instead keeps every source variable as a real picker (chained queries work, there is no per-client repeat any more). It changes the top bar and the default queries, so switching a board to it is a deliberate change, not a fix.
+- `link_map` rewrites drill-down URLs (e.g. per-cluster `content-service-cluster` back to `content-service`, and V2 overview links to the consolidated boards).
 - Output is written one panel per line: fully indented, Connectors Detail would exceed the ConfigMap limit.
 
 ### Shared rules (checked on every build and in CI)
@@ -136,7 +141,7 @@ V1 is the pre-V2 board set. **Do not add new dashboards here.** Only modify V1 f
 
 ## V1 Layout
 
-- Remaining V1-era per-cluster boards: `dashboards/applications/{sharepoint-connector-dashboard,xberg-dashboard,apps-s3-inventory-connector,backend-workers,cifs-connector-combined,content-service-*}.json`, `dashboards/infrastructure/*.json`, `dashboards/backups/backups-dashboard.json`.
+- V1-era per-cluster boards live at the top of `dashboards/` (paths, uids, titles and folders unchanged from development), plus `dashboards/applications/backend-workers.json`.
 - `folders/applications-folder.json`, `folders/infrastructure-folder.json`, `folders/backups-folder.json`, `folders/scans-folder.json`: flat parent folders, `parentUid: ""`.
 - `datasources/prometheus-nx.json`, `datasources/loki-nx.json`: legacy reference (not synced).
 - `alerts/nx-applications-alerts.json`, `alerts/nx-infrastructure-alerts.json`.
