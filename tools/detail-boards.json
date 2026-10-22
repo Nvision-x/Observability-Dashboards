@@ -1,7 +1,6 @@
 {
   "extra_sources": [
-    "dashboards/applications/cifs-connector-combined.json",
-    "dashboards/backups/backups-dashboard.json"
+    "dashboards/backups-dashboard.json"
   ],
   "boards": [
     {
@@ -57,29 +56,16 @@
         "weekStart": "",
         "folderUid": "applications-folder"
       },
-      "intro": "**Connectors Detail**: one collapsed row per connector, built from that connector's per-cluster boards (overview, pipeline, runtime). Expand a row for its full detail. The namespace picker applies to every row; each connector keeps its own pickers (component, pod, query type, datasource id), labelled with the connector name. Each section header links to the per-cluster board it came from.",
-      "pickers": "show",
+      "intro": "**Connectors Detail**: one collapsed row per connector, built from that connector's per-cluster boards (overview, pipeline, runtime). Expand a row for its full detail. Each row shows everything in namespace `default`; the Scanner/Content component pickers at the top apply to their connector's row. For per-pod, query-type or datasource-id filtering, open the per-cluster board linked in each section header. Each section header links to the per-cluster board it came from.",
+      "pickers": "hide",
       "shared_vars": [
         {
           "name": "namespace",
           "label": "Namespace",
-          "type": "query",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "query": "label_values(kube_deployment_spec_replicas, namespace)",
-          "definition": "label_values(kube_deployment_spec_replicas, namespace)",
-          "refresh": 1,
-          "sort": 1,
-          "multi": false,
-          "includeAll": false,
-          "hide": 0,
-          "current": {
-            "text": "default",
-            "value": "default"
-          },
-          "options": []
+          "type": "constant",
+          "hide": 2,
+          "query": "default",
+          "skipUrlSync": true
         }
       ],
       "sections": [
@@ -166,7 +152,7 @@
           "label": "SharePoint",
           "title": "📄 SharePoint",
           "sources": [
-            "dashboards/applications/sharepoint-connector-dashboard.json"
+            "dashboards/sharepoint-connector-dashboard.json"
           ]
         },
         {
@@ -174,7 +160,7 @@
           "label": "Xberg",
           "title": "⚡ Xberg Extraction Engine",
           "sources": [
-            "dashboards/applications/xberg-dashboard.json"
+            "dashboards/xberg-dashboard.json"
           ]
         },
         {
@@ -182,10 +168,19 @@
           "label": "S3",
           "title": "🪣 S3 Parquet Inventory",
           "sources": [
-            "dashboards/applications/apps-s3-inventory-connector.json"
+            "dashboards/apps-s3-inventory-connector.json"
           ]
         }
-      ]
+      ],
+      "keep_vars": {
+        "cifs_component": 0,
+        "mysql_component": 0,
+        "postgresql_component": 2,
+        "snowflake_component": 0,
+        "box_component": 0,
+        "sharepoint_component": 0,
+        "oracle_component": 0
+      }
     },
     {
       "output": "dashboards/applications/services-detail.json",
@@ -240,29 +235,16 @@
         "weekStart": "",
         "folderUid": "applications-folder"
       },
-      "intro": "**Services Detail**: one collapsed row per platform service, built from that service's per-cluster boards. Expand a row for its full detail. The namespace picker applies to every row; each service keeps its own pod picker, labelled with the service name. Each section header links to the per-cluster board it came from.",
-      "pickers": "show",
+      "intro": "**Services Detail**: one collapsed row per platform service, built from that service's per-cluster boards. Expand a row for its full detail. Each row shows every pod in namespace `default`; for per-pod filtering open the per-cluster board linked in each section header. Each section header links to the per-cluster board it came from.",
+      "pickers": "hide",
       "shared_vars": [
         {
           "name": "namespace",
           "label": "Namespace",
-          "type": "query",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "query": "label_values(kube_deployment_spec_replicas, namespace)",
-          "definition": "label_values(kube_deployment_spec_replicas, namespace)",
-          "refresh": 1,
-          "sort": 1,
-          "multi": false,
-          "includeAll": false,
-          "hide": 0,
-          "current": {
-            "text": "default",
-            "value": "default"
-          },
-          "options": []
+          "type": "constant",
+          "hide": 2,
+          "query": "default",
+          "skipUrlSync": true
         }
       ],
       "sections": [
@@ -355,6 +337,12 @@
             "dashboards/applications/backend-workers.json"
           ]
         }
+      ],
+      "link_map": [
+        {
+          "match": "/d/content-service-cluster(?![a-z-])",
+          "replace": "/d/content-service"
+        }
       ]
     },
     {
@@ -400,8 +388,8 @@
         "version": 1,
         "weekStart": ""
       },
-      "intro": "**Infrastructure Overview**: one collapsed row per infrastructure component (Kong, NATS/JetStream, OpenSearch, Prometheus self-monitoring, Pulsar, GPU/DCGM), built from the per-cluster boards under `dashboards/infrastructure/`. Each component keeps its own pickers, labelled with the component name.",
-      "pickers": "show",
+      "intro": "**Infrastructure Overview**: one collapsed row per infrastructure component (Kong, NATS/JetStream, OpenSearch, Prometheus self-monitoring, Pulsar, GPU/DCGM), built from the per-cluster boards under `dashboards/`. Rows aggregate every instance; for per-instance filtering open the per-cluster board linked in each section header.",
+      "pickers": "hide",
       "shared_vars": [],
       "sections": [
         {
@@ -409,7 +397,7 @@
           "label": "Kong",
           "title": "🦍 Kong Gateway",
           "sources": [
-            "dashboards/infrastructure/kong-dashboard.json"
+            "dashboards/kong-dashboard.json"
           ]
         },
         {
@@ -417,7 +405,7 @@
           "label": "NATS",
           "title": "📨 NATS / JetStream",
           "sources": [
-            "dashboards/infrastructure/nats-explorer.json"
+            "dashboards/nats-explorer.json"
           ]
         },
         {
@@ -425,7 +413,7 @@
           "label": "OpenSearch",
           "title": "🔎 OpenSearch Metrics",
           "sources": [
-            "dashboards/infrastructure/opensearch-metrics-central.json"
+            "dashboards/opensearch-metrics-central.json"
           ]
         },
         {
@@ -433,7 +421,7 @@
           "label": "Prometheus",
           "title": "🔥 Prometheus Self-Monitoring",
           "sources": [
-            "dashboards/infrastructure/prometheus2.json"
+            "dashboards/prometheus2.json"
           ]
         },
         {
@@ -441,7 +429,7 @@
           "label": "Pulsar",
           "title": "📡 Pulsar",
           "sources": [
-            "dashboards/infrastructure/pulsar-explorer.json"
+            "dashboards/pulsar-explorer.json"
           ]
         },
         {
@@ -449,7 +437,7 @@
           "label": "GPU",
           "title": "🖥️ NVIDIA GPU / DCGM",
           "sources": [
-            "dashboards/infrastructure/nvidia-dcgm-gpu.json"
+            "dashboards/nvidia-dcgm-gpu.json"
           ]
         }
       ]
@@ -493,43 +481,21 @@
         "timepicker": {},
         "timezone": "",
         "title": "Content Service (Legacy)",
-        "uid": "nx-content-service-legacy",
+        "uid": "content-service",
         "version": 1,
         "weekStart": "",
         "folderUid": "applications-folder"
       },
       "intro": "**Content Service (Legacy V1)**: the pre-V2 Content Service boards (Overview, Extraction Routing, Tika vs Kreuzberg Comparison), one collapsed row each, kept until the V2 Content Service board (in Services Detail) reaches parity.",
-      "pickers": "show",
-      "shared_vars": [
-        {
-          "name": "namespace",
-          "label": "Namespace",
-          "type": "query",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "query": "label_values(kube_deployment_spec_replicas, namespace)",
-          "definition": "label_values(kube_deployment_spec_replicas, namespace)",
-          "refresh": 1,
-          "sort": 1,
-          "multi": false,
-          "includeAll": false,
-          "hide": 0,
-          "current": {
-            "text": "default",
-            "value": "default"
-          },
-          "options": []
-        }
-      ],
+      "pickers": "hide",
+      "shared_vars": [],
       "sections": [
         {
           "key": "cs",
           "label": "Content Service",
           "title": "📄 Overview",
           "sources": [
-            "dashboards/applications/content-service-dashboard.json"
+            "dashboards/content-service-dashboard.json"
           ]
         },
         {
@@ -537,7 +503,7 @@
           "label": "Routing",
           "title": "🔀 Extraction Routing",
           "sources": [
-            "dashboards/applications/content-service-extraction-routing.json"
+            "dashboards/content-service-extraction-routing.json"
           ]
         },
         {
@@ -545,8 +511,14 @@
           "label": "Tika",
           "title": "⚖️ Tika vs Kreuzberg Comparison",
           "sources": [
-            "dashboards/applications/content-service-tika-comparison-dashboard.json"
+            "dashboards/content-service-tika-comparison-dashboard.json"
           ]
+        }
+      ],
+      "link_map": [
+        {
+          "match": "/d/content-service-cluster(?![a-z-])",
+          "replace": "/d/content-service"
         }
       ]
     },
@@ -557,11 +529,11 @@
       "source": "dashboards/applications/V2/applications-overview.json",
       "link_map": [
         {
-          "match": "/d/apps-v2-(snowflake|cifs|mysql|postgresql|box|oracle)-overview",
+          "match": "^/d/apps-v2-(snowflake|cifs|mysql|postgresql|box|oracle)-overview.*$",
           "replace": "/d/nx-connectors-detail"
         },
         {
-          "match": "/d/apps-v2-[a-z-]+-(overview|ingest)",
+          "match": "^/d/apps-v2-[a-z-]+-(overview|ingest).*$",
           "replace": "/d/nx-services-detail"
         }
       ]

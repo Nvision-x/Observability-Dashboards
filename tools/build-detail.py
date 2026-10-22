@@ -296,6 +296,8 @@ def build_section(board, section, notes):
     own = set(section.get("own_vars", []))
     unify = section.get("unify", {})
     pickers_hidden = board.get("pickers", "show") == "hide"
+    keep = board.get("keep_vars", {})
+    wildcard = board.get("wildcard", ".*")
 
     paths = [s if isinstance(s, str) else s["path"] for s in section["sources"]]
     stems = [os.path.splitext(os.path.basename(p))[0] for p in paths]
@@ -344,17 +346,26 @@ def build_section(board, section, notes):
             variables.append((new, vdef, owner))
 
     out_vars = []
+    wildcarded = set()
     for new, vdef, owner in variables:
         v = copy.deepcopy(vdef)
         v["name"] = new
         label = vdef.get("label") or vdef["name"]
         v["label"] = "%s %s" % (section.get("label", key), label)
-        if pickers_hidden or vdef.get("hide") == 2:
+        if vdef.get("hide") == 2:
             v["hide"] = 2
         # chained queries reference other variables of the source the definition came from
         m = dict(mapping_for[owner])
         v = walk_strings(v, lambda s: rename_refs(s, m))
         v["name"] = new
+        if new in keep:
+            v["hide"] = keep[new]
+        elif pickers_hidden and v.get("type") != "constant":
+            # "hide": the board keeps the shape it had before pickers came back:
+            # every per-section variable is a hidden constant matching everything.
+            v = {"name": new, "label": v["label"], "type": "constant", "hide": 2, "query": wildcard,
+                 "skipUrlSync": True}
+            wildcarded.add(new)
         out_vars.append(v)
 
     # a chained variable goes after the variables it reads
@@ -383,6 +394,12 @@ def build_section(board, section, notes):
         panels = [strip_panel(p) for p in panels]
         panels = normalize_ds(panels, ds_names)
         panels = walk_strings(panels, lambda s: rename_refs(s, mapping))
+        if wildcarded:
+            # label="$x" with x now matching everything must become =~ (main #138)
+            eqv = re.compile(r'([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"(\$\{?(?:%s)(?::[^}"]*)?\}?)"'
+                             % "|".join(sorted(map(re.escape, wildcarded))))
+            panels = walk_strings(panels, lambda s: eqv.sub(lambda m: '%s=~"%s"' % (m.group(1), m.group(2)), s))
+        panels = relink(panels, board.get("link_map", []))
         for p in all_panels(panels):
             if p.get("repeat") in mapping:
                 p["repeat"] = mapping[p["repeat"]]
@@ -455,6 +472,18 @@ def renumber(panels, start):
     return n
 
 
+def relink(obj, rules):
+    rules = [(re.compile(r["match"]), r["replace"]) for r in rules]
+    if not rules:
+        return obj
+
+    def f(s):
+        for rx, rep_ in rules:
+            s = rx.sub(rep_, s)
+        return s
+    return walk_strings(obj, f)
+
+
 def build_splice(spec, notes):
     """Regenerate the panels after a marker row inside a hand-maintained board."""
     target = load(spec["output"])
@@ -471,13 +500,7 @@ def build_splice(spec, notes):
         raise BuildError("%s: source variables %s are not defined on %s" % (spec["source"], missing, spec["output"]))
     gen = [strip_panel(copy.deepcopy(p)) for p in src["panels"]]
     gen = normalize_ds(gen, {"datasource", "DS_PROMETHEUS"})
-    link_rules = [(re.compile(r["match"]), r["replace"]) for r in spec.get("link_map", [])]
-
-    def relink(s):
-        for rx, rep in link_rules:
-            s = rx.sub(rep, s)
-        return s
-    gen = walk_strings(gen, relink)
+    gen = relink(gen, spec.get("link_map", []))
     top = min((p["gridPos"]["y"] for p in gen), default=0)
     base = marker["gridPos"]["y"] + marker["gridPos"]["h"]
     for p in all_panels(gen):
@@ -493,8 +516,14 @@ def build_splice(spec, notes):
 
 # ---------------------------------------------------------------- validation
 
-def check_board(path, dash, problems, strict, ds_rule=True):
-    """strict: generated or source board, held to every shared rule."""
+def check_board(path, dash, problems, strict, ds_rule=True, warnings=None):
+    """strict: generated or source board, held to every shared rule.
+
+    Other boards (hand-maintained or legacy) only get the checks that decide
+    whether the sync and Grafana can load them; the rest are warnings.
+    """
+    if not strict:
+        problems = []
     ids = [p.get("id") for p in all_panels(dash.get("panels", []))]
     dup = sorted({i for i in ids if ids.count(i) > 1 and i is not None})
     if dup:
@@ -546,9 +575,11 @@ def check_board(path, dash, problems, strict, ds_rule=True):
                     or v.get("hide") != 2:
                 problems.append("%s: datasource variable must be type datasource, query prometheus, current "
                                 "'default', hide 2 (run --fix-sources)" % path)
+    if not strict and warnings is not None:
+        warnings.extend(problems)
 
 
-def check_tree(problems, generated, sources):
+def check_tree(problems, generated, sources, warnings):
     uids, titles = {}, {}
     for dp, _, files in os.walk(os.path.join(ROOT, "dashboards")):
         for f in sorted(files):
@@ -576,7 +607,8 @@ def check_tree(problems, generated, sources):
                 problems.append("%s: file name is not a valid ConfigMap key" % path)
             uid = dash.get("uid")
             if not uid:
-                problems.append("%s: dashboard has no uid" % path)
+                (problems if path in generated or path in sources else warnings).append(
+                    "%s: dashboard has no uid (Grafana assigns one)" % path)
             elif len(uid) > 40:
                 problems.append("%s: uid %r longer than 40 characters" % (path, uid))
             elif uid in uids:
@@ -588,7 +620,7 @@ def check_tree(problems, generated, sources):
                 problems.append("%s: title %r already used in the same folder by %s" % (path, tkey[1], titles[tkey]))
             titles[tkey] = path
             check_board(path, dash, problems, strict=path in generated or path in sources,
-                        ds_rule=not splice)
+                        ds_rule=not splice, warnings=warnings)
 
 
 # ---------------------------------------------------------------- source fixer
@@ -701,10 +733,14 @@ def fix_source(path):
                 first = lst.children[0]
                 edits.append((first.start, first.start, render(dict(DATASOURCE_VAR), first.start) + ",\n" +
                               " " * indent_at(first.start)))
+            else:
+                pad = " " * (indent_at(lst.start) + 2)
+                edits.append((lst.start, lst.end, "[\n" + pad + render(dict(DATASOURCE_VAR), 0).replace(
+                    "\n", "\n" + pad) + "\n" + " " * indent_at(lst.start) + "]"))
     # literal "Prometheus" datasource strings -> the variable
     for m in literal:
         edits.append((m.start(1) - 1, m.end(1) + 1, json.dumps(PROM_DS)))
-    if edits and not has_ds and lst is not None and not lst.children:
+    if uses_ds and not has_ds and lst is None:
         raise BuildError("%s: no template list to add the datasource variable to" % path)
     # label=".*" -> label=~".*"; label="$multi" -> label=~"$multi"
     multi = {v["name"] for v in vars_ if v.get("multi") or v.get("includeAll")}
@@ -802,8 +838,10 @@ def main():
         for n in notes:
             print("note: %s" % n)
 
-    problems = []
-    check_tree(problems, generated, sources)
+    problems, warnings = [], []
+    check_tree(problems, generated, sources, warnings)
+    for w in warnings:
+        print("warn: %s" % w)
     for p in problems:
         print("FAIL: %s" % p)
     if args.check and drift:
