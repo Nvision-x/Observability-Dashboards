@@ -4,70 +4,151 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a Grafana dashboards configuration repository for NX infrastructure and application monitoring. It contains JSON-based Grafana dashboards, datasources, alert rules, and folder definitions that are synchronized to Grafana instances. Grafana itself runs in the `observability` namespace; the connectors and applications it monitors run in separate application namespaces (e.g., `default`).
+Grafana dashboards for NX infrastructure and application monitoring: dashboard JSON, folder definitions, alert rules and reference datasources. Grafana runs in the `observability` namespace; the connectors and services it monitors run in application namespaces (normally `default`).
 
-The repo is in the middle of a V1 → V2 restructure. New work for application/connector dashboards goes in V2. V1 stays untouched until V2 reaches parity per connector, then V1 files are deleted in a cleanup PR.
+One tree serves two kinds of Grafana:
+
+- **Per-cluster Grafanas** (dev, integration, each customer cluster) with one local Prometheus. They use the **per-cluster boards**: one board per component view, with their own pickers.
+- **The central (mimir) Grafana**, which wants a few big boards. It uses the **consolidated boards** (Connectors Detail, Services Detail, Infrastructure Overview, Content Service (Legacy), Applications Overview), one collapsed row per component.
+
+Every Grafana syncs every file under `dashboards/`, so both kinds exist everywhere. The consolidated boards are **generated** from the per-cluster boards; see "Per-cluster sources and generated boards" below. That is what keeps them from drifting apart again (on 09-18 main replaced the per-cluster boards with hand-made consolidated copies, development kept editing the per-cluster ones, and the two diverged for a month).
 
 ## Top-Level Layout
 
 ```
 dashboards/
-  *.json                                  # V1 (Original) — flat layout
-  applications/V2/                        # V2 — nested by connector
-    applications-overview.json
-    connectors/<name>/<name>-{overview,pipeline,runtime}.json
-folders/
-  *.json                                  # V1 folders (flat)
-  connectors/                             # V2 connector subfolders
-alerts/
-  *.json                                  # alert rule definitions
-datasources/
-  *.json                                  # legacy reference datasources (not actively synced)
-.github/workflows/release.yml             # CalVer tag + GitHub Release on push to main
+  cluster-health-overview.json, global-monitoring.json      # hand-maintained landing pages (Grafana root)
+  applications-overview-central.json                         # hand-maintained, except its V2 section (GENERATED)
+  infrastructure-overview.json                               # GENERATED from the infra boards below
+  kong-dashboard.json, nats-explorer.json, opensearch-metrics-central.json, prometheus2.json,
+  pulsar-explorer.json, nvidia-dcgm-gpu.json                 # per-cluster infra boards (sources)
+  sharepoint-connector-dashboard.json, xberg-dashboard.json, apps-s3-inventory-connector.json,
+  content-service-*.json                                     # per-cluster V1-era boards (sources)
+  *.json (others at the top level)                           # per-cluster V1 boards, not generated from
+  applications/
+    connectors-detail.json                                   # GENERATED from the connector boards
+    services-detail.json                                     # GENERATED from the service boards
+    content-service-legacy.json                              # GENERATED from content-service-*.json
+    backend-workers.json                                     # source of the Backend Workers row
+    V2/
+      applications-overview.json                             # per-cluster V2 roll-up
+      connectors/<name>/<name>-{overview,pipeline,runtime}.json
+      services/<name>/<name>-{overview,runtime}.json
+  backups/  scans/                                           # hand-maintained central boards
+folders/                                                     # folder definitions (documentation only, not synced)
+  connectors/  services/                                     # V2 component folders
+tools/
+  build-detail.py                                            # generator + validator
+  detail-boards.json                                         # which sources make which generated board
+alerts/  datasources/                                        # not synced (see below)
+.github/workflows/
+  dashboards-check.yml                                       # CI: generated boards up to date, shared rules hold
+  release.yml                                                # CalVer tag + GitHub Release on push to main
 ```
+
+## Per-cluster sources and generated boards
+
+**Edit the per-cluster board, never a generated one.** The generated files are rebuilt from scratch; a hand edit is lost on the next build and fails CI before that.
+
+| Generated board | uid | Built from |
+|---|---|---|
+| `dashboards/applications/connectors-detail.json` | `nx-connectors-detail` | V2 CIFS, MySQL, PostgreSQL, Snowflake, Oracle, Box boards; SharePoint, Xberg, S3 Parquet boards |
+| `dashboards/applications/services-detail.json` | `nx-services-detail` | V2 Content Service, Authz, Credential Manager, Datasource Service, Knowledge Hub (sidecar, standalone), Knowledge Service, Registration, Request boards; Backend Workers |
+| `dashboards/infrastructure-overview.json` | `nx-infrastructure-overview` | Kong, NATS, OpenSearch, Prometheus, Pulsar, NVIDIA GPU boards |
+| `dashboards/applications/content-service-legacy.json` | `content-service` | the three `content-service-*.json` boards (the per-cluster Content Service board is `content-service-cluster`) |
+| `dashboards/applications-overview-central.json`, panels after row id 10004 only | `nx-applications-overview` | `dashboards/applications/V2/applications-overview.json` (drill-down links rewritten to the consolidated boards) |
+
+The exact list is `tools/detail-boards.json`. Each generated file says so in its `__generated` key and in its first text panel.
+
+### Workflow
+
+```bash
+# after editing any source board
+python3 tools/build-detail.py            # rebuild the generated boards and validate everything
+git add dashboards tools && git commit   # commit the source change AND the regenerated boards together
+
+python3 tools/build-detail.py --check    # what CI runs: no writes, fails on drift or a broken rule
+python3 tools/build-detail.py --fix-sources   # apply the shared rules to source boards (small, in-place edits)
+python3 tools/build-detail.py -v         # also print how source variables were named
+```
+
+On a merge conflict in a generated file, do not resolve it by hand: take either side, run `python3 tools/build-detail.py`, commit.
+
+### What the generator does
+
+- One collapsed row per section; inside it, each source board under a small header that links back to the per-cluster board. A source's own rows become text headers (Grafana does not support rows inside a collapsed row).
+- Panel ids are renumbered across the board; dashboard-level links of the sources are dropped.
+- Variables: `$datasource` becomes the board's single hidden datasource variable. Every other source variable is prefixed with the section key (`cifs_pod`, `box_datasource_id`, `sharepoint_job`). Identical definitions within a section share one variable; a section's `unify` entry forces one definition (used for `pod`); Knowledge Hub sidecar and standalone are separate sections so their pods never mix.
+- **Every generated board is built with `"pickers": "hide"`, so it looks and queries as the hand-made boards did on main before generation (except `$pod`, below, which no longer double-counts):** each per-section variable becomes a hidden constant: the source's `allValue` when it has one (`.+` for `$pod`, see the `$pod` note under V2 template variables), `.*` otherwise (and any `label="$x"` on it becomes `=~`), `namespace` is a hidden constant `default` on Connectors and Services Detail, and only the variables listed in `keep_vars` stay real pickers (the Scanner/Content component pickers of Connectors Detail, with the same names, defaults and visibility as before). For per-pod, query-type or datasource-id filtering, use the per-cluster board each section header links to.
+- `"pickers": "show"` instead keeps every source variable as a real picker (chained queries work, there is no per-client repeat any more). It changes the top bar and the default queries, so switching a board to it is a deliberate change, not a fix.
+- `link_map` rewrites drill-down URLs (e.g. per-cluster `content-service-cluster` back to `content-service`, and V2 overview links to the consolidated boards).
+- Output is written one panel per line: fully indented, Connectors Detail would exceed the ConfigMap limit.
+
+### Shared rules (checked on every build and in CI)
+
+Applied to every source and generated board, and the generic ones to every file under `dashboards/`:
+
+- JSON parses; unique `uid` (at most 40 characters) across `dashboards/`; unique title per folder; unique panel ids; no overlapping panels and nothing wider than 24 columns.
+- **No `label=".*"`** (or `".+"`): with `=` it matches only the literal string and the panel shows No data. Use `=~`.
+- No `label="$var"` when `$var` is multi-value or has All; use `=~`.
+- No reference to an undefined variable.
+- **The datasource variable** is `type: datasource`, `query: prometheus`, `current: default`, `hide: 2`, `refresh: 1`. A saved uid that does not exist in some Grafana (the V2 boards used to save `prometheus-nx`) blanks the board there. `--fix-sources` sets it.
+- Size at most 1 MiB minus 8 KiB (the ConfigMap limit); a warning above 90%. To shrink a generated board, move a section into a new board in the manifest.
+- The file path must give a valid ConfigMap name (lowercase letters, digits, `-`, `.`: no underscores) and the file name a valid ConfigMap key. See the sync section below.
+
+### Adding a board
+
+1. Create the per-cluster board as usual (V2 conventions below), with the standard datasource variable.
+2. If it belongs in a consolidated view, add its path to the right section of `tools/detail-boards.json` (or add a section: `key` is the variable prefix, `label` the picker label, `title` the row title).
+3. If it is a new V2 component, add its row to `dashboards/applications/V2/applications-overview.json`; the central Applications Overview picks it up on the next build.
+4. Run `python3 tools/build-detail.py` and commit everything it changed.
+
+## Branches: development first, then main
+
+- **Dev Grafana renders `development`** (`dashboardSync.branch: development` in `nxdeployment-development-env` `values.yaml`). Every other Grafana, including customer clusters and the central one, renders **`main`** (the `nx-application-helm` observability chart default).
+- **Changes go to `development` first and reach `main` by promotion** (a development -> main PR), the same as code. Check them on dev Grafana before promoting.
+- **No restructures straight on `main`.** Moving, merging, renaming or deleting boards on main while development keeps editing them is what produced the 09-18 split. If the central Grafana needs a different shape, change the manifest or the generator on development and promote it.
+- A fix made directly on main (hotfix) must be merged back into development the same day.
 
 ## How dashboards actually reach Grafana
 
-**The GitHub Release workflow is NOT in the deployment path.** It tags + bundles JSONs for audit/versioning only.
+**The GitHub Release workflow is NOT in the deployment path.** It tags and bundles JSONs for audit/versioning only.
 
-The real sync mechanism is configured in `nx-application-helm/charts/observability` and uses a custom CronJob image (`ghcr.io/nvision-x/grafana-dashboards-sync`, source: `grafana-dashboards-sync` repo). The flow:
+The sync is configured in `nx-application-helm/charts/observability` and uses a CronJob image (`ghcr.io/nvision-x/grafana-dashboards-sync`, source: the `grafana-dashboards-sync` repo, `sync-dashboards.sh`):
 
-1. CronJob runs every minute in the `observability` namespace.
-2. The container clones `https://github.com/Nvision-x/Observability-Dashboards.git` at branch `main` (commit pin optional via `COMMIT` env var).
-3. **Phase 1 (cleanup):** deletes every existing ConfigMap with prefix `observability-grafana-dashboard-`.
-4. **Phase 2 (process):** runs `find $TEMP_DIR/dashboards -name "*.json" -type f` (no `-maxdepth` → recurses subdirectories), validates each with `jq`, and creates one ConfigMap per file. Names derive from the path: `dashboards/applications/V2/connectors/snowflake/snowflake-overview.json` → `observability-grafana-dashboard-dashboards-applications-v2-connectors-snowflake-snowflake-overview`.
-5. ConfigMaps are labeled `grafana_dashboard=1`, `app.kubernetes.io/managed-by=grafana-dashboards-sync`, `app.kubernetes.io/component=grafana-dashboard`.
-6. Grafana's sidecar (kube-prometheus-stack, configured with `sidecar.dashboards.label: app.kubernetes.io/component`) picks up labeled ConfigMaps and loads the JSONs into Grafana.
+1. The CronJob runs every minute in the `observability` namespace (`concurrencyPolicy: Forbid`).
+2. It clones this repo at the configured branch (`main` by default, `development` on dev; a `COMMIT` pin overrides the branch).
+3. **Phase 1 (cleanup):** deletes every ConfigMap whose name starts with `observability-grafana-dashboard-`.
+4. **Phase 2 (process):** `find dashboards -name "*.json" -type f` (recursive, no depth limit), skips files that fail `jq`, and runs `kubectl create configmap <name> --from-file=<basename>=<file>` for each. The name is `observability-grafana-dashboard-` + the path without `.json`, `/` replaced by `-`, lowercased: `dashboards/applications/V2/connectors/snowflake/snowflake-overview.json` -> `observability-grafana-dashboard-dashboards-applications-v2-connectors-snowflake-snowflake-overview`. A name Kubernetes rejects (an underscore in the path, more than 253 characters) or a file over the 1 MiB ConfigMap limit is skipped with a warning and the dashboard silently disappears; the validator checks both.
+5. ConfigMaps are labelled `grafana_dashboard=1`, `app.kubernetes.io/managed-by=grafana-dashboards-sync`, `app.kubernetes.io/component=grafana-dashboard`.
+6. Grafana's sidecar (kube-prometheus-stack, `sidecar.dashboards.label: app.kubernetes.io/component`) loads them.
 
 ### Implications for editing this repo
 
-- ✅ **Subdirectory layouts work.** V2's nested paths under `dashboards/applications/V2/connectors/<name>/` are processed normally because the sync uses recursive `find`.
-- ❌ **Only `dashboards/` is synced.** The script does not look at `folders/`, `alerts/`, or `datasources/`. JSON files placed there are inert with respect to this sync.
-- ❌ **No folder mechanism.** Because `folders/` isn't synced and the sidecar isn't configured with `folderAnnotation`, dashboard organization in Grafana is NOT driven by this repo. Folders must exist in Grafana first (created manually or by another process); only then will the `folderUid` inside a dashboard JSON be honored at load time.
-- ❌ **No alert sync.** `alerts/*.json` is not deployed by anything in this stack. Alerts must be configured separately.
-- ⚠️ **Cleanup-then-recreate** runs every minute. A broken JSON merged to `main` will cause one ConfigMap creation to fail but won't roll back others. A removed file vanishes from Grafana within a minute of merge.
-- ⚠️ **The `"git-sync"` tag is decorative.** It's a labeling convention, not a functional sync trigger — the sync script doesn't read it. Keep it for consistency, but don't rely on it.
-- ⚠️ **The `release.yml` workflow is unused for deployment** — the cronjob clones `main` directly, not Release artifacts. The workflow is only useful as a versioning record.
+- ✅ **Subdirectories work** (recursive `find`), and moving a file only renames its ConfigMap; Grafana keys dashboards by `uid`.
+- ❌ **Only `dashboards/` is synced.** `folders/`, `alerts/`, `tools/` and `datasources/` are inert.
+- ❌ **No folder mechanism.** `folders/` isn't synced and the sidecar has no `folderAnnotation`, so folders must already exist in Grafana for a dashboard's `folderUid` to be honoured.
+- ❌ **No alert sync.** `alerts/*.json` is not deployed by anything in this stack.
+- ⚠️ **Cleanup-then-recreate** every minute: a removed file vanishes from Grafana within a minute of reaching the synced branch; a file that fails `jq` is skipped, others are unaffected.
+- ⚠️ **Two dashboards with the same `uid` overwrite each other** in Grafana. The validator rejects duplicates.
+- ⚠️ **The `"git-sync"` tag is decorative.** Keep it for consistency.
 
 ---
 
 # V1 (Original) — Legacy / Maintenance Mode
 
-V1 is the existing flat dashboard set. **Do not add new dashboards here.** Only modify V1 files for bug fixes or until the V2 equivalent has been shipped and verified.
+V1 is the pre-V2 board set. **Do not add new dashboards here.** Only modify V1 files for bug fixes or until the V2 equivalent has been shipped and verified.
 
 ## V1 Layout
 
-- `dashboards/*.json` — all dashboards in one flat directory
-  - Application dashboards: `nx-applications-dashboard.json`, `nx-applications-monitoring.json`, `apps-connector.json`, `apps-enricher.json`, `apps-archiver.json`, `apps-archiverv2.json`, etc.
-  - Infrastructure dashboards: `nx-infrastructure-overview.json`, `prometheus2.json`
-  - Messaging dashboards: `nats-dashboard.json`, `nats-explorer.json`, `pulsar-monitor.json`, `pulsar-topic-official.json`, `pulsar-explorer.json`
-- `folders/applications-folder.json`, `folders/infrastructure-folder.json`, `folders/app-metrics-folder.json` — flat parent folders, all with `parentUid: ""`
-- `datasources/prometheus-nx.json`, `datasources/loki-nx.json` — legacy reference (not actively synced)
-- `alerts/nx-applications-alerts.json`, `alerts/nx-infrastructure-alerts.json`
+- V1-era per-cluster boards live at the top of `dashboards/` (paths, uids, titles and folders unchanged from development), plus `dashboards/applications/backend-workers.json`.
+- `folders/applications-folder.json`, `folders/infrastructure-folder.json`, `folders/backups-folder.json`, `folders/scans-folder.json`: flat parent folders, `parentUid: ""`.
+- `datasources/prometheus-nx.json`, `datasources/loki-nx.json`: legacy reference (not synced).
+- `alerts/nx-applications-alerts.json`, `alerts/nx-infrastructure-alerts.json`.
 
 ## V1 Conventions
 
-- **Datasource references vary across files.** Some V1 dashboards use `"${DS_PROMETHEUS}"` (e.g., `apps-archiver.json`); others use the literal `"Prometheus"` (e.g., `apps-connector.json`). Match whatever the surrounding file uses when editing.
+- **Datasource references:** use `{"type": "prometheus", "uid": "${datasource}"}` and the standard datasource variable (see V2 template variables). Literal `"Prometheus"` references were replaced on the boards that still had them.
 - **Hard-coded selectors.** V1 panels frequently hard-code `namespace='default'`, `job='default/applications-connector'`, `container='connector'`. This is one of the things V2 fixes — do not propagate this pattern.
 - **Tags include `"git-sync"`** plus categorization tags (e.g., `archiver`, `applications`, `pulsar`).
 - **Schema version 39** with `refresh` typically `"15s"` or `"30s"`.
@@ -137,7 +218,7 @@ Every V2 dashboard MUST include in `tags`:
 
 ### Template variables (V2 standard)
 Every V2 dashboard declares these in `templating.list`, in this order:
-- `$datasource` — type `datasource`, query `prometheus`. Default value should match the actual Prometheus datasource UID used in your Grafana (CLAUDE.md previously claimed `prometheus-nx` but V1 dashboards use `${DS_PROMETHEUS}` or `Prometheus` — confirm against your real Grafana before relying on the default).
+- `$datasource` — type `datasource`, query `prometheus`, `current` = `default` (Grafana's default datasource), `refresh: 1`, `hide: 2`. Never save a concrete uid such as `prometheus-nx`: it does not exist in every Grafana and blanks the board where it is missing. CI enforces this; `python3 tools/build-detail.py --fix-sources` sets it.
 - `$namespace` — `label_values(kube_deployment_spec_replicas{deployment=~".*<name>.*"}, namespace)`. **Never `process_start_time_seconds` here** — see the note below.
 - `$component` — **connectors only.** Custom variable with `All` / `Scanner` / `Content` options for connectors that have a content-fetch pod; single-value, used as a job-regex selector. Its option values are full job regexes, not bare names — see the job-label table below. Services have a single pod type and omit this variable.
 - `$pod` — `label_values(process_start_time_seconds{job=~"$component", namespace="$namespace"}, pod)` for connectors, or `job=~".*<name>.*"` for services. Multi-value with `includeAll`.
@@ -365,8 +446,9 @@ Services differ from connectors here:
 7. Open in Grafana — confirm template variables resolve, drill-down links carry the namespace, and at least one panel returns data. An all-blank dashboard usually means a front-anchored job selector (step 3), not a missing metric.
 
 8. Add a row for the new component to `dashboards/applications/V2/applications-overview.json` — the V2 roll-up. The established shape is four `stat` panels across: `Pods Up` (with a `fieldConfig.defaults.links` drill-down to the component's own overview, propagating `${namespace:queryparam}`), a throughput stat, a latency stat, and an error-rate stat. Only use a `histogram_quantile` latency stat if the component's histogram has explicit boundaries — see the bucket note above.
+9. Add the new boards to the right section of `tools/detail-boards.json`, run `python3 tools/build-detail.py`, and commit the regenerated boards with your change.
 
-**Which overview file.** V2 components belong in `dashboards/applications/V2/applications-overview.json` and **only** there. Never add them to the V1 roll-ups — `dashboards/nx-applications-dashboard.json` and `dashboards/nx-applications-monitoring.json` — which cover the pre-V2 applications and stay untouched by V2 work. The two files are unrelated despite the similar names; V1 is in maintenance mode.
+**Which overview file.** V2 components belong in `dashboards/applications/V2/applications-overview.json` and **only** there. Its rows are copied into the central `applications-overview-central.json` by `tools/build-detail.py` (the V2 section after row 10004), so never edit that section of the central board by hand. The old V1 roll-ups (`nx-applications-dashboard.json`, `nx-applications-monitoring.json`) were removed.
 
 For a **service** rather than a connector, copy `dashboards/applications/V2/services/request-service/` instead, drop the `$component` variable, and skip the `pipeline` dashboard — put the domain metrics in `overview`.
 
@@ -374,7 +456,7 @@ For a **service** rather than a connector, copy `dashboards/applications/V2/serv
 
 ## Deployment Notes
 
-- See "How dashboards actually reach Grafana" near the top of this file for the full sync mechanism. Summary: a CronJob in `observability` clones `main` every minute, recursively scans `dashboards/`, and writes ConfigMaps that Grafana's sidecar loads.
+- See "How dashboards actually reach Grafana" near the top of this file for the full sync mechanism. Summary: a CronJob in `observability` clones `main` (`development` on dev) every minute, recursively scans `dashboards/`, and writes one ConfigMap per file that Grafana's sidecar loads.
 - Prometheus in `observability` must have `podMonitorNamespaceSelector` configured to discover PodMonitors in the application namespace. If V1 metrics are flowing today, this is already correct.
 - Folders, alerts, and datasource JSONs in this repo are **not** part of the active deployment path. Treat them as documentation of intent; configure them via another mechanism if you need them live in Grafana.
 
