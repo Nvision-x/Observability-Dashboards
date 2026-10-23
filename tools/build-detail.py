@@ -363,7 +363,10 @@ def build_section(board, section, notes):
         elif pickers_hidden and v.get("type") != "constant":
             # "hide": the board keeps the shape it had before pickers came back:
             # every per-section variable is a hidden constant matching everything.
-            v = {"name": new, "label": v["label"], "type": "constant", "hide": 2, "query": wildcard,
+            # A source allValue wins over the board wildcard: $pod uses ".+" so a
+            # series scraped twice (PodMonitor + catch-all) is not counted twice.
+            v = {"name": new, "label": v["label"], "type": "constant", "hide": 2,
+                 "query": vdef.get("allValue") or wildcard,
                  "skipUrlSync": True}
             wildcarded.add(new)
         out_vars.append(v)
