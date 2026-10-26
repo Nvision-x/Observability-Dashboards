@@ -2075,7 +2075,7 @@
       "id": 233,
       "type": "stat",
       "title": "Charged",
-      "description": "**Label writes we sent to Microsoft**, each priced at $0.00185. A write Microsoft then refused still counts, because whether it is charged is not documented. A write is counted when the connector finishes with the file, so one cut off by a pod restart mid-wait is missed.\n\n**Normal:** close to the number of files whose label actually changed. Charged files that still have no label are in *Charged files without the label*.\n\n**Next:** *Charged, USD* beside it; Azure Cost Management for the real bill.",
+      "description": "**Label writes we sent to Microsoft**, each priced at $0.00185. A write Microsoft then refused still counts, because whether it is charged is not documented. A write is counted when the connector finishes with the file, so one cut off by a pod restart mid-wait is missed.\n\n**Normal:** close to the number of files whose label actually changed. Far above it usually means PDFs on a tenant without PDF labelling (see *file_type* in the glossary). Charged files that still have no label are in *Charged files without the label*.\n\n**Next:** *Charged, USD* beside it; Azure Cost Management for the real bill.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2159,7 +2159,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "blue",
                 "value": null
               }
             ]
@@ -2199,7 +2199,7 @@
       "id": 235,
       "type": "stat",
       "title": "Charged, USD",
-      "description": "**What the charged writes cost**: *Charged* times $0.00185.\n\n**Normal:** close to Azure Cost Management for the range. It can read **above** Azure, because every write that left the pod counts, including ones Microsoft refused, throttled or never answered; and **below** it for writes cut off by a pod restart, or if Microsoft bills a write our HTTP client re-sent after a 429, 503 or 504 (not documented). Azure is the billing truth. *Billed spend* in the row above counts the same writes with an older method that extrapolates, so it can read a little higher or lower; use this one.\n\n**Next:** Azure Cost Management for the invoice.",
+      "description": "**What the charged writes cost**: *Charged* times $0.00185.\n\n**Normal:** close to Azure Cost Management for the range. It can read **above** Azure, because every write we tried to send counts, including ones Microsoft refused, throttled or never answered, and ones that failed on the network before reaching Microsoft; and **below** it for writes cut off by a pod restart, or if Microsoft bills a write our HTTP client re-sent after a 429, 503 or 504 (not documented). Azure is the billing truth. *Billed spend* in the row above counts the same writes with an older method that extrapolates, so it can read higher or lower, and $0 for a short run on a pod that has just started; use this one.\n\n**Next:** Azure Cost Management for the invoice.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2607,7 +2607,7 @@
       "id": 239,
       "type": "bargauge",
       "title": "Files without the label, by reason (needs connector update)",
-      "description": "**Why files did not get their label**, grouped into the reasons in the glossary below. Unlike *No label written*, this includes files still pending (blue), so its bars can add up to more.\n\nShows *No reasons yet* until the connector reports a reason with each result. That is expected today; nothing is estimated.\n\n**Normal:** short bars. Orange reasons are for the customer to fix, red ones for engineering; yellow ones need nothing from them (see the glossary below for which clear on a later run).\n\n**Next:** *By data source and reason* below, then the per-file report in Job Management.",
+      "description": "**Why files did not get their label**, grouped into the reasons in the glossary below. Unlike *No label written*, this includes files still pending (blue), so its bars can add up to more.\n\nShows *No reasons yet* until the connector reports a reason with each result. That is expected today; nothing is estimated.\n\n**Normal:** short bars. Orange reasons are for the customer to fix, red ones for engineering; yellow ones need nothing about the label (not_found clears with a rescan; file_type is yellow because most are refused for free, its charged part is orange in *Charged files without the label*). See the glossary below.\n\n**Next:** *By data source and reason* below, then the per-file report in Job Management.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2754,7 +2754,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "orange"
+                  "fixedColor": "yellow"
                 }
               }
             ]
@@ -2952,7 +2952,7 @@
       "id": 241,
       "type": "bargauge",
       "title": "Charged files without the label, by reason (needs connector update)",
-      "description": "**Money spent on files that still have no label**, by reason: Microsoft billed the write and then refused it, or had not finished it.\n\nShows *No reasons yet* until the connector reports a reason and whether the result was charged.\n\n**Normal:** pending only, which usually lands later. A locked site here means the run paid for the files it sent there; leave that site out next time. A file_type bar here is paid refusals, usually PDF on a tenant without PDF labelling: it repeats on every run until fixed.\n\n**Next:** the glossary below for what the customer can do.",
+      "description": "**Files we sent a charged write for that still have no label**, by reason: Microsoft refused the write, had not finished it, or never answered. Each counts as charged here, as in *Charged*; whether Microsoft bills a refused write is not documented.\n\nShows *No reasons yet* until the connector reports a reason and whether the result was charged.\n\n**Normal:** pending only, which usually lands later. A locked site here means the run paid for the files it sent there; leave that site out next time. A file_type bar here is paid refusals, usually PDF on a tenant without PDF labelling: it repeats on every run until fixed.\n\n**Next:** the glossary below for what the customer can do.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3099,7 +3099,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "orange"
+                  "fixedColor": "yellow"
                 }
               }
             ]
@@ -3224,7 +3224,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "| Reason | What happened | Charged? | What the customer can do |\n|---|---|---|---|\n| `encrypted` | The file is encrypted, so Microsoft would not let us read or change its label. | Yes when Microsoft refused the write itself; no when reading the current label already failed | Remove or change the file's protection, or leave it as it is. |\n| `site_locked` | The SharePoint site is locked (read-only or no access). | **Usually**: yes when the write was sent and refused; no when the site would not even let us read the current label | Unlock the site, or leave it out of label sync. |\n| `site_blocked` | The tenant has blocked access to the site. | No | Allow our app to reach the site, or leave it out. |\n| `invalid_host` | The file's address is not in the customer's Microsoft 365 tenant. | No | Check the data source points at their own tenant; rescan after a domain change. |\n| `file_type` | The file's type cannot carry a label, or the file is empty or was not available. | Only when the write was sent and Microsoft refused it, usually PDF on a tenant without PDF labelling, and then again on every run; the rest are refused before any charged call | Nothing for most. For charged PDFs: turn on PDF labelling in the tenant, or ask us to stop writing PDFs (LABELSYNC_PDF_WRITE_ENABLED=false). |\n| `invalid_data` | Microsoft rejected the label write as malformed (\"Invalid Data\"). This is on our side, not the customer's. | **Yes** | Nothing; tell engineering, the per-file report has the exact message. |\n| `pending` | Microsoft accepted the label but had not finished when we stopped watching. It usually lands later. | **Yes** | Nothing. Do not re-run for these alone: a second write is charged again. |\n| `not_found` | The file was moved or deleted after the last scan. | Rarely (deleted between our read and our write) | Rescan the data source. |\n| `label_problem` | The label is missing, turned off, or cannot be applied by an app. | Sometimes (the first file per label) | Fix the label in Purview, or map a different one. |\n| `unmapped` | The file's record type has no Purview label mapped. | No | Map a label for it (Fetch label ids), then run again. |\n| `throttled` | Microsoft kept asking us to slow down and we gave up on the file for this run. | Sometimes | Run again later, outside busy hours. |\n| `retry_later` | Microsoft said it can do it later (the file is still being decrypted), or a new label is not visible yet (about an hour after publishing). | Sometimes | Run again later; a file whose write was sent is charged again. |\n| `other` | Anything not listed above. | Varies | Ask engineering; the per-file report has the exact message. |"
+        "content": "| Reason | What happened | Charged? | What the customer can do |\n|---|---|---|---|\n| `encrypted` | The file is encrypted, so Microsoft would not let us read or change its label. | Yes when Microsoft refused the write itself; no when reading the current label already failed | Remove or change the file's protection, or leave it as it is. |\n| `site_locked` | The SharePoint site is locked (read-only or no access). | **Usually**: yes when the write was sent and refused; no when the site would not even let us read the current label | Unlock the site, or leave it out of label sync. |\n| `site_blocked` | The tenant has blocked access to the site. | No | Allow our app to reach the site, or leave it out. |\n| `invalid_host` | The file's address is not in the customer's Microsoft 365 tenant. | No | Check the data source points at their own tenant; rescan after a domain change. |\n| `file_type` | The file's type cannot carry a label, or the file is empty or was not available. | Only when the write was sent and Microsoft refused it, usually PDF on a tenant without PDF labelling, and then again on every run; the rest are refused before any charged call | Nothing for most. For charged PDFs: turn on PDF labelling in the tenant, or ask us to stop writing PDFs (LABELSYNC_PDF_WRITE_ENABLED=false). |\n| `invalid_data` | Microsoft rejected the label write as malformed (\"Invalid Data\"). This is on our side, not the customer's. | **Yes** | Nothing; tell engineering, the per-file report has the exact message. |\n| `pending` | Microsoft accepted the label but had not finished when we stopped watching. It usually lands later. | **Yes** | Nothing. Do not re-run for these alone: a second write is charged again. |\n| `not_found` | The file was moved or deleted after the last scan. | Rarely (deleted between our read and our write) | Rescan the data source. |\n| `label_problem` | The label is missing, turned off, or cannot be applied by an app. | Sometimes: the first file per label in each batch, or every file when Microsoft refuses the label only after accepting the write | Fix the label in Purview, or map a different one. |\n| `unmapped` | The file's record type has no Purview label mapped. | No | Map a label for it (Fetch label ids), then run again. |\n| `throttled` | Microsoft kept asking us to slow down and we gave up on the file for this run. | Sometimes | Run again later, outside busy hours. |\n| `retry_later` | Microsoft said it can do it later (the file is still being decrypted), or a new label is not visible yet (about an hour after publishing). | Sometimes | Run again later; a file whose write was sent is charged again. |\n| `other` | Anything not listed above. | Varies | Ask engineering; the per-file report has the exact message. |"
       }
     },
     {
