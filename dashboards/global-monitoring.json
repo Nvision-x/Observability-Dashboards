@@ -1,0 +1,4764 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "bfu8nhvd6vzlsd"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "red",
+        "name": "KrispyKreme VPN alarm state changes",
+        "target": {
+          "actionPrefix": "",
+          "alarmNamePrefix": "nx-krispy-vpn",
+          "dimensions": {},
+          "metricName": "TunnelState",
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "prefixMatching": true,
+          "queryMode": "Annotations",
+          "region": "us-east-1",
+          "statistic": "Maximum"
+        }
+      },
+      {
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "efxi9awv4pq0wd"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "red",
+        "name": "IONIS VPN alarm state changes",
+        "target": {
+          "actionPrefix": "",
+          "alarmNamePrefix": "nx-ionis-vpn",
+          "dimensions": {},
+          "metricName": "TunnelState",
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "prefixMatching": true,
+          "queryMode": "Annotations",
+          "region": "us-east-1",
+          "statistic": "Maximum"
+        }
+      },
+      {
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "afxieeejpwa2ob"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "red",
+        "name": "SSB VPN alarm state changes",
+        "target": {
+          "actionPrefix": "",
+          "alarmNamePrefix": "nx-ssb-vpn",
+          "dimensions": {},
+          "metricName": "TunnelState",
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "prefixMatching": true,
+          "queryMode": "Annotations",
+          "region": "us-east-1",
+          "statistic": "Maximum"
+        }
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 68,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Aggregate health across Demo, Demo2, Integration, UAT, Krispy, SSB, IONIS and Development, plus the KrispyKreme, IONIS and SSB VPN tunnels. Goes to ISSUES DETECTED if any environment has Failed/Unknown pods, any scrape target is down, or any of the six VPN tunnels is DOWN. Missing tunnel data counts as DOWN. Click to view all problem pods; see the VPN Tunnels row for tunnel detail.",
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "links": [
+            {
+              "targetBlank": false,
+              "title": "Drill down: view all problem pods",
+              "url": "/d/k8s-cluster-health-global-v16?viewPanel=310&${__url_time_range}"
+            }
+          ],
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "HEALTHY"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "from": 1,
+                "result": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "ISSUES DETECTED"
+                },
+                "to": 1000000
+              },
+              "type": "range"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 200,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Unknown\"}) + sum(up == 0) or vector(0)",
+          "legendFormat": "Demo",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Unknown\"}) + sum(up == 0) or vector(0)",
+          "legendFormat": "Demo2",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Unknown\"}) + sum(up == 0) or vector(0)",
+          "legendFormat": "Integration",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Unknown\"}) + sum(up == 0) or vector(0)",
+          "legendFormat": "UAT",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "KrispyKreme"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Unknown\"}) + sum(up == 0) or vector(0)",
+          "legendFormat": "Krispy",
+          "range": true,
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "SSB"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Unknown\"}) + sum(up == 0) or vector(0)",
+          "legendFormat": "SSB",
+          "range": true,
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "IONIS"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Unknown\"}) + sum(up == 0) or vector(0)",
+          "legendFormat": "IONIS",
+          "range": true,
+          "refId": "G"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Development"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Unknown\"}) + sum(up == 0) or vector(0)",
+          "legendFormat": "Development",
+          "range": true,
+          "refId": "Q"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "bfu8nhvd6vzlsd"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "52.71.21.53",
+            "VpnId": "vpn-0c5208027c1d7eeb1"
+          },
+          "expression": "",
+          "hide": true,
+          "id": "t1",
+          "label": "Tunnel 1 state",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "H",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "bfu8nhvd6vzlsd"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "54.236.84.203",
+            "VpnId": "vpn-0c5208027c1d7eeb1"
+          },
+          "expression": "",
+          "hide": true,
+          "id": "t2",
+          "label": "Tunnel 2 state",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "I",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "bfu8nhvd6vzlsd"
+          },
+          "dimensions": {},
+          "expression": "(1 - FILL(t1, 0)) + (1 - FILL(t2, 0))",
+          "hide": false,
+          "id": "",
+          "label": "KrispyKreme VPN Tunnels Down",
+          "matchExact": true,
+          "metricEditorMode": 1,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "J",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "efxi9awv4pq0wd"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "52.202.7.27",
+            "VpnId": "vpn-04affc3f652ee940f"
+          },
+          "expression": "",
+          "hide": true,
+          "id": "i1",
+          "label": "IONIS Tunnel 1 state",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "K",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "efxi9awv4pq0wd"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "75.101.136.90",
+            "VpnId": "vpn-04affc3f652ee940f"
+          },
+          "expression": "",
+          "hide": true,
+          "id": "i2",
+          "label": "IONIS Tunnel 2 state",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "L",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "efxi9awv4pq0wd"
+          },
+          "dimensions": {},
+          "expression": "(1 - FILL(i1, 0)) + (1 - FILL(i2, 0))",
+          "hide": false,
+          "id": "",
+          "label": "IONIS VPN Tunnels Down",
+          "matchExact": true,
+          "metricEditorMode": 1,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "M",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "afxieeejpwa2ob"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "34.202.133.224",
+            "VpnId": "vpn-0e9c99f1ed3ce3e1d"
+          },
+          "expression": "",
+          "hide": true,
+          "id": "s1",
+          "label": "SSB Tunnel 1 state",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "N",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "afxieeejpwa2ob"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "52.205.25.194",
+            "VpnId": "vpn-0e9c99f1ed3ce3e1d"
+          },
+          "expression": "",
+          "hide": true,
+          "id": "s2",
+          "label": "SSB Tunnel 2 state",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "O",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "afxieeejpwa2ob"
+          },
+          "dimensions": {},
+          "expression": "(1 - FILL(s1, 0)) + (1 - FILL(s2, 0))",
+          "hide": false,
+          "id": "",
+          "label": "SSB VPN Tunnels Down",
+          "matchExact": true,
+          "metricEditorMode": 1,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "",
+          "period": "",
+          "queryMode": "Metrics",
+          "refId": "P",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "timeFrom": "1h",
+      "title": "Overall Cluster Health (All Environments)",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "includeTimeField": false,
+            "mode": "seriesToRows",
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Last *"
+              ]
+            }
+          }
+        },
+        {
+          "id": "reduce",
+          "options": {
+            "includeTimeField": false,
+            "mode": "reduceFields",
+            "reducers": [
+              "sum"
+            ]
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "id": 202,
+      "panels": [],
+      "title": "Problem Indicators  ·  any value > 0 needs attention",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Total pods stuck in Pending phase across all 8 environments. Click to drill down into pod names.",
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "links": [
+            {
+              "targetBlank": false,
+              "title": "Drill down: which pods are Pending?",
+              "url": "/d/k8s-cluster-health-global-v16?viewPanel=310&${__url_time_range}"
+            }
+          ],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 0,
+        "y": 5
+      },
+      "id": 212,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Pending\"}) or vector(0)",
+          "legendFormat": "Demo",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Pending\"}) or vector(0)",
+          "legendFormat": "Demo2",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Pending\"}) or vector(0)",
+          "legendFormat": "Integration",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Pending\"}) or vector(0)",
+          "legendFormat": "UAT",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "KrispyKreme"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Pending\"}) or vector(0)",
+          "legendFormat": "Krispy",
+          "range": true,
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "SSB"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Pending\"}) or vector(0)",
+          "legendFormat": "SSB",
+          "range": true,
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "IONIS"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Pending\"}) or vector(0)",
+          "legendFormat": "IONIS",
+          "range": true,
+          "refId": "G"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Development"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Pending\"}) or vector(0)",
+          "legendFormat": "Development",
+          "range": true,
+          "refId": "H"
+        }
+      ],
+      "title": "Total Pending Pods",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "includeTimeField": false,
+            "mode": "seriesToRows",
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Last *"
+              ]
+            }
+          }
+        },
+        {
+          "id": "reduce",
+          "options": {
+            "includeTimeField": false,
+            "mode": "reduceFields",
+            "reducers": [
+              "sum"
+            ]
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Total pods in Failed phase across all 8 environments. Click to drill down.",
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "links": [
+            {
+              "targetBlank": false,
+              "title": "Drill down: which pods are Failed?",
+              "url": "/d/k8s-cluster-health-global-v16?viewPanel=310&${__url_time_range}"
+            }
+          ],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 5,
+        "y": 5
+      },
+      "id": 220,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Failed\"}) or vector(0)",
+          "legendFormat": "Demo",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Failed\"}) or vector(0)",
+          "legendFormat": "Demo2",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Failed\"}) or vector(0)",
+          "legendFormat": "Integration",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Failed\"}) or vector(0)",
+          "legendFormat": "UAT",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "KrispyKreme"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Failed\"}) or vector(0)",
+          "legendFormat": "Krispy",
+          "range": true,
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "SSB"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Failed\"}) or vector(0)",
+          "legendFormat": "SSB",
+          "range": true,
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "IONIS"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Failed\"}) or vector(0)",
+          "legendFormat": "IONIS",
+          "range": true,
+          "refId": "G"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Development"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Failed\"}) or vector(0)",
+          "legendFormat": "Development",
+          "range": true,
+          "refId": "H"
+        }
+      ],
+      "title": "Total Failed Pods",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "includeTimeField": false,
+            "mode": "seriesToRows",
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Last *"
+              ]
+            }
+          }
+        },
+        {
+          "id": "reduce",
+          "options": {
+            "includeTimeField": false,
+            "mode": "reduceFields",
+            "reducers": [
+              "sum"
+            ]
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Total pods in Unknown phase across all 8 environments. Click to drill down.",
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "links": [
+            {
+              "targetBlank": false,
+              "title": "Drill down: which pods are Unknown?",
+              "url": "/d/k8s-cluster-health-global-v16?viewPanel=310&${__url_time_range}"
+            }
+          ],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 10,
+        "y": 5
+      },
+      "id": 222,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Unknown\"}) or vector(0)",
+          "legendFormat": "Demo",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Unknown\"}) or vector(0)",
+          "legendFormat": "Demo2",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Unknown\"}) or vector(0)",
+          "legendFormat": "Integration",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Unknown\"}) or vector(0)",
+          "legendFormat": "UAT",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "KrispyKreme"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Unknown\"}) or vector(0)",
+          "legendFormat": "Krispy",
+          "range": true,
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "SSB"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Unknown\"}) or vector(0)",
+          "legendFormat": "SSB",
+          "range": true,
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "IONIS"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Unknown\"}) or vector(0)",
+          "legendFormat": "IONIS",
+          "range": true,
+          "refId": "G"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Development"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_pod_status_phase{namespace=\"default\",phase=\"Unknown\"}) or vector(0)",
+          "legendFormat": "Development",
+          "range": true,
+          "refId": "H"
+        }
+      ],
+      "title": "Total Unknown Pods",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "includeTimeField": false,
+            "mode": "seriesToRows",
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Last *"
+              ]
+            }
+          }
+        },
+        {
+          "id": "reduce",
+          "options": {
+            "includeTimeField": false,
+            "mode": "reduceFields",
+            "reducers": [
+              "sum"
+            ]
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Total Prometheus scrape targets that are down (up == 0).",
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 15,
+        "y": 5
+      },
+      "id": 221,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "editorMode": "code",
+          "expr": "sum(up == 0) or vector(0)",
+          "legendFormat": "Demo",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "editorMode": "code",
+          "expr": "sum(up == 0) or vector(0)",
+          "legendFormat": "Demo2",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "editorMode": "code",
+          "expr": "sum(up == 0) or vector(0)",
+          "legendFormat": "Integration",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "editorMode": "code",
+          "expr": "sum(up == 0) or vector(0)",
+          "legendFormat": "UAT",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "KrispyKreme"
+          },
+          "editorMode": "code",
+          "expr": "sum(up == 0) or vector(0)",
+          "legendFormat": "Krispy",
+          "range": true,
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "SSB"
+          },
+          "editorMode": "code",
+          "expr": "sum(up == 0) or vector(0)",
+          "legendFormat": "SSB",
+          "range": true,
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "IONIS"
+          },
+          "editorMode": "code",
+          "expr": "sum(up == 0) or vector(0)",
+          "legendFormat": "IONIS",
+          "range": true,
+          "refId": "G"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Development"
+          },
+          "editorMode": "code",
+          "expr": "sum(up == 0) or vector(0)",
+          "legendFormat": "Development",
+          "range": true,
+          "refId": "H"
+        }
+      ],
+      "title": "Total Unhealthy Targets",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "includeTimeField": false,
+            "mode": "seriesToRows",
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Last *"
+              ]
+            }
+          }
+        },
+        {
+          "id": "reduce",
+          "options": {
+            "includeTimeField": false,
+            "mode": "reduceFields",
+            "reducers": [
+              "sum"
+            ]
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Count of pods that have restarted more than 10 times in the last 2h. These are flapping services - possible memory leak / OOM / crash loop. Will be 0 (green) if cluster is healthy.",
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "links": [
+            {
+              "targetBlank": false,
+              "title": "Drill down: which services are flapping?",
+              "url": "/d/k8s-cluster-health-global-v16?viewPanel=320&${__url_time_range}"
+            }
+          ],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 5
+      },
+      "id": 223,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "editorMode": "code",
+          "expr": "count(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10) or vector(0)",
+          "legendFormat": "Demo",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "editorMode": "code",
+          "expr": "count(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10) or vector(0)",
+          "legendFormat": "Demo2",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "editorMode": "code",
+          "expr": "count(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10) or vector(0)",
+          "legendFormat": "Integration",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "editorMode": "code",
+          "expr": "count(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10) or vector(0)",
+          "legendFormat": "UAT",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "KrispyKreme"
+          },
+          "editorMode": "code",
+          "expr": "count(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10) or vector(0)",
+          "legendFormat": "Krispy",
+          "range": true,
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "SSB"
+          },
+          "editorMode": "code",
+          "expr": "count(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10) or vector(0)",
+          "legendFormat": "SSB",
+          "range": true,
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "IONIS"
+          },
+          "editorMode": "code",
+          "expr": "count(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10) or vector(0)",
+          "legendFormat": "IONIS",
+          "range": true,
+          "refId": "G"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Development"
+          },
+          "editorMode": "code",
+          "expr": "count(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10) or vector(0)",
+          "legendFormat": "Development",
+          "range": true,
+          "refId": "H"
+        }
+      ],
+      "title": "Flapping Pods (>10 restarts / 2h)",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "includeTimeField": false,
+            "mode": "seriesToRows",
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Last *"
+              ]
+            }
+          }
+        },
+        {
+          "id": "reduce",
+          "options": {
+            "includeTimeField": false,
+            "mode": "reduceFields",
+            "reducers": [
+              "sum"
+            ]
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 301,
+      "panels": [],
+      "title": "Problem Pod Diagnostics  ·  restarts / duration / last termination reason",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Restart count over the last 24 hours for each problem pod. High counts (>50) suggest memory leaks, crashloops, or repeated liveness failures. Helps decide whether to wait or investigate now.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "noValue": "No problem pods (healthy)",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Phase"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "Failed": {
+                        "color": "red",
+                        "index": 0
+                      },
+                      "Pending": {
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "Unknown": {
+                        "color": "purple",
+                        "index": 2
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Environment"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "Demo": {
+                        "color": "blue",
+                        "index": 0
+                      },
+                      "Demo2": {
+                        "color": "purple",
+                        "index": 1
+                      },
+                      "Development": {
+                        "color": "dark-green",
+                        "index": 7
+                      },
+                      "IONIS": {
+                        "color": "orange",
+                        "index": 6
+                      },
+                      "Integration": {
+                        "color": "super-light-orange",
+                        "index": 2
+                      },
+                      "Krispy": {
+                        "color": "green",
+                        "index": 4
+                      },
+                      "SSB": {
+                        "color": "light-blue",
+                        "index": 5
+                      },
+                      "UAT": {
+                        "color": "yellow",
+                        "index": 3
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Restarts 24h"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 3
+                    },
+                    {
+                      "color": "orange",
+                      "value": 10
+                    },
+                    {
+                      "color": "red",
+                      "value": 50
+                    },
+                    {
+                      "color": "dark-red",
+                      "value": 300
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 140
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "id": 315,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Restarts 24h"
+          }
+        ]
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[24h])) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Demo\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[24h])) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Demo2\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[24h])) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Integration\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Integration"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[24h])) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"UAT\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "KrispyKreme"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[24h])) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Krispy\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Krispy"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "SSB"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[24h])) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"SSB\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "IONIS"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[24h])) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"IONIS\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Development"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[24h])) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Development\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Development"
+        }
+      ],
+      "title": "Problem Pods - Restart Count (24h)",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "cluster": true,
+              "container": true,
+              "endpoint": true,
+              "instance": true,
+              "job": true,
+              "prometheus": true,
+              "prometheus_replica": true,
+              "service": true,
+              "uid": true
+            },
+            "indexByName": {
+              "Value": 4,
+              "environment": 0,
+              "namespace": 3,
+              "phase": 2,
+              "pod": 1
+            },
+            "renameByName": {
+              "Value": "Restarts 24h",
+              "environment": "Environment",
+              "namespace": "Namespace",
+              "phase": "Phase",
+              "pod": "Pod"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "How long each problem pod has been alive (time since pod creation). Combined with restart count this helps decide priority: short duration + few restarts = likely transient; long duration or many restarts = needs attention.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "noValue": "No problem pods (healthy)",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Phase"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "Failed": {
+                        "color": "red",
+                        "index": 0
+                      },
+                      "Pending": {
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "Unknown": {
+                        "color": "purple",
+                        "index": 2
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Environment"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "Demo": {
+                        "color": "blue",
+                        "index": 0
+                      },
+                      "Demo2": {
+                        "color": "purple",
+                        "index": 1
+                      },
+                      "Development": {
+                        "color": "dark-green",
+                        "index": 7
+                      },
+                      "IONIS": {
+                        "color": "orange",
+                        "index": 6
+                      },
+                      "Integration": {
+                        "color": "super-light-orange",
+                        "index": 2
+                      },
+                      "Krispy": {
+                        "color": "green",
+                        "index": 4
+                      },
+                      "SSB": {
+                        "color": "light-blue",
+                        "index": 5
+                      },
+                      "UAT": {
+                        "color": "yellow",
+                        "index": 3
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "blue",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 120
+                    },
+                    {
+                      "color": "orange",
+                      "value": 900
+                    },
+                    {
+                      "color": "red",
+                      "value": 3600
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "id": 316,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Duration"
+          }
+        ]
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((time() - kube_pod_created{namespace=\"default\"}) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Demo\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((time() - kube_pod_created{namespace=\"default\"}) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Demo2\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((time() - kube_pod_created{namespace=\"default\"}) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Integration\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Integration"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((time() - kube_pod_created{namespace=\"default\"}) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"UAT\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "KrispyKreme"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((time() - kube_pod_created{namespace=\"default\"}) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Krispy\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Krispy"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "SSB"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((time() - kube_pod_created{namespace=\"default\"}) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"SSB\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "IONIS"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((time() - kube_pod_created{namespace=\"default\"}) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"IONIS\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Development"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((time() - kube_pod_created{namespace=\"default\"}) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Development\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Development"
+        }
+      ],
+      "title": "Problem Pods - Duration (since pod creation)",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "cluster": true,
+              "container": true,
+              "endpoint": true,
+              "instance": true,
+              "job": true,
+              "prometheus": true,
+              "prometheus_replica": true,
+              "service": true,
+              "uid": true
+            },
+            "indexByName": {
+              "Value": 4,
+              "environment": 0,
+              "namespace": 3,
+              "phase": 2,
+              "pod": 1
+            },
+            "renameByName": {
+              "Value": "Duration",
+              "environment": "Environment",
+              "namespace": "Namespace",
+              "phase": "Phase",
+              "pod": "Pod"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Last termination reason for each container of a problem pod. Tells you WHY without checking logs: OOMKilled = memory issue, Error = app crash, Completed = job finished normally. Pending pods that never ran will not appear here.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "noValue": "No terminated containers among problem pods",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Phase"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "Failed": {
+                        "color": "red",
+                        "index": 0
+                      },
+                      "Pending": {
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "Unknown": {
+                        "color": "purple",
+                        "index": 2
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Environment"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "Demo": {
+                        "color": "blue",
+                        "index": 0
+                      },
+                      "Demo2": {
+                        "color": "purple",
+                        "index": 1
+                      },
+                      "Development": {
+                        "color": "dark-green",
+                        "index": 7
+                      },
+                      "IONIS": {
+                        "color": "orange",
+                        "index": 6
+                      },
+                      "Integration": {
+                        "color": "super-light-orange",
+                        "index": 2
+                      },
+                      "Krispy": {
+                        "color": "green",
+                        "index": 4
+                      },
+                      "SSB": {
+                        "color": "light-blue",
+                        "index": 5
+                      },
+                      "UAT": {
+                        "color": "yellow",
+                        "index": 3
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last Reason"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "Completed": {
+                        "color": "green",
+                        "index": 3
+                      },
+                      "ContainerStatusUnknown": {
+                        "color": "purple",
+                        "index": 2
+                      },
+                      "Error": {
+                        "color": "red",
+                        "index": 1
+                      },
+                      "Evicted": {
+                        "color": "orange",
+                        "index": 4
+                      },
+                      "OOMKilled": {
+                        "color": "dark-red",
+                        "index": 0
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 17
+      },
+      "id": 317,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Environment"
+          }
+        ]
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((kube_pod_container_status_last_terminated_reason{namespace=\"default\"} == 1) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Demo\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((kube_pod_container_status_last_terminated_reason{namespace=\"default\"} == 1) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Demo2\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((kube_pod_container_status_last_terminated_reason{namespace=\"default\"} == 1) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Integration\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Integration"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((kube_pod_container_status_last_terminated_reason{namespace=\"default\"} == 1) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"UAT\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "KrispyKreme"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((kube_pod_container_status_last_terminated_reason{namespace=\"default\"} == 1) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Krispy\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Krispy"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "SSB"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((kube_pod_container_status_last_terminated_reason{namespace=\"default\"} == 1) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"SSB\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "IONIS"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((kube_pod_container_status_last_terminated_reason{namespace=\"default\"} == 1) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"IONIS\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Development"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((kube_pod_container_status_last_terminated_reason{namespace=\"default\"} == 1) * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Development\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Development"
+        }
+      ],
+      "title": "Problem Pods - Last Termination Reason",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "cluster": true,
+              "endpoint": true,
+              "instance": true,
+              "job": true,
+              "prometheus": true,
+              "prometheus_replica": true,
+              "service": true,
+              "uid": true
+            },
+            "indexByName": {
+              "container": 2,
+              "environment": 0,
+              "namespace": 5,
+              "phase": 3,
+              "pod": 1,
+              "reason": 4
+            },
+            "renameByName": {
+              "container": "Container",
+              "environment": "Environment",
+              "namespace": "Namespace",
+              "phase": "Phase",
+              "pod": "Pod",
+              "reason": "Last Reason"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Exit code of the last terminated container for each problem pod. Read alongside Last Reason: 137 = SIGKILL (128+9) which can mean OOMKilled, node-pressure eviction, or a liveness-probe kill; 143 = SIGTERM (graceful); 0 = clean exit; 1/2 = application error. The code alone is ambiguous - the reason column disambiguates it.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "noValue": "No terminated containers among problem pods",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Phase"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "Failed": {
+                        "color": "red",
+                        "index": 0
+                      },
+                      "Pending": {
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "Unknown": {
+                        "color": "purple",
+                        "index": 2
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Environment"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "Demo": {
+                        "color": "blue",
+                        "index": 0
+                      },
+                      "Demo2": {
+                        "color": "purple",
+                        "index": 1
+                      },
+                      "Development": {
+                        "color": "dark-green",
+                        "index": 7
+                      },
+                      "IONIS": {
+                        "color": "orange",
+                        "index": 6
+                      },
+                      "Integration": {
+                        "color": "super-light-orange",
+                        "index": 2
+                      },
+                      "Krispy": {
+                        "color": "green",
+                        "index": 4
+                      },
+                      "SSB": {
+                        "color": "light-blue",
+                        "index": 5
+                      },
+                      "UAT": {
+                        "color": "yellow",
+                        "index": 3
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Exit Code"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "0": {
+                        "color": "green",
+                        "index": 0,
+                        "text": "0 (clean)"
+                      },
+                      "1": {
+                        "color": "red",
+                        "index": 1,
+                        "text": "1 (error)"
+                      },
+                      "2": {
+                        "color": "red",
+                        "index": 2,
+                        "text": "2 (error)"
+                      },
+                      "137": {
+                        "color": "dark-red",
+                        "index": 3,
+                        "text": "137 (SIGKILL)"
+                      },
+                      "143": {
+                        "color": "orange",
+                        "index": 4,
+                        "text": "143 (SIGTERM)"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "id": 318,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Environment"
+          }
+        ]
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfmklaiqtfif4c"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(kube_pod_container_status_last_terminated_exitcode{namespace=\"default\"} * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Demo\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Demo"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl7hw5ukkwzkd"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(kube_pod_container_status_last_terminated_exitcode{namespace=\"default\"} * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Demo2\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Demo2"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efl6f47f8cj5sb"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(kube_pod_container_status_last_terminated_exitcode{namespace=\"default\"} * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Integration\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Integration"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "efmkjlznz8ykgb"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(kube_pod_container_status_last_terminated_exitcode{namespace=\"default\"} * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"UAT\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "UAT"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "KrispyKreme"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(kube_pod_container_status_last_terminated_exitcode{namespace=\"default\"} * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Krispy\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Krispy"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "SSB"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(kube_pod_container_status_last_terminated_exitcode{namespace=\"default\"} * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"SSB\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "SSB"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "IONIS"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(kube_pod_container_status_last_terminated_exitcode{namespace=\"default\"} * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"IONIS\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "IONIS"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Development"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(kube_pod_container_status_last_terminated_exitcode{namespace=\"default\"} * on (namespace, pod) group_left(phase) (kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1), \"environment\", \"Development\", \"\", \"\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "Development"
+        }
+      ],
+      "title": "Problem Pods - Last Exit Code",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "cluster": true,
+              "endpoint": true,
+              "instance": true,
+              "job": true,
+              "prometheus": true,
+              "prometheus_replica": true,
+              "service": true,
+              "uid": true
+            },
+            "indexByName": {
+              "Value": 4,
+              "container": 2,
+              "environment": 0,
+              "phase": 3,
+              "pod": 1
+            },
+            "renameByName": {
+              "Value": "Exit Code",
+              "container": "Container",
+              "environment": "Environment",
+              "phase": "Phase",
+              "pod": "Pod"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "id": 300,
+      "panels": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Mixed --"
+          },
+          "description": "All pods across every environment currently in Failed, Pending, or Unknown phase. Environment column shows which cluster.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": false
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Phase"
+                },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "mode": "basic",
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "options": {
+                          "Failed": {
+                            "color": "red",
+                            "index": 0
+                          },
+                          "Pending": {
+                            "color": "orange",
+                            "index": 1
+                          },
+                          "Unknown": {
+                            "color": "purple",
+                            "index": 2
+                          }
+                        },
+                        "type": "value"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Environment"
+                },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "mode": "basic",
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "options": {
+                          "Demo": {
+                            "color": "blue",
+                            "index": 0
+                          },
+                          "Demo2": {
+                            "color": "purple",
+                            "index": 1
+                          },
+                          "Development": {
+                            "color": "dark-green",
+                            "index": 7
+                          },
+                          "IONIS": {
+                            "color": "orange",
+                            "index": 6
+                          },
+                          "Integration": {
+                            "color": "super-light-orange",
+                            "index": 2
+                          },
+                          "Krispy": {
+                            "color": "green",
+                            "index": 4
+                          },
+                          "SSB": {
+                            "color": "light-blue",
+                            "index": 5
+                          },
+                          "UAT": {
+                            "color": "yellow",
+                            "index": 3
+                          }
+                        },
+                        "type": "value"
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 140
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 24
+          },
+          "id": 310,
+          "options": {
+            "cellHeight": "sm",
+            "footer": {
+              "countRows": false,
+              "fields": "",
+              "reducer": [
+                "sum"
+              ],
+              "show": false
+            },
+            "showHeader": true,
+            "sortBy": [
+              {
+                "desc": false,
+                "displayName": "Environment"
+              }
+            ]
+          },
+          "pluginVersion": "11.5.2",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "dfmklaiqtfif4c"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1, \"environment\", \"Demo\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "Demo"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "efl7hw5ukkwzkd"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1, \"environment\", \"Demo2\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "Demo2"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "efl6f47f8cj5sb"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1, \"environment\", \"Integration\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "Integration"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "efmkjlznz8ykgb"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1, \"environment\", \"UAT\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "UAT"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "KrispyKreme"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1, \"environment\", \"Krispy\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "Krispy"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "SSB"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1, \"environment\", \"SSB\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "SSB"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "IONIS"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1, \"environment\", \"IONIS\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "IONIS"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "Development"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(kube_pod_status_phase{namespace=\"default\",phase=~\"Failed|Pending|Unknown\"} == 1, \"environment\", \"Development\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "Development"
+            }
+          ],
+          "title": "All Problem Pods (with Environment)",
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "Value": true,
+                  "__name__": true,
+                  "cluster": true,
+                  "container": true,
+                  "endpoint": true,
+                  "instance": true,
+                  "job": true,
+                  "prometheus": true,
+                  "prometheus_replica": true,
+                  "service": true,
+                  "uid": true
+                },
+                "indexByName": {
+                  "environment": 0,
+                  "namespace": 3,
+                  "phase": 2,
+                  "pod": 1
+                },
+                "renameByName": {
+                  "environment": "Environment",
+                  "namespace": "Namespace",
+                  "phase": "Phase",
+                  "pod": "Pod"
+                }
+              }
+            }
+          ],
+          "type": "table"
+        }
+      ],
+      "title": "Problem Pod Details  ·  every Failed / Pending / Unknown pod",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 302,
+      "panels": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Mixed --"
+          },
+          "description": "Pods that have restarted more than 10 times in the last 2 hours. These services may currently look Running (healthy), but the high restart rate indicates an underlying problem: memory leaks (OOMKilled), recurring crashes, or failing liveness probes. Empty = no flapping services found, which is the expected healthy state.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": false
+              },
+              "mappings": [],
+              "noValue": "No flapping services detected (healthy)",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Environment"
+                },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "mode": "basic",
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "options": {
+                          "Demo": {
+                            "color": "blue",
+                            "index": 0
+                          },
+                          "Demo2": {
+                            "color": "purple",
+                            "index": 1
+                          },
+                          "Development": {
+                            "color": "dark-green",
+                            "index": 7
+                          },
+                          "IONIS": {
+                            "color": "orange",
+                            "index": 6
+                          },
+                          "Integration": {
+                            "color": "super-light-orange",
+                            "index": 2
+                          },
+                          "Krispy": {
+                            "color": "green",
+                            "index": 4
+                          },
+                          "SSB": {
+                            "color": "light-blue",
+                            "index": 5
+                          },
+                          "UAT": {
+                            "color": "yellow",
+                            "index": 3
+                          }
+                        },
+                        "type": "value"
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 130
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Restarts 2h"
+                },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "mode": "gradient",
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "yellow"
+                        },
+                        {
+                          "color": "orange",
+                          "value": 25
+                        },
+                        {
+                          "color": "red",
+                          "value": 50
+                        },
+                        {
+                          "color": "dark-red",
+                          "value": 300
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 140
+                  },
+                  {
+                    "id": "unit",
+                    "value": "short"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 25
+          },
+          "id": 320,
+          "options": {
+            "cellHeight": "sm",
+            "footer": {
+              "countRows": false,
+              "fields": "",
+              "reducer": [
+                "sum"
+              ],
+              "show": false
+            },
+            "showHeader": true,
+            "sortBy": [
+              {
+                "desc": true,
+                "displayName": "Restarts 2h"
+              }
+            ]
+          },
+          "pluginVersion": "11.5.2",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "dfmklaiqtfif4c"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10, \"environment\", \"Demo\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "Demo"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "efl7hw5ukkwzkd"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10, \"environment\", \"Demo2\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "Demo2"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "efl6f47f8cj5sb"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10, \"environment\", \"Integration\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "Integration"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "efmkjlznz8ykgb"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10, \"environment\", \"UAT\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "UAT"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "KrispyKreme"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10, \"environment\", \"Krispy\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "Krispy"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "SSB"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10, \"environment\", \"SSB\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "SSB"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "IONIS"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10, \"environment\", \"IONIS\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "IONIS"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "Development"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=\"default\"}[2h])) > 10, \"environment\", \"Development\", \"\", \"\")",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "__auto",
+              "refId": "Development"
+            }
+          ],
+          "title": "Flapping Services (>10 restarts in 2h)",
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "__name__": true,
+                  "cluster": true,
+                  "container": true,
+                  "endpoint": true,
+                  "instance": true,
+                  "job": true,
+                  "prometheus": true,
+                  "prometheus_replica": true,
+                  "service": true,
+                  "uid": true
+                },
+                "indexByName": {
+                  "Value": 3,
+                  "environment": 0,
+                  "namespace": 2,
+                  "pod": 1
+                },
+                "renameByName": {
+                  "Value": "Restarts 2h",
+                  "environment": "Environment",
+                  "namespace": "Namespace",
+                  "pod": "Pod"
+                }
+              }
+            }
+          ],
+          "type": "table"
+        }
+      ],
+      "title": "Flapping / High-Restart Services (running but unstable - possible memory leak / OOM)",
+      "type": "row"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 400,
+      "panels": [],
+      "title": "VPN Tunnels",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "bfu8nhvd6vzlsd"
+      },
+      "description": "Current TunnelState (Maximum, 60s). NO DATA is treated as breaching by the alarm.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "index": 0,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "index": 1,
+                  "text": "UP"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "noValue": "NO DATA",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 26
+      },
+      "id": 401,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "bfu8nhvd6vzlsd"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "52.71.21.53",
+            "VpnId": "vpn-0c5208027c1d7eeb1"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "Tunnel 1",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "timeFrom": "1h",
+      "title": "KrispyKreme Tunnel1 — 52.71.21.53",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "bfu8nhvd6vzlsd"
+      },
+      "description": "Current TunnelState (Maximum, 60s). NO DATA is treated as breaching by the alarm.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "index": 0,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "index": 1,
+                  "text": "UP"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "noValue": "NO DATA",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 26
+      },
+      "id": 402,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "bfu8nhvd6vzlsd"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "54.236.84.203",
+            "VpnId": "vpn-0c5208027c1d7eeb1"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "Tunnel 2",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "timeFrom": "1h",
+      "title": "KrispyKreme Tunnel2 — 54.236.84.203",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 7,
+        "x": 8,
+        "y": 26
+      },
+      "id": 403,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "**VPN connection** `vpn-0c5208027c1d7eeb1` · account `830278488552` · `us-east-1`\n\n| | |\n|---|---|\n| Metric | `AWS/VPN` / `TunnelState` |\n| Statistic | Maximum, 60s period |\n| Condition | `< 1` for 5 of 5 datapoints (5 min) |\n| Missing data | **breaching** — gaps count as DOWN |\n| Notifications | SNS `eks-krispy-cloudwatch-alarms` |\n\nTunnel 1 = `52.71.21.53` · Tunnel 2 = `54.236.84.203`\n\nEither tunnel alone carries traffic, but a single tunnel means **no redundancy**.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "11.5.2",
+      "title": "KrispyKreme Alarm Definition",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "bfu8nhvd6vzlsd"
+      },
+      "description": "Stepped line: 1 = UP, 0 = DOWN. Gaps are intentionally not connected, since the alarm treats missing data as breaching. Dashed line marks the alarm threshold. Fixed to a 24h window regardless of the dashboard time range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "1 = UP / 0 = DOWN",
+            "axisPlacement": "auto",
+            "axisSoftMax": 1,
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "index": 0,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "index": 1,
+                  "text": "UP"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Tunnel 1.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Tunnel 2.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 9,
+        "x": 15,
+        "y": 26
+      },
+      "id": 404,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "bfu8nhvd6vzlsd"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "52.71.21.53",
+            "VpnId": "vpn-0c5208027c1d7eeb1"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "Tunnel 1 (52.71.21.53)",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "bfu8nhvd6vzlsd"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "54.236.84.203",
+            "VpnId": "vpn-0c5208027c1d7eeb1"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "Tunnel 2 (54.236.84.203)",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "timeFrom": "24h",
+      "title": "KrispyKreme Tunnel State History",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "efxi9awv4pq0wd"
+      },
+      "description": "Current TunnelState (Maximum, 60s). NO DATA is treated as breaching by the alarm.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "index": 0,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "index": 1,
+                  "text": "UP"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "noValue": "NO DATA",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 30
+      },
+      "id": 411,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "efxi9awv4pq0wd"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "52.202.7.27",
+            "VpnId": "vpn-04affc3f652ee940f"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "Tunnel 1",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "timeFrom": "1h",
+      "title": "IONIS Tunnel1 — 52.202.7.27",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "efxi9awv4pq0wd"
+      },
+      "description": "Current TunnelState (Maximum, 60s). NO DATA is treated as breaching by the alarm.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "index": 0,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "index": 1,
+                  "text": "UP"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "noValue": "NO DATA",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 30
+      },
+      "id": 412,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "efxi9awv4pq0wd"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "75.101.136.90",
+            "VpnId": "vpn-04affc3f652ee940f"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "Tunnel 2",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "timeFrom": "1h",
+      "title": "IONIS Tunnel2 — 75.101.136.90",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 7,
+        "x": 8,
+        "y": 30
+      },
+      "id": 413,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "**VPN connection** `vpn-04affc3f652ee940f` · account `360999005852` · `us-east-1`\n\n| | |\n|---|---|\n| Metric | `AWS/VPN` / `TunnelState` |\n| Statistic | Maximum, 60s period |\n| Condition | `< 1` for 5 of 5 datapoints (5 min) |\n| Missing data | **breaching** — gaps count as DOWN |\n| Alarms | `nx-ionis-vpn-tunnel1-down`<br>`nx-ionis-vpn-tunnel2-down` |\n\nTunnel 1 = `52.202.7.27` · Tunnel 2 = `75.101.136.90`\n\nEither tunnel alone carries traffic, but a single tunnel means **no redundancy**.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "11.5.2",
+      "title": "IONIS Alarm Definition",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "efxi9awv4pq0wd"
+      },
+      "description": "Stepped line: 1 = UP, 0 = DOWN. Gaps are intentionally not connected, since the alarm treats missing data as breaching. Dashed line marks the alarm threshold. Fixed to a 24h window regardless of the dashboard time range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "1 = UP / 0 = DOWN",
+            "axisPlacement": "auto",
+            "axisSoftMax": 1,
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "index": 0,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "index": 1,
+                  "text": "UP"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Tunnel 1.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Tunnel 2.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 9,
+        "x": 15,
+        "y": 30
+      },
+      "id": 414,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "efxi9awv4pq0wd"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "52.202.7.27",
+            "VpnId": "vpn-04affc3f652ee940f"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "Tunnel 1 (52.202.7.27)",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "efxi9awv4pq0wd"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "75.101.136.90",
+            "VpnId": "vpn-04affc3f652ee940f"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "Tunnel 2 (75.101.136.90)",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "timeFrom": "24h",
+      "title": "IONIS Tunnel State History",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "afxieeejpwa2ob"
+      },
+      "description": "Current TunnelState (Maximum, 60s). NO DATA is treated as breaching by the alarm.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "index": 0,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "index": 1,
+                  "text": "UP"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "noValue": "NO DATA",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 34
+      },
+      "id": 421,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "afxieeejpwa2ob"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "34.202.133.224",
+            "VpnId": "vpn-0e9c99f1ed3ce3e1d"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "Tunnel 1",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "timeFrom": "1h",
+      "title": "SSB Tunnel1 — 34.202.133.224",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "afxieeejpwa2ob"
+      },
+      "description": "Current TunnelState (Maximum, 60s). NO DATA is treated as breaching by the alarm.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "index": 0,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "index": 1,
+                  "text": "UP"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "noValue": "NO DATA",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 34
+      },
+      "id": 422,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "afxieeejpwa2ob"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "52.205.25.194",
+            "VpnId": "vpn-0e9c99f1ed3ce3e1d"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "Tunnel 2",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "timeFrom": "1h",
+      "title": "SSB Tunnel2 — 52.205.25.194",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 7,
+        "x": 8,
+        "y": 34
+      },
+      "id": 423,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "**VPN connection** `vpn-0e9c99f1ed3ce3e1d` · account `108782067879` · `us-east-1`\n\n| | |\n|---|---|\n| Metric | `AWS/VPN` / `TunnelState` |\n| Statistic | Maximum, 60s period |\n| Condition | `< 1` for 5 of 5 datapoints (5 min) |\n| Missing data | **breaching** — gaps count as DOWN |\n| Alarms | `nx-ssb-vpn-tunnel1-down`<br>`nx-ssb-vpn-tunnel2-down` |\n\nTunnel 1 = `34.202.133.224` · Tunnel 2 = `52.205.25.194`\n\nEither tunnel alone carries traffic, but a single tunnel means **no redundancy**.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "11.5.2",
+      "title": "SSB Alarm Definition",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "afxieeejpwa2ob"
+      },
+      "description": "Stepped line: 1 = UP, 0 = DOWN. Gaps are intentionally not connected, since the alarm treats missing data as breaching. Dashed line marks the alarm threshold. Fixed to a 24h window regardless of the dashboard time range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "1 = UP / 0 = DOWN",
+            "axisPlacement": "auto",
+            "axisSoftMax": 1,
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "index": 0,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "index": 1,
+                  "text": "UP"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Tunnel 1.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Tunnel 2.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 9,
+        "x": 15,
+        "y": 34
+      },
+      "id": 424,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "afxieeejpwa2ob"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "34.202.133.224",
+            "VpnId": "vpn-0e9c99f1ed3ce3e1d"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "Tunnel 1 (34.202.133.224)",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "afxieeejpwa2ob"
+          },
+          "dimensions": {
+            "TunnelIpAddress": "52.205.25.194",
+            "VpnId": "vpn-0e9c99f1ed3ce3e1d"
+          },
+          "expression": "",
+          "hide": false,
+          "id": "",
+          "label": "Tunnel 2 (52.205.25.194)",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-east-1",
+          "sqlExpression": "",
+          "statistic": "Maximum"
+        }
+      ],
+      "timeFrom": "24h",
+      "title": "SSB Tunnel State History",
+      "type": "timeseries"
+    }
+  ],
+  "preload": false,
+  "refresh": "30s",
+  "schemaVersion": 40,
+  "tags": [
+    "kubernetes",
+    "mimir",
+    "prometheus",
+    "cluster-health",
+    "global-health",
+    "multi-environment"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "America/La_Paz",
+  "title": "Kubernetes Cluster Health - Global Overview v16",
+  "uid": "k8s-cluster-health-global-v16",
+  "version": 1,
+  "weekStart": ""
+}
