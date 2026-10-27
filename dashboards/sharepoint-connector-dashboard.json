@@ -2006,7 +2006,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**For the product team: what happened to the files a label-sync run touched, and why the rest did not get their label.** Every count adds up every run in the selected time range. Narrow the range to one run to see that run alone.\n\n**Works today:** the stats and *Results by outcome*. **Waiting for the connector:** the three *reason* panels show \"No reasons yet\" until the connector reports a reason and a data source with each result (Etch follow-up). That is the expected state, not a fault. The *Data source* selector at the top (on the per-cluster SharePoint board only; Connectors Detail has none) stays empty (All) until then, and only ever narrows the reason panels and *Results by outcome*; the stats always count every data source.\n\n**Charged** counts the label writes we sent to Microsoft, at $0.00185 each. Whether Microsoft charges a write it then refused is not documented, so those count as charged too; Azure Cost Management stays the billing truth. **Not charged** is every other result: no label write was sent (a free read may have been). For the file names behind a number, use the per-file report from Job Management (planned in the same ticket); no file names are shown here."
+        "content": "**For the product team: what happened to the files a label-sync run touched, and why the rest did not get their label.** Every count adds up every run in the selected time range. Narrow the range to one run to see that run alone.\n\n**Works today:** the stats and *Results by outcome*. **Waiting for the connector:** the three *reason* panels show \"No reasons yet\" until the connector reports a reason and a data source with each result (Etch follow-up). That is the expected state, not a fault. The *Data source* selector at the top (on the per-cluster SharePoint board only; Connectors Detail has none) stays empty (All) until then, and only ever narrows the reason panels and *Results by outcome*; the stats always count every data source.\n\n**Charged** counts the label writes we tried to send to Microsoft, at $0.00185 each, including any that failed on the network before reaching it. Whether Microsoft charges a write it then refused is not documented, so those count as charged too; Azure Cost Management stays the billing truth. **Not charged** is every other result: no label write was sent (a free read may have been). For the file names behind a number, use the per-file report from Job Management (planned in the same ticket); no file names are shown here."
       }
     },
     {
@@ -2075,7 +2075,7 @@
       "id": 233,
       "type": "stat",
       "title": "Charged",
-      "description": "**Label writes we sent to Microsoft**, each priced at $0.00185. A write Microsoft then refused still counts, because whether it is charged is not documented. A write is counted when the connector finishes with the file, so one cut off by a pod restart mid-wait is missed.\n\n**Normal:** close to the number of files whose label actually changed. Far above it usually means PDFs on a tenant without PDF labelling (see *file_type* in the glossary). Charged files that still have no label are in *Charged files without the label*.\n\n**Next:** *Charged, USD* beside it; Azure Cost Management for the real bill.",
+      "description": "**Label writes we tried to send to Microsoft**, each priced at $0.00185. A write that failed on the network before reaching Microsoft, or that Microsoft then refused, still counts, because whether it is charged is not documented. A write is counted when the connector finishes with the file, so one cut off by a pod restart mid-wait is missed.\n\n**Normal:** close to the number of files whose label actually changed. Far above it usually means PDFs on a tenant without PDF labelling (see *file_type* in the glossary). Charged files that still have no label are in *Charged files without the label*.\n\n**Next:** *Charged, USD* beside it; Azure Cost Management for the real bill.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2213,7 +2213,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "currencyUSD",
-          "decimals": 2,
+          "decimals": 4,
           "color": {
             "mode": "thresholds"
           },
@@ -2323,7 +2323,7 @@
       "id": 237,
       "type": "stat",
       "title": "Unmapped",
-      "description": "**Files whose record type has no Purview label mapped.** Nothing was sent and nothing was charged. A file of a type that cannot take a label at all is counted as not labellable instead, even when its record type is also unmapped.\n\n**Normal:** 0. Anything else is a mapping gap the customer can close in Fetch label ids.\n\n**Next:** the reason glossary at the bottom of this row.",
+      "description": "**Files whose record type has no Purview label mapped.** Nothing was sent and nothing was charged. A file of a type that cannot take a label at all is counted as not labellable instead, even when its record type is also unmapped, but only when the scan knew its file name: without one, the file type is not checked first and the file is counted here.\n\n**Normal:** 0. Anything else is a mapping gap the customer can close in Fetch label ids.\n\n**Next:** the reason glossary at the bottom of this row.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2423,7 +2423,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "applied.*"
+              "options": "^applied.*$"
             },
             "properties": [
               {
@@ -2438,7 +2438,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "skipped_already_correct.*"
+              "options": "^skipped_already_correct.*$"
             },
             "properties": [
               {
@@ -2453,7 +2453,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "pending_unterminated.*"
+              "options": "^pending_unterminated.*$"
             },
             "properties": [
               {
@@ -2468,7 +2468,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "deferred_.*"
+              "options": "^deferred_.*$"
             },
             "properties": [
               {
@@ -2483,7 +2483,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "rejected_file_not_labellable.*"
+              "options": "^rejected_file_not_labellable.*$"
             },
             "properties": [
               {
@@ -2498,7 +2498,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "rejected_file_not_labellable_billed.*"
+              "options": "^rejected_file_not_labellable_billed.*$"
             },
             "properties": [
               {
@@ -2513,7 +2513,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "unmapped.*"
+              "options": "^unmapped.*$"
             },
             "properties": [
               {
@@ -2528,7 +2528,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "rejected_label_.*|rejected_not_appliable.*|rejected_unsupported_label.*"
+              "options": "^(rejected_label_.*|rejected_not_appliable.*|rejected_unsupported_label.*)$"
             },
             "properties": [
               {
@@ -2543,7 +2543,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "rejected_file_locked.*"
+              "options": "^rejected_file_locked.*$"
             },
             "properties": [
               {
@@ -2558,7 +2558,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "failed.*"
+              "options": "^failed.*$"
             },
             "properties": [
               {
@@ -2607,7 +2607,7 @@
       "id": 239,
       "type": "bargauge",
       "title": "Files without the label, by reason (needs connector update)",
-      "description": "**Why files did not get their label**, grouped into the reasons in the glossary below. Unlike *No label written*, this includes files still pending (blue), so its bars can add up to more.\n\nShows *No reasons yet* until the connector reports a reason with each result. That is expected today; nothing is estimated.\n\n**Normal:** short bars. Orange reasons are for the customer to fix, red ones for engineering; yellow ones need nothing about the label (not_found clears with a rescan; file_type is yellow because most are refused for free, its charged part is orange in *Charged files without the label*). See the glossary below.\n\n**Next:** *By data source and reason* below, then the per-file report in Job Management.",
+      "description": "**Why files did not get their label**, grouped into the reasons in the glossary below. Unlike *No label written*, this includes files still pending (blue), so with *Data source* on All its bars can add up to more. These are results, not distinct files: a file deferred in two runs counts twice. Purple is a reason this panel does not know yet: tell engineering.\n\nShows *No reasons yet* until the connector reports a reason with each result. That is expected today; nothing is estimated.\n\n**Normal:** short bars. Orange reasons are for the customer to fix, red ones for engineering; yellow ones need nothing about the label (not_found clears with a rescan; file_type is yellow because most are refused for free, its charged part is orange in *Charged files without the label*). See the glossary below.\n\n**Next:** *By data source and reason* below, then the per-file report in Job Management.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2625,7 +2625,7 @@
           "min": 0,
           "color": {
             "mode": "fixed",
-            "fixedColor": "blue"
+            "fixedColor": "purple"
           },
           "thresholds": {
             "mode": "absolute",
@@ -2871,7 +2871,7 @@
       "id": 240,
       "type": "table",
       "title": "By data source and reason (needs connector update)",
-      "description": "**The same files, split by data source.** One row per data source and reason.\n\nShows *No reasons yet* until the connector reports a reason and data source with each result.\n\n**Normal:** one or two data sources with a handful of rows.\n\n**Next:** the per-file report in Job Management for the file names.",
+      "description": "**The same results, split by data source.** One row per data source and reason. These are results, not distinct files: a file deferred in two runs counts twice.\n\nShows *No reasons yet* until the connector reports a reason and data source with each result.\n\n**Normal:** one or two data sources with a handful of rows.\n\n**Next:** the per-file report in Job Management for the file names.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2952,7 +2952,7 @@
       "id": 241,
       "type": "bargauge",
       "title": "Charged files without the label, by reason (needs connector update)",
-      "description": "**Files we sent a charged write for that still have no label**, by reason: Microsoft refused the write, had not finished it, or never answered. Each counts as charged here, as in *Charged*; whether Microsoft bills a refused write is not documented.\n\nShows *No reasons yet* until the connector reports a reason and whether the result was charged.\n\n**Normal:** pending only, which usually lands later. A locked site here means the run paid for the files it sent there; leave that site out next time. A file_type bar here is paid refusals, usually PDF on a tenant without PDF labelling: it repeats on every run until fixed.\n\n**Next:** the glossary below for what the customer can do.",
+      "description": "**Files we sent a charged write for that still have no label**, by reason: Microsoft refused the write, had not finished it, or never answered. Each counts as charged here, as in *Charged*; whether Microsoft bills a refused write is not documented. These are results, not distinct files: a file charged in two runs counts twice. Purple is a reason this panel does not know yet: tell engineering.\n\nShows *No reasons yet* until the connector reports a reason and whether the result was charged.\n\n**Normal:** pending only, which usually lands later. A locked site here means the run paid for the files it sent there; leave that site out next time. A file_type bar here is paid refusals, usually PDF on a tenant without PDF labelling: it repeats on every run until fixed.\n\n**Next:** the glossary below for what the customer can do.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -2970,7 +2970,7 @@
           "min": 0,
           "color": {
             "mode": "fixed",
-            "fixedColor": "blue"
+            "fixedColor": "purple"
           },
           "thresholds": {
             "mode": "absolute",
