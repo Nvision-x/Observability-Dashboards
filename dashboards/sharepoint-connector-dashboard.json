@@ -44,22 +44,6 @@
         }
       },
       {
-        "name": "job",
-        "label": "Job",
-        "type": "query",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "query": "label_values(sharepoint_content_fetch_success_total, job)",
-        "refresh": 2,
-        "multi": false,
-        "includeAll": false,
-        "current": {},
-        "options": [],
-        "sort": 1
-      },
-      {
         "name": "component",
         "label": "Component",
         "type": "custom",
@@ -606,7 +590,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(graph_requests_total{job=\"$job\"}[5m]))",
+          "expr": "sum(rate(graph_requests_total{job=~\"$component\"}[5m]))",
           "legendFormat": "requests/s",
           "range": true,
           "editorMode": "code"
@@ -675,7 +659,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(graph_requests_5xx_total{job=\"$job\"}[5m]))",
+          "expr": "sum(rate(graph_requests_5xx_total{job=~\"$component\"}[5m]))",
           "legendFormat": "5xx/s",
           "range": true,
           "editorMode": "code"
@@ -757,7 +741,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(graph_request_duration_seconds_bucket{job=\"$job\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(graph_request_duration_seconds_bucket{job=~\"$component\"}[5m])))",
           "legendFormat": "p95",
           "range": true,
           "editorMode": "code"
@@ -2237,7 +2221,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**Label sync runs in SCANNER mode only.** Set **Component = Scanner** (or leave it on All) \u2014 the `$job` and `$pod` variables on the rest of this dashboard are driven by `sharepoint_content_fetch_*`, which only the *content* pod emits, so they can never name the pod doing this work. That is why this row selects on `$component` instead.\n\n**Blank panels are the expected state until the feature is switched on**, and they are the *only* outward signal that it is not. The producer half is gated behind `LABELSYNC_PRODUCER_ENABLED`, which defaults to false; left unset, a label-sync job finds no handler and vanishes with no error, no log line and no failed job. In Kubernetes the switch is the Helm value `sharepointConnectorBeGo.labelSync.producerEnabled` on the **scanner** deployment \u2014 content mode never registers the handlers. Check it before assuming the pipeline is broken:\n\n```\nkubectl get cm -o jsonpath='{.data.LABELSYNC_PRODUCER_ENABLED}' \\\n  <release>-applications-sharepoint-connector-be-go-config\n```\n\n**Every write we send costs money, whatever its outcome.** `assignSensitivityLabel` is the one metered call in Graph, at **$0.00185** each, and it is billed once it is sent, not when it succeeds: `applied`, `pending_unterminated` and `rejected_file_not_labellable_billed` each cost a call, and so does `failed` unless the write never left the pod. Free means no write was sent: `skipped_already_correct`, `rejected_file_not_labellable_gated` and the pre-flight rejections. The exact count is *Billed calls*, not a sum of outcomes. An `_cached` suffix on an outcome means the verdict came from the label cache rather than a fresh read \u2014 same meaning, no Graph call.\n\n**429s do not appear here.** Graph throttling shows up in the Throttling row at the top of this dashboard, and only for content mode. Scanner-side Graph traffic is on the *Microsoft Graph API* row, gated by `$job`.\n\n**File types (NXE-2921).** Microsoft reads labels from more types than it lets us write them to. The connector refuses a write to a type it cannot take before any Graph call (free) and counts it in `sharepoint_label_sync_file_type_gated_total`; a write that was still sent and refused for its type is billed and counted in `sharepoint_label_sync_file_type_billed_refusals_total`. Both carry a bounded `extension` and `access_id`. The billed one should stay at 0; if it does not, read its extension panel."
+        "content": "**Label sync runs in SCANNER mode only.** Set **Component = Scanner** (or leave it on All) \u2014 the `$pod` variable on the rest of this dashboard is driven by `sharepoint_content_fetch_*`, which only the *content* pod emits, so it can never name the pod doing this work. That is why this row, like the *Microsoft Graph API* row, selects on `$component` instead.\n\n**Blank panels are the expected state until the feature is switched on**, and they are the *only* outward signal that it is not. The producer half is gated behind `LABELSYNC_PRODUCER_ENABLED`, which defaults to false; left unset, a label-sync job finds no handler and vanishes with no error, no log line and no failed job. In Kubernetes the switch is the Helm value `sharepointConnectorBeGo.labelSync.producerEnabled` on the **scanner** deployment \u2014 content mode never registers the handlers. Check it before assuming the pipeline is broken:\n\n```\nkubectl get cm -o jsonpath='{.data.LABELSYNC_PRODUCER_ENABLED}' \\\n  <release>-applications-sharepoint-connector-be-go-config\n```\n\n**Every write we send costs money, whatever its outcome.** `assignSensitivityLabel` is the one metered call in Graph, at **$0.00185** each, and it is billed once it is sent, not when it succeeds: `applied`, `pending_unterminated` and `rejected_file_not_labellable_billed` each cost a call, and so does `failed` unless the write never left the pod. Free means no write was sent: `skipped_already_correct`, `rejected_file_not_labellable_gated` and the pre-flight rejections. The exact count is *Billed calls*, not a sum of outcomes. An `_cached` suffix on an outcome means the verdict came from the label cache rather than a fresh read \u2014 same meaning, no Graph call.\n\n**429s do not appear here.** Graph throttling shows up in the Throttling row at the top of this dashboard, and only for content mode. Scanner-side Graph traffic is on the *Microsoft Graph API* row, selected by `$component`.\n\n**File types (NXE-2921).** Microsoft reads labels from more types than it lets us write them to. The connector refuses a write to a type it cannot take before any Graph call (free) and counts it in `sharepoint_label_sync_file_type_gated_total`; a write that was still sent and refused for its type is billed and counted in `sharepoint_label_sync_file_type_billed_refusals_total`. Both carry a bounded `extension` and `access_id`. The billed one should stay at 0; if it does not, read its extension panel."
       }
     },
     {
@@ -2268,7 +2252,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (client_id) (graph_client_inflight{job=\"$job\"})",
+          "expr": "max by (client_id) (graph_client_inflight{job=~\"$component\"})",
           "legendFormat": "{{client_id}}",
           "range": true,
           "editorMode": "code"
