@@ -812,6 +812,291 @@
       }
     },
     {
+      "id": 300,
+      "type": "bargauge",
+      "title": "Graph requests with no response, by kind (range)",
+      "description": "**Microsoft Graph requests that got no answer at all in the selected range, by reason.** A request Graph answered with an error (throttling, a server error) is not counted here. Covers the scanner, content fetch and connection tests, for every app registration.\n\n**Normal:** empty, or a few *timeout*s: Graph occasionally leaves a request unanswered, and the connection test retries such calls. **Worry:** a steady stream of *timeout*s slows scans by 100 seconds per request; *connection_lost* means connections to Microsoft are dying; *network* means Microsoft is unreachable from the cluster.\n\n**Kinds:** *timeout* \u2014 no answer before a deadline (normally the 100-second limit on every Graph request); *connection_lost* \u2014 the connector found the connection dead (no reply to a health-check ping) and closed it under the request; *network* \u2014 Microsoft could not be reached at all (DNS, refused or reset connection, TLS); *canceled* \u2014 the connector stopped waiting itself, e.g. while shutting down; *other* \u2014 anything else.\n\n**Next:** the chart beside it shows when they happened; the request rate and latency panels above show whether the rest of the traffic was healthy at the time.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 27
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "timeout"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "connection_lost"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "network"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "canceled"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "expr": "sum by (kind) (sum_over_time((\n    (last_over_time(graph_request_errors_total{job=~\"$component\"}[15s]) - last_over_time(graph_request_errors_total{job=~\"$component\"}[1d] offset 15s)) >= 0\n  or last_over_time(graph_request_errors_total{job=~\"$component\"}[15s]) * 1\n)[$__range:15s])) > 0",
+          "legendFormat": "{{kind}}",
+          "refId": "A",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 301,
+      "type": "timeseries",
+      "title": "Graph requests with no response, by kind (rate, 5m)",
+      "description": "**When Microsoft Graph requests went unanswered, and how fast.** The same requests as the counts beside it, per second over 5-minute windows.\n\n**Normal:** flat at zero, with the odd blip. **Worry:** a sustained line. A short burst can read as zero here and still be real; the counts beside it are the place to check *how many*.\n\n**Kinds:** *timeout* \u2014 no answer before a deadline (normally the 100-second limit on every Graph request); *connection_lost* \u2014 the connector found the connection dead (no reply to a health-check ping) and closed it under the request; *network* \u2014 Microsoft could not be reached at all (DNS, refused or reset connection, TLS); *canceled* \u2014 the connector stopped waiting itself, e.g. while shutting down; *other* \u2014 anything else.\n\n**Next:** compare the timing with the Graph request rate and latency panels above, and with the connector's logs for the same minutes.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 27
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (kind) (rate(graph_request_errors_total{job=~\"$component\"}[5m]))",
+          "legendFormat": "{{kind}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "timeout"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "connection_lost"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "network"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "canceled"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
       "id": 200,
       "type": "row",
       "title": "PURVIEW LABEL SYNC (NXE-2102) \u2014 what we wrote back, and what it cost",
@@ -821,7 +1106,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 35
       }
     },
     {
@@ -837,7 +1122,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 28
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -896,7 +1181,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 28
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -946,7 +1231,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 28
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -996,7 +1281,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 28
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -1046,7 +1331,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 28
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -1104,7 +1389,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 28
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -1162,7 +1447,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 32
+        "y": 40
       },
       "fieldConfig": {
         "defaults": {
@@ -1219,7 +1504,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 32
+        "y": 40
       },
       "fieldConfig": {
         "defaults": {
@@ -1277,7 +1562,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 40
+        "y": 48
       },
       "fieldConfig": {
         "defaults": {
@@ -1330,7 +1615,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 40
+        "y": 48
       },
       "fieldConfig": {
         "defaults": {
@@ -1383,7 +1668,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 40
+        "y": 48
       },
       "fieldConfig": {
         "defaults": {
@@ -1441,7 +1726,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 48
+        "y": 56
       },
       "fieldConfig": {
         "defaults": {
@@ -1493,7 +1778,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 48
+        "y": 56
       },
       "fieldConfig": {
         "defaults": {
@@ -1549,7 +1834,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 48
+        "y": 56
       },
       "fieldConfig": {
         "defaults": {
@@ -1609,7 +1894,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 48
+        "y": 56
       },
       "fieldConfig": {
         "defaults": {
@@ -1677,7 +1962,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 48
+        "y": 56
       },
       "fieldConfig": {
         "defaults": {
@@ -1732,7 +2017,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 52
+        "y": 60
       },
       "fieldConfig": {
         "defaults": {
@@ -1785,7 +2070,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 52
+        "y": 60
       },
       "fieldConfig": {
         "defaults": {
@@ -1838,7 +2123,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 52
+        "y": 60
       },
       "fieldConfig": {
         "defaults": {
@@ -1891,7 +2176,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 60
+        "y": 68
       },
       "fieldConfig": {
         "defaults": {
@@ -1948,7 +2233,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 68
+        "y": 76
       },
       "options": {
         "mode": "markdown",
@@ -1963,7 +2248,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 77
+        "y": 85
       },
       "panels": [],
       "id": 4
@@ -2034,7 +2319,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 78
+        "y": 86
       }
     },
     {
@@ -2052,7 +2337,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 78
+        "y": 86
       }
     },
     {
@@ -2063,7 +2348,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 86
+        "y": 94
       },
       "panels": [],
       "id": 5
@@ -2134,7 +2419,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 87
+        "y": 95
       }
     },
     {
@@ -2203,7 +2488,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 87
+        "y": 95
       }
     },
     {
@@ -2272,7 +2557,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 87
+        "y": 95
       }
     },
     {
@@ -2283,7 +2568,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 95
+        "y": 103
       },
       "panels": [],
       "id": 6
@@ -2303,7 +2588,7 @@
         "h": 14,
         "w": 24,
         "x": 0,
-        "y": 96
+        "y": 104
       }
     }
   ]
