@@ -44,22 +44,6 @@
         }
       },
       {
-        "name": "job",
-        "label": "Job",
-        "type": "query",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "query": "label_values(sharepoint_content_fetch_success_total, job)",
-        "refresh": 2,
-        "multi": false,
-        "includeAll": false,
-        "current": {},
-        "options": [],
-        "sort": 1
-      },
-      {
         "name": "component",
         "label": "Component",
         "type": "custom",
@@ -606,7 +590,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(graph_requests_total{job=\"$job\"}[5m]))",
+          "expr": "sum(rate(graph_requests_total{job=~\"$component\"}[5m]))",
           "legendFormat": "requests/s",
           "range": true,
           "editorMode": "code"
@@ -675,7 +659,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(graph_requests_5xx_total{job=\"$job\"}[5m]))",
+          "expr": "sum(rate(graph_requests_5xx_total{job=~\"$component\"}[5m]))",
           "legendFormat": "5xx/s",
           "range": true,
           "editorMode": "code"
@@ -757,7 +741,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(graph_request_duration_seconds_bucket{job=\"$job\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(graph_request_duration_seconds_bucket{job=~\"$component\"}[5m])))",
           "legendFormat": "p95",
           "range": true,
           "editorMode": "code"
@@ -812,6 +796,291 @@
       }
     },
     {
+      "id": 300,
+      "type": "bargauge",
+      "title": "Graph requests with no response, by kind (range)",
+      "description": "**Microsoft Graph requests that got no answer at all in the selected range, by reason.** A request Graph answered with an error (throttling, a server error) is not counted here. Covers the scanner, content fetch and connection tests, for every app registration.\n\n**Normal:** empty, or a few *timeout*s: Graph occasionally leaves a request unanswered, and the connection test retries such calls. **Worry:** a steady stream of *timeout*s slows scans by 100 seconds per request; *connection_lost* means connections to Microsoft are dying; *network* means Microsoft is unreachable from the cluster.\n\n**Kinds:** *timeout* \u2014 no answer before a deadline (normally the 100-second limit on every Graph request); *connection_lost* \u2014 the connector found the connection dead (no reply to a health-check ping) and closed it under the request; *network* \u2014 Microsoft could not be reached at all (DNS, refused or reset connection, TLS); *canceled* \u2014 the connector stopped waiting itself, e.g. while shutting down; *other* \u2014 anything else.\n\n**Next:** the chart beside it shows when they happened; the request rate and latency panels above show whether the rest of the traffic was healthy at the time.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 27
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "timeout"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "connection_lost"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "network"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "canceled"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "expr": "sum by (kind) (sum_over_time((\n    (last_over_time(graph_request_errors_total{job=~\"$component\"}[15s]) - last_over_time(graph_request_errors_total{job=~\"$component\"}[1d] offset 15s)) >= 0\n  or last_over_time(graph_request_errors_total{job=~\"$component\"}[15s]) * 1\n)[$__range:15s])) > 0",
+          "legendFormat": "{{kind}}",
+          "refId": "A",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 301,
+      "type": "timeseries",
+      "title": "Graph requests with no response, by kind (rate, 5m)",
+      "description": "**When Microsoft Graph requests went unanswered, and how fast.** The same requests as the counts beside it, per second over 5-minute windows.\n\n**Normal:** flat at zero, with the odd blip. **Worry:** a sustained line. A short burst can read as zero here and still be real; the counts beside it are the place to check *how many*.\n\n**Kinds:** *timeout* \u2014 no answer before a deadline (normally the 100-second limit on every Graph request); *connection_lost* \u2014 the connector found the connection dead (no reply to a health-check ping) and closed it under the request; *network* \u2014 Microsoft could not be reached at all (DNS, refused or reset connection, TLS); *canceled* \u2014 the connector stopped waiting itself, e.g. while shutting down; *other* \u2014 anything else.\n\n**Next:** compare the timing with the Graph request rate and latency panels above, and with the connector's logs for the same minutes.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 27
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (kind) (rate(graph_request_errors_total{job=~\"$component\"}[5m]))",
+          "legendFormat": "{{kind}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "timeout"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "connection_lost"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "network"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "canceled"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
       "id": 200,
       "type": "row",
       "title": "PURVIEW LABEL SYNC (NXE-2102) \u2014 what we wrote back, and what it cost",
@@ -821,7 +1090,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 35
       }
     },
     {
@@ -837,7 +1106,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 28
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -896,7 +1165,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 28
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -946,7 +1215,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 28
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -996,7 +1265,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 28
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -1046,7 +1315,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 28
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -1104,7 +1373,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 28
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -1162,7 +1431,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 32
+        "y": 40
       },
       "fieldConfig": {
         "defaults": {
@@ -1219,7 +1488,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 32
+        "y": 40
       },
       "fieldConfig": {
         "defaults": {
@@ -1277,7 +1546,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 40
+        "y": 48
       },
       "fieldConfig": {
         "defaults": {
@@ -1330,7 +1599,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 40
+        "y": 48
       },
       "fieldConfig": {
         "defaults": {
@@ -1383,7 +1652,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 40
+        "y": 48
       },
       "fieldConfig": {
         "defaults": {
@@ -1441,7 +1710,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 48
+        "y": 56
       },
       "fieldConfig": {
         "defaults": {
@@ -1493,7 +1762,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 48
+        "y": 56
       },
       "fieldConfig": {
         "defaults": {
@@ -1549,7 +1818,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 48
+        "y": 56
       },
       "fieldConfig": {
         "defaults": {
@@ -1609,7 +1878,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 48
+        "y": 56
       },
       "fieldConfig": {
         "defaults": {
@@ -1677,7 +1946,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 48
+        "y": 56
       },
       "fieldConfig": {
         "defaults": {
@@ -1732,7 +2001,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 52
+        "y": 60
       },
       "fieldConfig": {
         "defaults": {
@@ -1785,7 +2054,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 52
+        "y": 60
       },
       "fieldConfig": {
         "defaults": {
@@ -1838,7 +2107,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 52
+        "y": 60
       },
       "fieldConfig": {
         "defaults": {
@@ -1891,7 +2160,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 60
+        "y": 68
       },
       "fieldConfig": {
         "defaults": {
@@ -1948,11 +2217,11 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 68
+        "y": 76
       },
       "options": {
         "mode": "markdown",
-        "content": "**Label sync runs in SCANNER mode only.** Set **Component = Scanner** (or leave it on All) \u2014 the `$job` and `$pod` variables on the rest of this dashboard are driven by `sharepoint_content_fetch_*`, which only the *content* pod emits, so they can never name the pod doing this work. That is why this row selects on `$component` instead.\n\n**Blank panels are the expected state until the feature is switched on**, and they are the *only* outward signal that it is not. The producer half is gated behind `LABELSYNC_PRODUCER_ENABLED`, which defaults to false; left unset, a label-sync job finds no handler and vanishes with no error, no log line and no failed job. In Kubernetes the switch is the Helm value `sharepointConnectorBeGo.labelSync.producerEnabled` on the **scanner** deployment \u2014 content mode never registers the handlers. Check it before assuming the pipeline is broken:\n\n```\nkubectl get cm -o jsonpath='{.data.LABELSYNC_PRODUCER_ENABLED}' \\\n  <release>-applications-sharepoint-connector-be-go-config\n```\n\n**Every write we send costs money, whatever its outcome.** `assignSensitivityLabel` is the one metered call in Graph, at **$0.00185** each, and it is billed once it is sent, not when it succeeds: `applied`, `pending_unterminated` and `rejected_file_not_labellable_billed` each cost a call, and so does `failed` unless the write never left the pod. Free means no write was sent: `skipped_already_correct`, `rejected_file_not_labellable_gated` and the pre-flight rejections. The exact count is *Billed calls*, not a sum of outcomes. An `_cached` suffix on an outcome means the verdict came from the label cache rather than a fresh read \u2014 same meaning, no Graph call.\n\n**429s do not appear here.** Graph throttling shows up in the Throttling row at the top of this dashboard, and only for content mode. Scanner-side Graph traffic is on the *Microsoft Graph API* row, gated by `$job`.\n\n**File types (NXE-2921).** Microsoft reads labels from more types than it lets us write them to. The connector refuses a write to a type it cannot take before any Graph call (free) and counts it in `sharepoint_label_sync_file_type_gated_total`; a write that was still sent and refused for its type is billed and counted in `sharepoint_label_sync_file_type_billed_refusals_total`. Both carry a bounded `extension` and `access_id`. The billed one should stay at 0; if it does not, read its extension panel."
+        "content": "**Label sync runs in SCANNER mode only.** Set **Component = Scanner** (or leave it on All) \u2014 the `$pod` variable on the rest of this dashboard is driven by `sharepoint_content_fetch_*`, which only the *content* pod emits, so it can never name the pod doing this work. That is why this row, like the *Microsoft Graph API* row, selects on `$component` instead.\n\n**Blank panels are the expected state until the feature is switched on**, and they are the *only* outward signal that it is not. The producer half is gated behind `LABELSYNC_PRODUCER_ENABLED`, which defaults to false; left unset, a label-sync job finds no handler and vanishes with no error, no log line and no failed job. In Kubernetes the switch is the Helm value `sharepointConnectorBeGo.labelSync.producerEnabled` on the **scanner** deployment \u2014 content mode never registers the handlers. Check it before assuming the pipeline is broken:\n\n```\nkubectl get cm -o jsonpath='{.data.LABELSYNC_PRODUCER_ENABLED}' \\\n  <release>-applications-sharepoint-connector-be-go-config\n```\n\n**Every write we send costs money, whatever its outcome.** `assignSensitivityLabel` is the one metered call in Graph, at **$0.00185** each, and it is billed once it is sent, not when it succeeds: `applied`, `pending_unterminated` and `rejected_file_not_labellable_billed` each cost a call, and so does `failed` unless the write never left the pod. Free means no write was sent: `skipped_already_correct`, `rejected_file_not_labellable_gated` and the pre-flight rejections. The exact count is *Billed calls*, not a sum of outcomes. An `_cached` suffix on an outcome means the verdict came from the label cache rather than a fresh read \u2014 same meaning, no Graph call.\n\n**429s do not appear here.** Graph throttling shows up in the Throttling row at the top of this dashboard, and only for content mode. Scanner-side Graph traffic is on the *Microsoft Graph API* row, selected by `$component`.\n\n**File types (NXE-2921).** Microsoft reads labels from more types than it lets us write them to. The connector refuses a write to a type it cannot take before any Graph call (free) and counts it in `sharepoint_label_sync_file_type_gated_total`; a write that was still sent and refused for its type is billed and counted in `sharepoint_label_sync_file_type_billed_refusals_total`. Both carry a bounded `extension` and `access_id`. The billed one should stay at 0; if it does not, read its extension panel."
       }
     },
     {
@@ -1963,7 +2232,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 77
+        "y": 85
       },
       "panels": [],
       "id": 4
@@ -1983,7 +2252,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (client_id) (graph_client_inflight{job=\"$job\"})",
+          "expr": "max by (client_id) (graph_client_inflight{job=~\"$component\"})",
           "legendFormat": "{{client_id}}",
           "range": true,
           "editorMode": "code"
@@ -2034,7 +2303,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 78
+        "y": 86
       }
     },
     {
@@ -2052,7 +2321,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 78
+        "y": 86
       }
     },
     {
@@ -2063,7 +2332,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 86
+        "y": 94
       },
       "panels": [],
       "id": 5
@@ -2134,7 +2403,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 87
+        "y": 95
       }
     },
     {
@@ -2203,7 +2472,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 87
+        "y": 95
       }
     },
     {
@@ -2272,7 +2541,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 87
+        "y": 95
       }
     },
     {
@@ -2283,7 +2552,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 95
+        "y": 103
       },
       "panels": [],
       "id": 6
@@ -2303,7 +2572,7 @@
         "h": 14,
         "w": 24,
         "x": 0,
-        "y": 96
+        "y": 104
       }
     }
   ]
