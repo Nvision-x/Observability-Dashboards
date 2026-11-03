@@ -50,3 +50,22 @@ drifted apart in September 2026. A hotfix made on `main` is merged back into
 
 See `CLAUDE.md` for the board conventions (variables, job labels, panel types, metric
 naming) and the full sync mechanism.
+
+## Post Deployment Test
+
+1. Render pass. Open the dashboard with its default variables and default time range. Then:
+
+   Expand every collapsed row.
+   Log any panel showing an error triangle, “No data”, “Datasource not found”.
+   For every “No data”, decide whether it’s legitimate (for example, no GPUs or no traffic) or a query defect. Open the panel in Explore and drop filters until data appears to find which one is wrong.
+
+2. Variable pass. For each variable:
+
+   Confirm the dropdown populates.
+   Change its value and confirm the panels actually change.
+   For multi-value variables, test a single value, several values, and All.
+   For chained variables, confirm that changing the parent refreshes the child.
+
+3. Accuracy pass. Pick 2–3 headline stats per dashboard, such as pod counts, error rates and totals. Run the same query in Explore, or check kubectl for counts, and confirm the numbers match. Also confirm units: bytes vs bits, seconds vs ms, percent as 0–1 vs 0–100.
+
+   Log every finding with: dashboard UID, row, panel title, the variable values used, expected vs actual, and severity (wrong data > broken > cosmetic).
