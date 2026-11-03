@@ -1,0 +1,3851 @@
+{
+  "uid": "nx-sharepoint-connector",
+  "title": "SharePoint Connector \u2014 Graph Fetch, Throttling & Leak Detection",
+  "description": "Covers the sharepoint_* and graph_* metric families, which no earlier dashboard touched. Read the reference panel at the bottom first \u2014 there is no 429 counter and a flat 5xx graph is misleading.",
+  "tags": [
+    "nvision-x",
+    "sharepoint",
+    "connector",
+    "graph",
+    "nxe-2480",
+    "git-sync",
+    "purview",
+    "nxe-2102",
+    "labelsync"
+  ],
+  "timezone": "utc",
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 39,
+  "version": 5,
+  "refresh": "1m",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "refresh": 1,
+        "hide": 2,
+        "includeAll": false,
+        "options": [],
+        "current": {
+          "text": "default",
+          "value": "default"
+        }
+      },
+      {
+        "name": "component",
+        "label": "Component",
+        "type": "custom",
+        "query": "All : .*sharepoint-connector-be-go.*,Scanner : .*sharepoint-connector-be-go,Content : .*sharepoint-connector-be-go-content",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": ".*sharepoint-connector-be-go.*"
+        },
+        "options": [],
+        "multi": false,
+        "includeAll": false
+      },
+      {
+        "name": "namespace",
+        "label": "Namespace",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(sharepoint_content_fetch_success_total, namespace)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [],
+        "sort": 1
+      },
+      {
+        "name": "pod",
+        "label": "Pod",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(sharepoint_content_fetch_success_total{namespace=~\"$namespace\"}, pod)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [],
+        "sort": 1
+      },
+      {
+        "name": "code",
+        "label": "Error code",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(sharepoint_content_fetch_error_total, code)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [],
+        "sort": 1
+      },
+      {
+        "name": "client_id",
+        "label": "Graph app registration",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(graph_client_inflight, client_id)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [],
+        "sort": 1
+      },
+      {
+        "name": "access_id",
+        "label": "Data source",
+        "description": "Narrows the reason panels and Results by outcome in PURVIEW LABEL SYNC: RESULTS BY REASON. Empty until the connector reports a data source on label-sync results; All matches every result, including those with no data source.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(sharepoint_label_sync_outcome_total{job=~\"$component\"}, access_id)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(sharepoint_label_sync_outcome_total{job=~\"$component\"}, access_id)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [],
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "THROTTLING \u2014 is Microsoft rate-limiting us?",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": [],
+      "id": 1
+    },
+    {
+      "type": "stat",
+      "title": "Graph 429 rate (RATE_LIMITED)",
+      "description": "Non-zero here means Microsoft Graph is throttling our app registration. This is the metric the whole NXE-2480 hypothesis turns on.\n\nNOTE: if the connector cannot read the HTTP status it falls through to CONNECTION_FAILED instead, so check the breakdown panel too rather than reading a zero here as proof.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(sharepoint_content_fetch_error_total{namespace=~\"$namespace\", pod=~\"$pod\", code=\"FETCH_ERROR_RATE_LIMITED\"}[5m]))",
+          "legendFormat": "",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.001
+              }
+            ]
+          },
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Fetch errors by code",
+      "description": "FetchErrorCode as classified by classifyGraphError (internal/fetch/handler.go:339).\n\nRETRYABLE (these are the dangerous ones \u2014 content-service will retry each 15x): RATE_LIMITED, CONNECTION_FAILED, TIMEOUT, READ_ERROR, CACHE_WRITE_FAILED\nNON-RETRYABLE (cheap, fail once): NOT_FOUND, PERMISSION_DENIED, INVALID_URN, TOO_LARGE, INTERNAL(4xx)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (code) (rate(sharepoint_content_fetch_error_total{namespace=~\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "{{code}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 6,
+        "y": 1
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Fetch failure fraction",
+      "description": "errors / (errors + successes). A few percent is normal \u2014 deleted files and permission denials. What matters is whether those failures are RETRYABLE, which the panel to the left answers.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(sharepoint_content_fetch_error_total{namespace=~\"$namespace\", pod=~\"$pod\"}[5m])) / (sum(rate(sharepoint_content_fetch_error_total{namespace=~\"$namespace\", pod=~\"$pod\"}[5m])) + sum(rate(sharepoint_content_fetch_success_total{namespace=~\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.02
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          },
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      }
+    },
+    {
+      "type": "row",
+      "title": "Fetch outcomes & latency",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "panels": [],
+      "id": 2
+    },
+    {
+      "type": "timeseries",
+      "title": "Fetch outcomes",
+      "description": "Success, error, timeout and too-large rates side by side. TIMEOUT and TOO_LARGE have their own counters and do NOT appear in sharepoint_content_fetch_error_total.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(sharepoint_content_fetch_success_total{namespace=~\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "success",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(sharepoint_content_fetch_error_total{namespace=~\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "error",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(sharepoint_content_fetch_timeout_total{namespace=~\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "timeout",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(sharepoint_content_fetch_too_large_total{namespace=~\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "too large",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Fetch duration p50 / p95 / p99",
+      "description": "End-to-end duration of one ContentFetchRequest inside the connector. Compare against content-service's content_nats_worker_duration_seconds \u2014 they measure nearly the same span from opposite ends, and a divergence means time is being spent in the NATS hop.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(sharepoint_content_fetch_duration_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p50",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(sharepoint_content_fetch_duration_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p95",
+          "range": true,
+          "editorMode": "code"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(sharepoint_content_fetch_duration_seconds_bucket{namespace=~\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "p99",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      }
+    },
+    {
+      "type": "row",
+      "title": "Microsoft Graph API",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "panels": [],
+      "id": 3
+    },
+    {
+      "type": "timeseries",
+      "title": "Graph request rate",
+      "description": "Requests leaving the connector toward graph.microsoft.com.\n\nDuring a retry storm this should show the amplification directly: content-service retries each failed document up to 15 times, and every one of those attempts becomes a fresh Graph call.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(graph_requests_total{job=~\"$component\"}[5m]))",
+          "legendFormat": "requests/s",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 19
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Graph 5xx rate  (NOTE: EXCLUDES 429)",
+      "description": "Server errors only. THROTTLING IS 429 AND IS NOT COUNTED HERE. Do not read a flat line as 'Graph was healthy' \u2014 see the reference panel at the bottom of this dashboard.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(graph_requests_5xx_total{job=~\"$component\"}[5m]))",
+          "legendFormat": "5xx/s",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.001
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 19
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Graph request duration p95",
+      "description": "Measured by the connector's TelemetryMiddleware around the whole round trip, including the 302 redirect to the CDN host.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(graph_request_duration_seconds_bucket{job=~\"$component\"}[5m])))",
+          "legendFormat": "p95",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 19
+      }
+    },
+    {
+      "id": 300,
+      "type": "bargauge",
+      "title": "Graph requests with no response, by kind (range)",
+      "description": "**Microsoft Graph requests that got no answer at all in the selected range, by reason.** A request Graph answered with an error (throttling, a server error) is not counted here. Covers the scanner, content fetch and connection tests, for every app registration.\n\n**Normal:** empty, or a few *timeout*s: Graph occasionally leaves a request unanswered, and the connection test retries such calls. **Worry:** a steady stream of *timeout*s slows scans by 100 seconds per request; *connection_lost* means connections to Microsoft are dying; *network* means Microsoft is unreachable from the cluster.\n\n**Kinds:** *timeout* \u2014 no answer before a deadline (normally the 100-second limit on every Graph request); *connection_lost* \u2014 the connector found the connection dead (no reply to a health-check ping) and closed it under the request; *network* \u2014 Microsoft could not be reached at all (DNS, refused or reset connection, TLS); *canceled* \u2014 the connector stopped waiting itself, e.g. while shutting down; *other* \u2014 anything else.\n\n**Next:** the chart beside it shows when they happened; the request rate and latency panels above show whether the rest of the traffic was healthy at the time.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 27
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "timeout"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "connection_lost"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "network"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "canceled"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "expr": "sum by (kind) (sum_over_time((\n    (last_over_time(graph_request_errors_total{job=~\"$component\"}[15s]) - last_over_time(graph_request_errors_total{job=~\"$component\"}[1d] offset 15s)) >= 0\n  or last_over_time(graph_request_errors_total{job=~\"$component\"}[15s]) * 1\n)[$__range:15s])) > 0",
+          "legendFormat": "{{kind}}",
+          "refId": "A",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code"
+        }
+      ]
+    },
+    {
+      "id": 301,
+      "type": "timeseries",
+      "title": "Graph requests with no response, by kind (rate, 5m)",
+      "description": "**When Microsoft Graph requests went unanswered, and how fast.** The same requests as the counts beside it, per second over 5-minute windows.\n\n**Normal:** flat at zero, with the odd blip. **Worry:** a sustained line. A short burst can read as zero here and still be real; the counts beside it are the place to check *how many*.\n\n**Kinds:** *timeout* \u2014 no answer before a deadline (normally the 100-second limit on every Graph request); *connection_lost* \u2014 the connector found the connection dead (no reply to a health-check ping) and closed it under the request; *network* \u2014 Microsoft could not be reached at all (DNS, refused or reset connection, TLS); *canceled* \u2014 the connector stopped waiting itself, e.g. while shutting down; *other* \u2014 anything else.\n\n**Next:** compare the timing with the Graph request rate and latency panels above, and with the connector's logs for the same minutes.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 27
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (kind) (rate(graph_request_errors_total{job=~\"$component\"}[5m]))",
+          "legendFormat": "{{kind}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "timeout"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "connection_lost"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "network"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "canceled"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "PURVIEW LABEL SYNC (NXE-2102) \u2014 what we wrote back, and what it cost",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      }
+    },
+    {
+      "id": 201,
+      "type": "stat",
+      "title": "Billed spend (range)",
+      "description": "assignSensitivityLabel is the only metered call in Microsoft Graph, at $0.00185 USD each. This is billed calls over the selected time range \u00d7 that unit price \u2014 the real invoice line, not an estimate from outcome arithmetic.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 36
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[$__range])) * 0.00185",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 202,
+      "type": "stat",
+      "title": "Billed calls (range)",
+      "description": "Writes actually issued to Graph. Every other outcome is free. A run whose billed count is close to its item count means almost nothing was already correct \u2014 check the mapping before repeating it.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 36
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 203,
+      "type": "stat",
+      "title": "Applied (range)",
+      "description": "Label written and the Graph operation reached a terminal success state. This is the only outcome that changed a document.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 36
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"applied.*\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 204,
+      "type": "stat",
+      "title": "Skipped \u2014 already correct (range)",
+      "description": "The file already carried the target label, so no Graph call was made and nothing was billed. On a re-run of an unchanged corpus this should dominate; if it is near zero on a second pass, the apply is not sticking.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 36
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"skipped_already_correct.*\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 205,
+      "type": "stat",
+      "title": "Terminal rejections (range)",
+      "description": "Outcomes that will never succeed on retry: label_missing (an admin deleted it \u2014 the MAPPING is stale), unsupported_label, not_appliable (the target is a label group), file_locked (423 on a file SharePoint cannot decrypt), rejected_file_not_labellable_billed (a write sent to a file type Microsoft refused, usually PDF on a tenant without PDF labelling: set LABELSYNC_PDF_WRITE_ENABLED=false on both the connector and the API), and failed. Non-zero means someone has to change something; re-running only costs money.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 36
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 25
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"rejected_label_missing.*|rejected_unsupported_label.*|rejected_not_appliable.*|rejected_file_locked.*|rejected_file_not_labellable_billed|failed.*\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 206,
+      "type": "stat",
+      "title": "Pending unterminated (range)",
+      "description": "Graph accepted the write but the operation had not reached a terminal state before the poll window closed. NOT a failure \u2014 the apply may still land, and it was already billed. Re-issuing would double-bill and may double-apply, so treat a rising count as a reason to widen LABELSYNC_POLL_WINDOW, never as a reason to retry.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 36
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"pending_unterminated.*\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 207,
+      "type": "timeseries",
+      "title": "Label-sync outcomes",
+      "description": "Every document the label-sync handler resolved, by outcome. Stacked, so the total height is throughput. The split between the free outcomes (skipped_already_correct, the pre-flight rejections) and the billed one (applied) is the cost story.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 20,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (rate(sharepoint_label_sync_outcome_total{job=~\"$component\"}[5m]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 208,
+      "type": "timeseries",
+      "title": "Billed call rate and cost per hour",
+      "description": "Left axis is calls/sec; the second series projects the current rate to USD/hour at $0.00185 per call. Use it to sanity-check a large run before it finishes rather than after the invoice.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[5m]))",
+          "legendFormat": "billed calls/sec",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[5m])) * 3600 * 0.00185",
+          "legendFormat": "USD/hour at current rate",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 209,
+      "type": "timeseries",
+      "title": "Terminal rejections \u2014 something has to change",
+      "description": "None of these get better by retrying. label_missing and unsupported_label point at the mapping; not_appliable means the mapped target is a label GROUP rather than a label; file_locked is about the document itself (double-key encrypted, or protected in a way SharePoint cannot decrypt); rejected_file_not_labellable_billed is a file type Microsoft refused after we sent the write, which every later job pays for again until the file-type settings change.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 48
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"rejected_label_missing.*|rejected_unsupported_label.*|rejected_not_appliable.*|rejected_file_locked.*|rejected_file_not_labellable_billed|failed.*\"}[5m]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 210,
+      "type": "timeseries",
+      "title": "Transient \u2014 worth another run",
+      "description": "deferred_retry_later is 423 fileDecryptionDeferred: the service is saying it can do this, just not now. deferred_label_pending means the mapped label was not in the tenant at write time but the registry saw it live recently, so this is propagation rather than deletion. rejected_label_disabled may reverse when an admin turns the label back on.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 48
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"deferred_retry_later.*|deferred_label_pending.*|rejected_label_disabled.*\"}[5m]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 211,
+      "type": "timeseries",
+      "title": "Billed writes that did not resolve",
+      "description": "pending_unterminated against the billed-call rate. The gap is money spent on writes whose outcome we never observed. A persistent gap means the poll window is too short for this tenant, not that the writes failed.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 48
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"pending_unterminated.*\"}[5m]))",
+          "legendFormat": "pending_unterminated",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[5m]))",
+          "legendFormat": "billed calls",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 213,
+      "type": "stat",
+      "title": "File-type refusals, free (range)",
+      "description": "Label writes the file-type gate refused before any Graph call, over the selected range: files Microsoft cannot apply a label to (legacy .doc .xls .ppt, templates, PDF when LABELSYNC_PDF_WRITE_ENABLED is off, anything outside the write list). Each one is a metered call NOT made. Counted as the batch runs (NXE-2921). Blank means no pod with label sync switched on reported in the range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 56
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum((increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"}[$__range]) and sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"} offset $__range) or (last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"}[$__range]) unless sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"} offset $__range))",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 214,
+      "type": "stat",
+      "title": "File-type refusals, billed (range)",
+      "description": "Writes that WERE sent to assignSensitivityLabel and refused by Microsoft for the file type, over the selected range. Each was billed at $0.00185. Should be 0: anything here is a type the gate let through and Microsoft refused. pdf: the tenant has no PDF labelling, set LABELSYNC_PDF_WRITE_ENABLED=false. A type listed in LABELSYNC_WRITE_EXTRA_EXTENSIONS: take it out again. unknown: the index had no file name. See Billed refusals by extension. Counted when the write resolves.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 56
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum((increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[$__range]) and sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"} offset $__range) or (last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[$__range]) unless sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"} offset $__range))",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 215,
+      "type": "stat",
+      "title": "Wasted spend, file-type refusals (range)",
+      "description": "Billed file-type refusals over the selected range x $0.00185. Money spent on writes Microsoft was never going to accept. Azure Cost Management is the invoice; this is our count of the calls.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 56
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "decimals": 4
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum((increase(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[$__range]) and sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"} offset $__range) or (last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[$__range]) unless sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"} offset $__range)) * 0.00185",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 216,
+      "type": "stat",
+      "title": "PDF write enabled, per pod",
+      "description": "LABELSYNC_PDF_WRITE_ENABLED as each scanner pod read it at startup. On: PDFs are sent (right only if the tenant has EnableSensitivityLabelforPDF). Off: PDFs are refused for free. Reported at startup only by a scanner pod with the label-sync producer switched on (LABELSYNC_PRODUCER_ENABLED); no value means it is off or the pod predates NXE-2921. Live pods only.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 56
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Off",
+                  "color": "orange",
+                  "index": 0
+                },
+                "1": {
+                  "text": "On",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "expr": "max by (pod) (sharepoint_label_sync_pdf_write_enabled{job=~\"$component\"})",
+          "legendFormat": "{{pod}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 217,
+      "type": "stat",
+      "title": "Extra writable extensions, per pod",
+      "description": "How many LABELSYNC_WRITE_EXTRA_EXTENSIONS entries each scanner pod accepted at startup (added to Microsoft's apply list). Normally 0. Entries the connector dropped (pdf, dots, paths) are not counted; they are in its startup warning. Live pods with the label-sync producer switched on only.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 56
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "expr": "max by (pod) (sharepoint_label_sync_write_extra_extensions{job=~\"$component\"})",
+          "legendFormat": "{{pod}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 218,
+      "type": "bargauge",
+      "title": "Free refusals by extension (range)",
+      "description": "The free refusals above, split by extension. The extension is bounded by the connector: Microsoft's labellable read list plus configured extras, else none (a name with no extension), unknown (no name in the index) or other. Never a file name. Empty when nothing was refused in the range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 60
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "expr": "sum by (extension) ((increase(sharepoint_label_sync_file_type_gated_total{job=~\"$component\"}[$__range]) and sharepoint_label_sync_file_type_gated_total{job=~\"$component\"} offset $__range) or (last_over_time(sharepoint_label_sync_file_type_gated_total{job=~\"$component\"}[$__range]) unless sharepoint_label_sync_file_type_gated_total{job=~\"$component\"} offset $__range))",
+          "legendFormat": "{{extension}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 219,
+      "type": "bargauge",
+      "title": "Billed refusals by extension (range)",
+      "description": "The billed file-type refusals, split by extension. A type that shows up here every run should be refused by the gate instead: pdf -> LABELSYNC_PDF_WRITE_ENABLED=false; a type added through LABELSYNC_WRITE_EXTRA_EXTENSIONS -> remove it there; unknown -> the file has no name in the index; any other type is on our own write list and Microsoft refused it, which needs a code change. Empty when nothing was refused in the range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 60
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "expr": "sum by (extension) ((increase(sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"}[$__range]) and sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"} offset $__range) or (last_over_time(sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"}[$__range]) unless sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"} offset $__range))",
+          "legendFormat": "{{extension}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 220,
+      "type": "bargauge",
+      "title": "Wasted spend by datasource (range)",
+      "description": "Billed file-type refusals x $0.00185, by the connector's access_id (one per datasource). Map an access_id to a datasource in the API's datasource access list. Empty when nothing was refused in the range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 60
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 4
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "expr": "(sum by (access_id) ((increase(sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"}[$__range]) and sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"} offset $__range) or (last_over_time(sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"}[$__range]) unless sharepoint_label_sync_file_type_billed_refusals_total{job=~\"$component\"} offset $__range))) * 0.00185",
+          "legendFormat": "{{access_id}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 221,
+      "type": "timeseries",
+      "title": "File-type refusals: free vs billed",
+      "description": "Rate of file-type refusals, the free gate against the billed backstop. The split by extension is in the bar charts above.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 68
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_gated\"}[5m]))",
+          "legendFormat": "refused free (gate)",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=\"rejected_file_not_labellable_billed\"}[5m]))",
+          "legendFormat": "refused after a billed call",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 212,
+      "type": "text",
+      "title": "How to read this row",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 76
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Label sync runs in SCANNER mode only.** Set **Component = Scanner** (or leave it on All) \u2014 the `$pod` variable on the rest of this dashboard is driven by `sharepoint_content_fetch_*`, which only the *content* pod emits, so it can never name the pod doing this work. That is why this row, like the *Microsoft Graph API* row, selects on `$component` instead.\n\n**Blank panels are the expected state until the feature is switched on**, and they are the *only* outward signal that it is not. The producer half is gated behind `LABELSYNC_PRODUCER_ENABLED`, which defaults to false; left unset, a label-sync job finds no handler and vanishes with no error, no log line and no failed job. In Kubernetes the switch is the Helm value `sharepointConnectorBeGo.labelSync.producerEnabled` on the **scanner** deployment \u2014 content mode never registers the handlers. Check it before assuming the pipeline is broken:\n\n```\nkubectl get cm -o jsonpath='{.data.LABELSYNC_PRODUCER_ENABLED}' \\\n  <release>-applications-sharepoint-connector-be-go-config\n```\n\n**Every write we send costs money, whatever its outcome.** `assignSensitivityLabel` is the one metered call in Graph, at **$0.00185** each, and it is billed once it is sent, not when it succeeds: `applied`, `pending_unterminated` and `rejected_file_not_labellable_billed` each cost a call, and so does `failed` unless the write never left the pod. Free means no write was sent: `skipped_already_correct`, `rejected_file_not_labellable_gated` and the pre-flight rejections. The exact count is *Billed calls*, not a sum of outcomes. An `_cached` suffix on an outcome means the verdict came from the label cache rather than a fresh read \u2014 same meaning, no Graph call.\n\n**429s do not appear here.** Graph throttling shows up in the Throttling row at the top of this dashboard, and only for content mode. Scanner-side Graph traffic is on the *Microsoft Graph API* row, selected by `$component`.\n\n**File types (NXE-2921).** Microsoft reads labels from more types than it lets us write them to. The connector refuses a write to a type it cannot take before any Graph call (free) and counts it in `sharepoint_label_sync_file_type_gated_total`; a write that was still sent and refused for its type is billed and counted in `sharepoint_label_sync_file_type_billed_refusals_total`. Both carry a bounded `extension` and `access_id`. The billed one should stay at 0; if it does not, read its extension panel."
+      }
+    },
+    {
+      "id": 230,
+      "type": "row",
+      "title": "PURVIEW LABEL SYNC: RESULTS BY REASON",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 85
+      }
+    },
+    {
+      "id": 231,
+      "type": "text",
+      "title": "Results by reason: how to read",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 86
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**For the product team: what happened to the files a label-sync run touched, and why the rest did not get their label.** Every count adds up every run in the selected time range. Narrow the range to one run to see that run alone.\n\n**Works today:** the stats and *Results by outcome*. **Waiting for the connector:** the three *reason* panels show \"No reasons yet\" until the connector reports a reason and a data source with each result (Etch follow-up). That is the expected state, not a fault. The *Data source* selector at the top (on the per-cluster SharePoint board only; Connectors Detail has none) stays empty (All) until then, and only ever narrows the reason panels and *Results by outcome*; the stats always count every data source.\n\n**Charged** counts the label writes we tried to send to Microsoft, at $0.00185 each, including any that failed on the network before reaching it. Whether Microsoft charges a write it then refused is not documented, so those count as charged too; Azure Cost Management stays the billing truth. **Not charged** is every other result: no label write was sent (a free read may have been). For the file names behind a number, use the per-file report from Job Management (planned in the same ticket); no file names are shown here."
+      }
+    },
+    {
+      "id": 232,
+      "type": "stat",
+      "title": "Results",
+      "description": "**Files label sync finished with, whatever the outcome.** A file retried later (Microsoft asked us to wait) counts once per attempt. Files the connector could not reach at all (no Microsoft connection for the data source, or an item with no usable SharePoint address) are not counted here; the per-file report has them.\n\n**Normal:** about the number of files the runs in this range covered.\n\n**Next:** *Results by outcome* below.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 92
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\"}[15s]) - last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\"}[1d] offset 15s)) >= 0 or last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\"}[15s]) * 1)[$__range:15s]))) or vector(0))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 233,
+      "type": "stat",
+      "title": "Charged",
+      "description": "**Label writes we tried to send to Microsoft**, each priced at $0.00185. A write that failed on the network before reaching Microsoft, or that Microsoft then refused, still counts, because whether it is charged is not documented. A write is counted when the connector finishes with the file, so one cut off by a pod restart mid-wait is missed.\n\n**Normal:** close to the number of files whose label actually changed. Far above it usually means PDFs on a tenant without PDF labelling (see *file_type* in the glossary). Charged files that still have no label are in *Charged files without the label*.\n\n**Next:** *Charged, USD* beside it; Azure Cost Management for the real bill.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 92
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[15s]) - last_over_time(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[1d] offset 15s)) >= 0 or last_over_time(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[15s]) * 1)[$__range:15s]))) or vector(0))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 234,
+      "type": "stat",
+      "title": "Not charged",
+      "description": "**Results with no label write sent**: the file already had the right label, the file type was refused before the write, the label or mapping was unusable, the free read of the file failed (encrypted, gone), or the run deferred the file. So it is not all good news: it also holds results that need a fix.\n\n**Normal:** most of a re-run of the same data source, because files already labelled are skipped for free.\n\n**Next:** *Results by outcome* below says which.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 92
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "clamp_min(((sum(sum_over_time(((last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\"}[15s]) - last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\"}[1d] offset 15s)) >= 0 or last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\"}[15s]) * 1)[$__range:15s]))) or vector(0)) - ((sum(sum_over_time(((last_over_time(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[15s]) - last_over_time(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[1d] offset 15s)) >= 0 or last_over_time(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[15s]) * 1)[$__range:15s]))) or vector(0)), 0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 235,
+      "type": "stat",
+      "title": "Charged, USD",
+      "description": "**What the charged writes cost**: *Charged* times $0.00185.\n\n**Normal:** close to Azure Cost Management for the range. It can read **above** Azure, because every write we tried to send counts, including ones Microsoft refused, throttled or never answered, and ones that failed on the network before reaching Microsoft; and **below** it for writes cut off by a pod restart, or if Microsoft bills a write our HTTP client re-sent after a 429, 503 or 504 (not documented). Azure is the billing truth. *Billed spend* in the row above counts the same writes with an older method that extrapolates, so it can read higher or lower, and $0 for a short run on a pod that has just started; use this one.\n\n**Next:** Azure Cost Management for the invoice.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 92
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[15s]) - last_over_time(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[1d] offset 15s)) >= 0 or last_over_time(sharepoint_label_sync_billed_calls_total{job=~\"$component\"}[15s]) * 1)[$__range:15s]))) or vector(0)) * 0.00185",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 236,
+      "type": "stat",
+      "title": "No label written",
+      "description": "**Results that did not leave the label on the file**: failed, refused (including file types refused for free before any call), unmapped, or deferred to a later run. A legacy Office file that already carries the right label is counted here too (its type cannot be written, so it is not checked). These are results, not distinct files: a file deferred in one run and labelled in the next counts here and as applied. Files still pending are not in this number, nor are files the connector could not reach at all (see *Results*).\n\n**Normal:** a steady level per tenant from run to run (file types that cannot take a label, encrypted files). A jump after a mapping change or on a re-run of the same data source is worth a look.\n\n**Next:** *Results by outcome* below, and *Files without the label, by reason* once the connector reports reasons.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 92
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"failed.*|rejected_.*|unmapped.*|deferred_.*\"}[15s]) - last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"failed.*|rejected_.*|unmapped.*|deferred_.*\"}[1d] offset 15s)) >= 0 or last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"failed.*|rejected_.*|unmapped.*|deferred_.*\"}[15s]) * 1)[$__range:15s]))) or vector(0))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 237,
+      "type": "stat",
+      "title": "Unmapped",
+      "description": "**Files whose record type has no Purview label mapped.** Nothing was sent and nothing was charged. A file of a type that cannot take a label at all is counted as not labellable instead, even when its record type is also unmapped, but only when the scan knew its file name: without one, the file type is not checked first and the file is counted here.\n\n**Normal:** 0. Anything else is a mapping gap the customer can close in Fetch label ids.\n\n**Next:** the reason glossary at the bottom of this row.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 92
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum(sum_over_time(((last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"unmapped.*\"}[15s]) - last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"unmapped.*\"}[1d] offset 15s)) >= 0 or last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", outcome=~\"unmapped.*\"}[15s]) * 1)[$__range:15s]))) or vector(0))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 238,
+      "type": "bargauge",
+      "title": "Results by outcome",
+      "description": "**Every result in the range, by outcome.** Green got or already had the label, blue is still pending, yellow is nothing to fix now (the file cannot take a label and nothing was paid, or it clears on a later run), orange needs a change (including file types we paid to have refused: see the glossary's file_type), red failed. Purple is an outcome this panel does not know yet: tell engineering.\n\n**Normal:** almost all green.\n\n**Next:** the reason panel beside it says why, once the connector reports reasons; *Label-sync outcomes* in the row above says when.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 96
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "purple",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^applied.*$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^skipped_already_correct.*$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^pending_unterminated.*$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^deferred_.*$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^rejected_file_not_labellable.*$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^rejected_file_not_labellable_billed.*$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^unmapped.*$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(rejected_label_.*|rejected_not_appliable.*|rejected_unsupported_label.*)$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^rejected_file_locked.*$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^failed.*$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "maxVizHeight": 300,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (outcome) (sum_over_time(((last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", access_id=~\"$access_id\"}[15s]) - last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", access_id=~\"$access_id\"}[1d] offset 15s)) >= 0 or last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", access_id=~\"$access_id\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "{{outcome}}",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 239,
+      "type": "bargauge",
+      "title": "Files without the label, by reason (needs connector update)",
+      "description": "**Why files did not get their label**, grouped into the reasons in the glossary below. Unlike *No label written*, this includes files still pending (blue), so with *Data source* on All its bars can add up to more. These are results, not distinct files: a file deferred in two runs counts twice. Purple is a reason this panel does not know yet: tell engineering.\n\nShows *No reasons yet* until the connector reports a reason with each result. That is expected today; nothing is estimated.\n\n**Normal:** short bars. Orange reasons are for the customer to fix, red ones for engineering; yellow ones need nothing about the label (not_found clears with a rescan; file_type is yellow because most are refused for free, its charged part is orange in *Charged files without the label*). See the glossary below.\n\n**Next:** *By data source and reason* below, then the per-file report in Job Management.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 96
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "No reasons yet: needs the connector update"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "encrypted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "site_locked"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "site_blocked"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "invalid_host"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "label_problem"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unmapped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "file_type"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "not_found"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "throttled"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "retry_later"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pending"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "invalid_data"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "maxVizHeight": 300,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (reason_class) (sum_over_time(((last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", reason_class=~\".+\", access_id=~\"$access_id\"}[15s]) - last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", reason_class=~\".+\", access_id=~\"$access_id\"}[1d] offset 15s)) >= 0 or last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", reason_class=~\".+\", access_id=~\"$access_id\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "{{reason_class}}",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 240,
+      "type": "table",
+      "title": "By data source and reason (needs connector update)",
+      "description": "**The same results, split by data source.** One row per data source and reason. These are results, not distinct files: a file deferred in two runs counts twice.\n\nShows *No reasons yet* until the connector reports a reason and data source with each result.\n\n**Normal:** one or two data sources with a handful of rows.\n\n**Next:** the per-file report in Job Management for the file names.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 105
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No reasons yet: needs the connector update",
+          "unit": "none",
+          "decimals": 0,
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Files",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "access_id": 0,
+              "reason_class": 1,
+              "Value": 2
+            },
+            "renameByName": {
+              "access_id": "Data source",
+              "reason_class": "Reason",
+              "Value": "Files"
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (access_id, reason_class) (sum_over_time(((last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", reason_class=~\".+\", access_id=~\"$access_id\"}[15s]) - last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", reason_class=~\".+\", access_id=~\"$access_id\"}[1d] offset 15s)) >= 0 or last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", reason_class=~\".+\", access_id=~\"$access_id\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 241,
+      "type": "bargauge",
+      "title": "Charged files without the label, by reason (needs connector update)",
+      "description": "**Files we sent a charged write for that still have no label**, by reason: Microsoft refused the write, had not finished it, or never answered. Each counts as charged here, as in *Charged*; whether Microsoft bills a refused write is not documented. These are results, not distinct files: a file charged in two runs counts twice. Purple is a reason this panel does not know yet: tell engineering.\n\nShows *No reasons yet* until the connector reports a reason and whether the result was charged.\n\n**Normal:** pending only, which usually lands later. A locked site here means the run paid for the files it sent there; leave that site out next time. A file_type bar here is paid refusals, usually PDF on a tenant without PDF labelling: it repeats on every run until fixed.\n\n**Next:** the glossary below for what the customer can do.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 105
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "No reasons yet: needs the connector update"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "encrypted"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "site_locked"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "site_blocked"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "invalid_host"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "label_problem"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unmapped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "file_type"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "not_found"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "throttled"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "retry_later"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pending"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "invalid_data"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "maxVizHeight": 300,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (reason_class) (sum_over_time(((last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", reason_class=~\".+\", billed=\"true\", access_id=~\"$access_id\"}[15s]) - last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", reason_class=~\".+\", billed=\"true\", access_id=~\"$access_id\"}[1d] offset 15s)) >= 0 or last_over_time(sharepoint_label_sync_outcome_total{job=~\"$component\", reason_class=~\".+\", billed=\"true\", access_id=~\"$access_id\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "{{reason_class}}",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 242,
+      "type": "text",
+      "title": "What each reason means",
+      "gridPos": {
+        "h": 16,
+        "w": 24,
+        "x": 0,
+        "y": 114
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "| Reason | What happened | Charged? | What the customer can do |\n|---|---|---|---|\n| `encrypted` | The file is encrypted, so Microsoft would not let us read or change its label. | Yes when Microsoft refused the write itself; no when reading the current label already failed | Remove or change the file's protection, or leave it as it is. |\n| `site_locked` | The SharePoint site is locked (read-only or no access). | **Usually**: yes when the write was sent and refused; no when the site would not even let us read the current label | Unlock the site, or leave it out of label sync. |\n| `site_blocked` | The tenant has blocked access to the site. | No | Allow our app to reach the site, or leave it out. |\n| `invalid_host` | The file's address is not in the customer's Microsoft 365 tenant. | No | Check the data source points at their own tenant; rescan after a domain change. |\n| `file_type` | The file's type cannot carry a label, or the file is empty or was not available. | Only when the write was sent and Microsoft refused it, usually PDF on a tenant without PDF labelling, and then again on every run; the rest are refused before any charged call | Nothing for most. For charged PDFs: turn on PDF labelling in the tenant, or ask us to stop writing PDFs (LABELSYNC_PDF_WRITE_ENABLED=false). |\n| `invalid_data` | Microsoft rejected the label write as malformed (\"Invalid Data\"). This is on our side, not the customer's. | **Yes** | Nothing; tell engineering, the per-file report has the exact message. |\n| `pending` | Microsoft accepted the label but had not finished when we stopped watching. It usually lands later. | **Yes** | Nothing. Do not re-run for these alone: a second write is charged again. |\n| `not_found` | The file was moved or deleted after the last scan. | Rarely (deleted between our read and our write) | Rescan the data source. |\n| `label_problem` | The label is missing, turned off, or cannot be applied by an app. | Sometimes: the first file per label in each batch, or every file when Microsoft refuses the label only after accepting the write | Fix the label in Purview, or map a different one. |\n| `unmapped` | The file's record type has no Purview label mapped. | No | Map a label for it (Fetch label ids), then run again. |\n| `throttled` | Microsoft kept asking us to slow down and we gave up on the file for this run. | Sometimes | Run again later, outside busy hours. |\n| `retry_later` | Microsoft said it can do it later (the file is still being decrypted), or a new label is not visible yet (about an hour after publishing). | Sometimes | Run again later; a file whose write was sent is charged again. |\n| `other` | Anything not listed above. | Varies | Ask engineering; the per-file report has the exact message. |"
+      }
+    },
+    {
+      "type": "row",
+      "title": "IN-FLIGHT LEAK DETECTOR \u2014 the rival hypothesis",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 130
+      },
+      "panels": [],
+      "id": 4
+    },
+    {
+      "type": "timeseries",
+      "title": "Graph client in-flight by app registration",
+      "description": "SHAPE MATTERS MORE THAN VALUE.\n\nsawtooth returning to 0 between scans -> healthy\nmonotonic ratchet never returning to 0 -> the Redis in-flight counter is leaking, and the connector will start blocking on every fetch once all clients exceed maxInflight\n\nSee the panel to the right for the two-minute test that settles it.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (client_id) (graph_client_inflight{job=~\"$component\"})",
+          "legendFormat": "{{client_id}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 131
+      }
+    },
+    {
+      "type": "text",
+      "title": "How to test the leak",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "## In-flight leak \u2014 the rival explanation\n\nThe connector picks a Graph **app registration** by fewest in-flight requests, counted in **Redis**: `Incr()` before each call, `Decr()` after (`graphhelper.go:122-137`). Any request that dies in between leaks a count **permanently** \u2014 the 15-minute `Expire` is refreshed on every `Incr`, so it never fires under sustained load.\n\nOnce every client exceeds `maxInflight`, `getClient()` **blocks on every fetch** (`graphhelper.go:326-358`) \u2014 and that code path has **no log statement at all**, so it leaves no trace.\n\n### Reading the panel to the left\n* **sawtooth returning to 0 between scans** -> healthy\n* **monotonic ratchet that never returns to 0** -> leaking\n\n### The decisive test (2 minutes, no history needed)\n```\n# with the connector IDLE:\nKEYS  inflight:*\nGET   inflight:<clientID>    # per Graph app registration\n```\nEvery value **must** be 0 on an idle connector. Any non-zero value is a leak. Stronger: restart the pod, wait for idle, re-read \u2014 the counters live in Redis, not the pod, so a restart does not clear them.\n\n### Telling the two apart\n**Throttling** -> `\"graph DownloadDriveItem failed\"` lines with `http_status` 429.\n**Leak** -> slow fetches with **no error lines at all**."
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 131
+      }
+    },
+    {
+      "type": "row",
+      "title": "Pod health \u2014 replicaCount is 1, this is a single point of failure",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 139
+      },
+      "panels": [],
+      "id": 5
+    },
+    {
+      "type": "timeseries",
+      "title": "Container restarts",
+      "description": "The SharePoint content connector runs at replicaCount: 1. A restart mid-scan drops every in-flight fetch, and \u2014 because the in-flight counters live in Redis rather than in the pod \u2014 leaks them.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{pod=~\".*sharepoint.*\"}[10m]))",
+          "legendFormat": "{{pod}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 140
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU throttling",
+      "description": "Time the container spent throttled against its CFS quota. A single replica serving the whole bulk content path will show up here before it shows up anywhere else.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (pod) (rate(container_cpu_cfs_throttled_seconds_total{pod=~\".*sharepoint.*\"}[5m]))",
+          "legendFormat": "{{pod}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 140
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory working set",
+      "description": "Downloads are streamed, so this should stay flat regardless of file size. A climb that tracks scan volume means something is buffering whole files.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (pod) (container_memory_working_set_bytes{pod=~\".*sharepoint.*\"})",
+          "legendFormat": "{{pod}}",
+          "range": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 140
+      }
+    },
+    {
+      "type": "row",
+      "title": "Reference",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 148
+      },
+      "panels": [],
+      "id": 6
+    },
+    {
+      "type": "text",
+      "title": "What this dashboard can and cannot tell you",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "## Read this before trusting a flat graph\n\n### There is no 429 counter in the `graph_*` family\n`graph_requests_5xx` counts **only** 5xx. Microsoft Graph throttling arrives as **HTTP 429**, which is 4xx, and **nothing counts it**.\n\nA flat `graph_requests_5xx` does **not** mean Graph was healthy.\n\nThrottling is visible in exactly two places:\n1. `sharepoint_content_fetch_error_total{code=\"FETCH_ERROR_RATE_LIMITED\"}` \u2014 the panels above\n2. the connector logs \u2014 grep `\"graph DownloadDriveItem failed\"`, logged at WARN with an `http_status` field\n\n### The error body is thrown away\n`internal/graphhelper/download.go:101-106` drains and **discards** the Graph error body, and never reads `Retry-After`. So we can see *that* we were throttled but not the Graph error code (`activityLimitReached`) nor how long Microsoft asked us to wait.\n\n### Why one connector's problem kills a privacy scan\ncontent-service does not enumerate `FETCH_ERROR_RATE_LIMITED` in `mapFetchError`, so it falls to the `default` branch and is treated as **retryable** \u2014 5 in-process attempts with 1/2/4/8s backoff, then Nak'd for up to 3 JetStream deliveries. **15 calls to Graph per document**, with Graph's own `Retry-After` ignored. Retrying a throttle deepens it."
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 149
+      }
+    }
+  ]
+}
