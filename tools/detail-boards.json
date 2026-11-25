@@ -32,6 +32,13 @@
             "url": "/d/nx-applications-overview",
             "targetBlank": false,
             "icon": "external link"
+          },
+          {
+            "title": "Connectors Detail: Files & Documents",
+            "type": "link",
+            "url": "/d/nx-connectors-detail-files",
+            "targetBlank": false,
+            "icon": "external link"
           }
         ],
         "preload": false,
@@ -50,13 +57,13 @@
         },
         "timepicker": {},
         "timezone": "",
-        "title": "Connectors Detail",
+        "title": "Connectors Detail: Databases",
         "uid": "nx-connectors-detail",
         "version": 1,
         "weekStart": "",
         "folderUid": "applications-folder"
       },
-      "intro": "**Connectors Detail**: one collapsed row per connector, built from that connector's per-cluster boards (overview, pipeline, runtime). Expand a row for its full detail. Each row shows everything in namespace `default`; the Scanner/Content component pickers at the top apply to their connector's row. For per-pod, query-type or datasource-id filtering, open the per-cluster board linked in each section header. Each section header links to the per-cluster board it came from.",
+      "intro": "**Connectors Detail: Databases**: one collapsed row per database connector (MySQL, PostgreSQL, Oracle, Snowflake), built from that connector's per-cluster boards (overview, pipeline, runtime). Expand a row for its full detail. Each row shows everything in namespace `default`; the Scanner/Content component pickers at the top apply to their connector's row. For per-pod, query-type or datasource-id filtering, open the per-cluster board linked in each section header. Each section header links to the per-cluster board it came from. The file, storage and document connectors (CIFS, Box, SharePoint, S3, Xberg) are on Connectors Detail: Files & Documents.",
       "pickers": "hide",
       "shared_vars": [
         {
@@ -69,19 +76,6 @@
         }
       ],
       "sections": [
-        {
-          "key": "cifs",
-          "label": "CIFS",
-          "title": "🗂️ CIFS",
-          "sources": [
-            "dashboards/applications/V2/connectors/cifs/cifs-overview.json",
-            "dashboards/applications/V2/connectors/cifs/cifs-pipeline.json",
-            "dashboards/applications/V2/connectors/cifs/cifs-runtime.json"
-          ],
-          "unify": {
-            "pod": "cifs-runtime"
-          }
-        },
         {
           "key": "mysql",
           "label": "MySQL",
@@ -109,6 +103,19 @@
           }
         },
         {
+          "key": "oracle",
+          "label": "Oracle",
+          "title": "🏛️ Oracle",
+          "sources": [
+            "dashboards/applications/V2/connectors/oracle/oracle-overview.json",
+            "dashboards/applications/V2/connectors/oracle/oracle-pipeline.json",
+            "dashboards/applications/V2/connectors/oracle/oracle-runtime.json"
+          ],
+          "unify": {
+            "pod": "oracle-runtime"
+          }
+        },
+        {
           "key": "snowflake",
           "label": "Snowflake",
           "title": "❄️ Snowflake",
@@ -120,18 +127,99 @@
           "unify": {
             "pod": "snowflake-runtime"
           }
+        }
+      ],
+      "keep_vars": {
+        "mysql_component": 0,
+        "postgresql_component": 2,
+        "snowflake_component": 0,
+        "oracle_component": 0
+      }
+    },
+    {
+      "output": "dashboards/applications/connectors-detail-files.json",
+      "header": {
+        "annotations": {
+          "list": [
+            {
+              "builtIn": 1,
+              "datasource": {
+                "type": "grafana",
+                "uid": "-- Grafana --"
+              },
+              "enable": true,
+              "hide": true,
+              "iconColor": "rgba(0, 211, 255, 1)",
+              "name": "Annotations & Alerts",
+              "type": "dashboard"
+            }
+          ]
         },
+        "editable": true,
+        "fiscalYearStartMonth": 0,
+        "graphTooltip": 1,
+        "links": [
+          {
+            "title": "Applications Overview",
+            "type": "link",
+            "url": "/d/nx-applications-overview",
+            "targetBlank": false,
+            "icon": "external link"
+          },
+          {
+            "title": "Connectors Detail: Databases",
+            "type": "link",
+            "url": "/d/nx-connectors-detail",
+            "targetBlank": false,
+            "icon": "external link"
+          }
+        ],
+        "preload": false,
+        "refresh": "1m",
+        "schemaVersion": 40,
+        "tags": [
+          "git-sync",
+          "nx",
+          "connectors",
+          "applications",
+          "all-clients"
+        ],
+        "time": {
+          "from": "now-24h",
+          "to": "now"
+        },
+        "timepicker": {},
+        "timezone": "",
+        "title": "Connectors Detail: Files & Documents",
+        "uid": "nx-connectors-detail-files",
+        "version": 1,
+        "weekStart": "",
+        "folderUid": "applications-folder"
+      },
+      "intro": "**Connectors Detail: Files & Documents**: one collapsed row per file, storage and document connector (CIFS, Box, SharePoint, S3 Parquet, Xberg), built from that connector's per-cluster boards (overview, pipeline, runtime). Expand a row for its full detail. Each row shows everything in namespace `default`; the Scanner/Content component pickers at the top apply to their connector's row. For per-pod, query-type or datasource-id filtering, open the per-cluster board linked in each section header. Each section header links to the per-cluster board it came from. The database connectors (MySQL, PostgreSQL, Oracle, Snowflake) are on Connectors Detail: Databases.",
+      "pickers": "hide",
+      "shared_vars": [
         {
-          "key": "oracle",
-          "label": "Oracle",
-          "title": "🏛️ Oracle",
+          "name": "namespace",
+          "label": "Namespace",
+          "type": "constant",
+          "hide": 2,
+          "query": "default",
+          "skipUrlSync": true
+        }
+      ],
+      "sections": [
+        {
+          "key": "cifs",
+          "label": "CIFS",
+          "title": "🗂️ CIFS",
           "sources": [
-            "dashboards/applications/V2/connectors/oracle/oracle-overview.json",
-            "dashboards/applications/V2/connectors/oracle/oracle-pipeline.json",
-            "dashboards/applications/V2/connectors/oracle/oracle-runtime.json"
+            "dashboards/applications/V2/connectors/cifs/cifs-overview.json",
+            "dashboards/applications/V2/connectors/cifs/cifs-pipeline.json",
+            "dashboards/applications/V2/connectors/cifs/cifs-runtime.json"
           ],
           "unify": {
-            "pod": "oracle-runtime"
+            "pod": "cifs-runtime"
           }
         },
         {
@@ -156,30 +244,26 @@
           ]
         },
         {
-          "key": "xberg",
-          "label": "Xberg",
-          "title": "⚡ Xberg Extraction Engine",
-          "sources": [
-            "dashboards/xberg-dashboard.json"
-          ]
-        },
-        {
           "key": "s3",
           "label": "S3",
           "title": "🪣 S3 Parquet Inventory",
           "sources": [
             "dashboards/apps-s3-inventory-connector.json"
           ]
+        },
+        {
+          "key": "xberg",
+          "label": "Xberg",
+          "title": "⚡ Xberg Extraction Engine",
+          "sources": [
+            "dashboards/xberg-dashboard.json"
+          ]
         }
       ],
       "keep_vars": {
         "cifs_component": 0,
-        "mysql_component": 0,
-        "postgresql_component": 2,
-        "snowflake_component": 0,
         "box_component": 0,
-        "sharepoint_component": 0,
-        "oracle_component": 0
+        "sharepoint_component": 0
       }
     },
     {
@@ -529,8 +613,12 @@
       "source": "dashboards/applications/V2/applications-overview.json",
       "link_map": [
         {
-          "match": "^/d/apps-v2-(snowflake|cifs|mysql|postgresql|box|oracle)-overview.*$",
+          "match": "^/d/apps-v2-(snowflake|mysql|postgresql|oracle)-overview.*$",
           "replace": "/d/nx-connectors-detail"
+        },
+        {
+          "match": "^/d/apps-v2-(cifs|box)-overview.*$",
+          "replace": "/d/nx-connectors-detail-files"
         },
         {
           "match": "^/d/apps-v2-[a-z-]+-(overview|ingest).*$",

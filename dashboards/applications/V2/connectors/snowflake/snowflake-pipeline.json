@@ -462,6 +462,384 @@
       "targets": [
         { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le, depth) (rate(snowflake_connectiontest_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))", "legendFormat": "{{depth}}" }
       ]
+    },
+    {
+      "type": "row",
+      "id": 1310,
+      "title": "Registration",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 73
+      },
+      "panels": []
+    },
+    {
+      "id": 1311,
+      "type": "state-timeline",
+      "title": "Registration State by Pod",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Whether each pod has registered itself with the registration service**, shown as the current state over time: registered, pending (no answer yet), unreachable (the registry or network is failing), rejected (the registry refused, retrying), rejected_final (refused for good), build_failed (the registration could not be built), lane_missing (no test-connection lane is being served), disabled (registration is switched off).\n\nThe registration series exist only on builds that include the registration-metrics change, so older pods show No data here. Connector pods scale to zero, so a pod's line exists only while a scanner pod is running.\n\n**Normal:** registered, after a short pending at start-up. lane_missing, rejected_final and build_failed are the states to alert on: no other panel reports them, and the pod is not registering. unreachable held for longer than a deploy takes is worth alerting on too.\n\n**Next:** 'Registration Attempts by Result' for whether attempts are still failing, and the connector logs for the reason.",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 74
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "disabled",
+                  "color": "gray",
+                  "index": 0
+                },
+                "2": {
+                  "text": "pending",
+                  "color": "blue",
+                  "index": 1
+                },
+                "3": {
+                  "text": "unreachable",
+                  "color": "orange",
+                  "index": 2
+                },
+                "4": {
+                  "text": "rejected",
+                  "color": "orange",
+                  "index": 3
+                },
+                "5": {
+                  "text": "registered",
+                  "color": "green",
+                  "index": 4
+                },
+                "6": {
+                  "text": "rejected_final",
+                  "color": "red",
+                  "index": 5
+                },
+                "7": {
+                  "text": "build_failed",
+                  "color": "red",
+                  "index": 6
+                },
+                "8": {
+                  "text": "lane_missing",
+                  "color": "red",
+                  "index": 7
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "gray",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "auto",
+        "alignValue": "left",
+        "rowHeight": 0.9,
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(max by (pod) (snowflake_registration_state{namespace=\"$namespace\", pod=~\"$pod\",state=\"disabled\"}) * 1) + on(pod) (max by (pod) (snowflake_registration_state{namespace=\"$namespace\", pod=~\"$pod\",state=\"pending\"}) * 2) + on(pod) (max by (pod) (snowflake_registration_state{namespace=\"$namespace\", pod=~\"$pod\",state=\"unreachable\"}) * 3) + on(pod) (max by (pod) (snowflake_registration_state{namespace=\"$namespace\", pod=~\"$pod\",state=\"rejected\"}) * 4) + on(pod) (max by (pod) (snowflake_registration_state{namespace=\"$namespace\", pod=~\"$pod\",state=\"registered\"}) * 5) + on(pod) (max by (pod) (snowflake_registration_state{namespace=\"$namespace\", pod=~\"$pod\",state=\"rejected_final\"}) * 6) + on(pod) (max by (pod) (snowflake_registration_state{namespace=\"$namespace\", pod=~\"$pod\",state=\"build_failed\"}) * 7) + on(pod) (max by (pod) (snowflake_registration_state{namespace=\"$namespace\", pod=~\"$pod\",state=\"lane_missing\"}) * 8)",
+          "legendFormat": "{{pod}}"
+        }
+      ]
+    },
+    {
+      "id": 1312,
+      "type": "bargauge",
+      "title": "Registration Attempts by Result",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Registration attempts made in the selected range**, by result: success (the registry accepted it), rejected (the registry refused it), failed (no answer: the registry was unreachable or failing). Totals add up every attempt of every pod in the range.\n\n**Normal:** a success at start-up and one about every 6 hours when the pod renews. Rejected or failed attempts that keep coming mean the pod is not (re-)registering. A pod can still read registered while renewals fail, so this is the panel that shows it.\n\n**Next:** 'Registration Attempts (rate, 5m)' beside it for when, and 'Registration State by Pod' for the pod's current state.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 82
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "success"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "rejected"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "instant": true,
+          "expr": "sum by (result) (sum_over_time(((last_over_time(snowflake_registration_attempts_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(snowflake_registration_attempts_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(snowflake_registration_attempts_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "{{result}}"
+        }
+      ]
+    },
+    {
+      "id": 1313,
+      "type": "timeseries",
+      "title": "Registration Attempts (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**When registration attempts happened**, by result, stacked. An attempt is rare, so a single one can read near 0 here and still be counted in 'Registration Attempts by Result'.\n\n**Normal:** a short green mark at start-up and every 6 hours. A steady orange or red line means the pod keeps trying and the registry keeps refusing it or not answering.\n\n**Next:** 'Registration State by Pod'; the registration service board for its side.",
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 8,
+        "y": 82
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "success"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "rejected"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (result) (rate(snowflake_registration_attempts_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "{{result}}"
+        }
+      ]
+    },
+    {
+      "id": 1314,
+      "type": "stat",
+      "title": "Since Last Success",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**How long since any pod last registered successfully**, measured from the newest success among the selected pods.\n\n**Normal:** under 6 hours, because the connector re-registers every 6 hours. Well beyond that means renewals are failing even if the state still reads registered. No data means no scanner pod is running (they scale to zero) or the pod's build predates the registration metrics.\n\n**Next:** 'Registration Attempts by Result' for what the attempts are returning.",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 82
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "instant": true,
+          "expr": "time() - max(snowflake_registration_last_success_timestamp_seconds{namespace=\"$namespace\", pod=~\"$pod\"} > 0)"
+        }
+      ]
     }
   ]
 }

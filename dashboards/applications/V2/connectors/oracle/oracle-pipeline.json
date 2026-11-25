@@ -1636,6 +1636,187 @@
         "y": 45
       },
       "id": 23
+    },
+    {
+      "type": "row",
+      "id": 1000,
+      "title": "Connection Test",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 53
+      },
+      "panels": []
+    },
+    {
+      "id": 1001,
+      "type": "bargauge",
+      "title": "Connection Tests by Outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "**Connection tests answered in the selected range**, by outcome: success, partial (some objects could not be read), credential_error, permission_denied, timeout, error, publish_failed.\n\nA test interrupted by this pod shutting down is redelivered to another pod and counted there.\n\n**Next:** 'Connection Test Outcomes (rate, 5m)' beside it for when they happened; the connector logs carry the classified error_code of each failure.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 54
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "instant": true,
+          "expr": "sum by (outcome) (sum_over_time(((last_over_time(oracle_connectiontest_requests_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) - last_over_time(oracle_connectiontest_requests_total{namespace=\"$namespace\", pod=~\"$pod\"}[1d] offset 15s)) >= 0 or last_over_time(oracle_connectiontest_requests_total{namespace=\"$namespace\", pod=~\"$pod\"}[15s]) * 1)[$__range:15s])) > 0",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 1002,
+      "type": "timeseries",
+      "title": "Connection Test Outcomes (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "When connection tests were answered, by outcome. A test shorter than a scrape interval can read 0 here and still be counted in 'Connection Tests by Outcome'.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 54
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (outcome) (rate(oracle_connectiontest_requests_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 1003,
+      "type": "timeseries",
+      "title": "Connection Test Duration by Depth (p95)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "End-to-end time to answer a connection test, from receiving the request to publishing the reply, by requested depth. Deeper tests list more objects and take longer.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 54
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, depth) (rate(oracle_connectiontest_duration_seconds_bucket{namespace=\"$namespace\", pod=~\"$pod\"}[5m])))",
+          "legendFormat": "{{depth}}"
+        }
+      ]
+    },
+    {
+      "id": 1004,
+      "type": "timeseries",
+      "title": "Connection Test Objects Skipped (rate, 5m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Objects a connection test could not read and reported on their own node while it carried on, by level. A test with any is answered with the partial outcome.",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (level) (rate(oracle_connectiontest_object_errors_total{namespace=\"$namespace\", pod=~\"$pod\"}[5m]))",
+          "legendFormat": "{{level}}"
+        }
+      ]
     }
   ]
 }

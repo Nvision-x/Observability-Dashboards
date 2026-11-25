@@ -508,6 +508,51 @@
         }
       ],
       "description": "**Operating-system threads the program uses.**\n\n**Normal:** a small, steady number. Growing steadily means calls are blocking.\n\n**Next:** 'Goroutines'."
+    },
+    {
+      "type": "row",
+      "id": 1400,
+      "title": "Connection Test",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "panels": []
+    },
+    {
+      "id": 1401,
+      "type": "timeseries",
+      "title": "Connection Tests In Flight",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(box_connectiontest_in_flight{namespace=\"$namespace\", pod=~\"$pod\"})",
+          "legendFormat": "in flight"
+        }
+      ]
     }
   ]
 }
