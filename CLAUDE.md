@@ -27,6 +27,7 @@ dashboards/
   *.json (others at the top level)                           # per-cluster V1 boards, not generated from
   applications/
     connectors-detail.json                                   # GENERATED from the connector boards
+    connectors-detail-files.json                             # GENERATED from the connector boards (the second half; see the table)
     services-detail.json                                     # GENERATED from the service boards
     content-service-legacy.json                              # GENERATED from content-service-*.json
     backend-workers.json                                     # source of the Backend Workers row
@@ -52,7 +53,8 @@ alerts/  datasources/                                        # not synced (see b
 
 | Generated board | uid | Built from |
 |---|---|---|
-| `dashboards/applications/connectors-detail.json` | `nx-connectors-detail` | V2 CIFS, MySQL, PostgreSQL, Snowflake, Oracle, Box boards; SharePoint, Xberg, S3 Parquet boards |
+| `dashboards/applications/connectors-detail.json` | `nx-connectors-detail` (Connectors Detail: Databases) | V2 MySQL, PostgreSQL, Oracle, Snowflake boards |
+| `dashboards/applications/connectors-detail-files.json` | `nx-connectors-detail-files` (Connectors Detail: Files & Documents) | V2 CIFS, Box boards; SharePoint, S3 Parquet, Xberg boards. It was split from one board when that board reached 94% of the ConfigMap limit; the overview's drill-down links are routed per connector by `link_map` in `tools/detail-boards.json` |
 | `dashboards/applications/services-detail.json` | `nx-services-detail` | V2 Content Service, Authz, Credential Manager, Datasource Service, Knowledge Hub (sidecar, standalone), Knowledge Service, Registration, Request boards; Backend Workers |
 | `dashboards/infrastructure-overview.json` | `nx-infrastructure-overview` | Kong, NATS, OpenSearch, Prometheus, Pulsar, NVIDIA GPU boards |
 | `dashboards/applications/content-service-legacy.json` | `content-service` | the three `content-service-*.json` boards (the per-cluster Content Service board is `content-service-cluster`) |
